@@ -1,6 +1,5 @@
 import math
 import random
-from word import Word
 
 class CacheLine:
     data: list
@@ -45,9 +44,9 @@ class Cache:
     def __parseAddr__(self, addr: int) -> tuple:
         numOffsetBits = math.floor(math.log2(self.lineSize))
         numIndexBits = math.floor(math.log2(self.numSets))
-        numTagBits = Word.WIDTH - numOffsetBits - numIndexBits
+        numTagBits = 16 - numOffsetBits - numIndexBits
 
-        addrBits = bin(addr)[2:].zfill(Word.WIDTH)
+        addrBits = bin(addr)[2:].zfill(16)
         tag = int(addrBits[:numTagBits], base=2)
         index = int(addrBits[numTagBits:numTagBits + numIndexBits], base=2)
         offset = int(addrBits[numTagBits + numIndexBits:], base=2)
@@ -78,6 +77,7 @@ class Cache:
         # cache is full. RR for now
         replaceIndex = random.randrange(self.numLines)
         newEntry = CacheLine(self.lineSize)
+        newEntry.setTag(tag)
         newEntry.data[offset] = data
         self.sets[index][replaceIndex] = newEntry
 
@@ -97,4 +97,5 @@ c.write(0, 0)
 c.write(1, 1)
 c.write(3, 3)
 c.write(2, 2)
+c.write(1, 4)
 c.printCache()
