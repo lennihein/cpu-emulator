@@ -1,7 +1,7 @@
 import math
 import random
 
-class CacheWay:
+class CacheLine:
     data: list
     tag: int
     lineSize: int
@@ -24,10 +24,10 @@ class Cache:
 
     numSets:int
     numLines: int
-    sets: list[list[CacheWay]]
+    sets: list[list[CacheLine]]
 
     def __init__(self, numSets: int, numLines: int, lineSize: int):
-        # self.sets = [[CacheWay(lineSize)] * numLines] * numSets
+        # self.sets = [[CacheLine(lineSize)] * numLines] * numSets
         self.sets = [[None] * numLines] * numSets
         self.numSets = numSets
         self.numLines = numLines
@@ -37,7 +37,7 @@ class Cache:
         for i in range(self.numSets):
             a = []
             for j in range(self.numLines):
-                a.append(CacheWay(self.lineSize))
+                a.append(CacheLine(self.lineSize))
                 # self.sets[i][j] = CacheWay(self.lineSize)
             self.sets[i] = a
 
@@ -77,7 +77,7 @@ class Cache:
 
         # cache is full. RR for now
         replaceIndex = random.randrange(self.numLines)
-        newEntry = CacheWay(self.lineSize)
+        newEntry = CacheLine(self.lineSize)
         newEntry.data[offset] = data
         self.sets[index][replaceIndex] = newEntry
 
@@ -93,11 +93,8 @@ class Cache:
 
 c = Cache(8, 2, 4)
 c.printCache()
-c.write(0, 1)
-c.write(1, 2)
-c.write(3, 1)
-c.write(2, 1)
-for i in range(100):
-    c.write(i, 5)
-c.write(0, 1)
+c.write(0, 0)
+c.write(1, 1)
+c.write(3, 3)
+c.write(2, 2)
 c.printCache()
