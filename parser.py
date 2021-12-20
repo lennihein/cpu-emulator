@@ -8,13 +8,6 @@ class InstructionType:
     name: str
     operands: list[Operand]
 
-    def execute(self, cpu: Cpu):
-        ...
-        # So ein Interface wäre gut wenn Nutzer neue Instruktionen hinzufügen wollen, aber
-        # vielleicht sollten wir lieber in der Reservation Station nach Instruktionstypen
-        # unterscheiden, anstatt dass die Reservation Station in die Instruktionen callt und diese
-        # (für Load/Store/Branch) wieder zurück in die Reservation Station.
-
 
 class InstrReg(InstructionType):
     operands = ["reg", "reg", "reg"]
@@ -50,9 +43,16 @@ class Instruction:
     ty: InstructionType
     ops: list[int]
 
+    def __init__(self, ty: InstructionType, ops: list[int]):
+        self.ty = ty
+        self.ops = ops
+
 
 class Parser:
     instructions: dict[str, InstructionType]
+
+    def __init__(self):
+        self.instructions = {}
 
     @staticmethod
     def split_instructions(src: str) -> Iterable[str]:
@@ -66,11 +66,16 @@ class Parser:
     @staticmethod
     def parse_operand(op: str, ty: Operand, labels: dict[str, int]) -> int:
         if ty == "reg":
-            return int(op, 0)
+            if not op.startswith("r"):
+                raise ValueError(f"Unknown register {op:r}")
+            return int(op[1:])
+
         if ty == "imm":
             return int(op, 0)
+
         if ty == "label":
             return labels[op]
+
         raise ValueError(f"Unknown operand type {ty:r}")
 
     def parse_instruction(self, instr: str, labels: dict[str, int]) -> Instruction:
@@ -79,13 +84,15 @@ class Parser:
         # Split operands
         ops = [x.strip() for x in op.split(",")]
 
+        # Get instruction type
         ty = self.instructions[name]
 
         # Parse each operand
         assert len(ops) == len(ty.operands)
         ops_parsed = [self.parse_operand(op, op_ty, labels) for op, op_ty in zip(ops, ty.operands)]
 
-        ...
+        # Create instruction object
+        return Instruction(ty, ops_parsed)
 
     def parse(self, src: str) -> list[Instruction]:
         # Split by instructions
