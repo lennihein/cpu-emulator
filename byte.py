@@ -1,0 +1,2 @@
+class Byte:
+    value: int
