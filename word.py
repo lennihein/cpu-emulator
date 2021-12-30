@@ -10,7 +10,7 @@ class Word:
         return cls(value)
 
     @classmethod
-    def from_bytes(cls, b: bytes[2]):
+    def from_bytes(cls, b: bytes):
         ...
 
     # careful: operations on differently sized ints results in an object of the lhs type
