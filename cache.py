@@ -152,6 +152,8 @@ class Cache:
         num_index_bits = math.floor(math.log2(self.num_sets))
         num_tag_bits = Word.WIDTH - num_offset_bits - num_index_bits
 
+        # TODO: check special cases, such as line_size = 1
+
         addr_bits = bin(addr)[2:].zfill(Word.WIDTH)
         tag = int(addr_bits[:num_tag_bits], base=2)
         index = int(addr_bits[num_tag_bits:num_tag_bits + num_index_bits], base=2)
@@ -239,6 +241,61 @@ class Cache:
             if self.sets[index][i].checkTag(tag):
                 self.sets[index][i].flush(offset)
                 return
+
+    def getNumSets(self):
+        """Returns the number of sets this cache uses."""
+        return self.num_sets
+
+    def getNumLines(self):
+        """Returns the number of lines per set."""
+        return self.num_lines
+
+    def getLineSize(self):
+        """Returns the number of entries per cache line."""
+        return self.line_size
+
+    def getCacheDump(self):
+        """
+        Returns a dictionary that contains the number of cache sets,
+        the number of cache lines per set, and the size of each line.
+        Additionally, the dictionary contains an array where each entry
+        corresponds to a cache line, whcih also contains the cached
+        data.
+
+        This function is intended to be used during testing and for
+        visualization purposes by the GUI.
+
+        Returns:
+            A dictionary of the following form is returned:
+                {
+                    "sets": [
+                        [
+                            {
+                                "tag": ... (int),
+                                "data": list[int]
+                            }
+                        ] // each of these entries represents a cache line
+                    ],
+                    "num_sets": ... (int),
+                    "num_lines": ... (int),
+                    "line_size": ... (int)
+                }
+        """
+
+        cache = {
+            "sets": [
+                [
+                    {
+                        "data": self.sets[i][j].data,
+                        "tag": self.sets[i][j].tag
+                    } for j in range(self.num_lines)
+                ] for i in range(self.num_sets)],
+            "num_sets": self.getNumSets(),
+            "num_lines": self.getNumLines(),
+            "line_size": self.getLineSize()
+        }
+        return cache
+
 
     def printCache(self) -> None:
         """Prints the cache. Only to be used during development."""
@@ -388,4 +445,8 @@ c.printCache()
 c.write(100, 99)
 c.write(0, 1)
 c.printCache()
+a = c.getCacheDump()
+print(a)
+print('first set:', a['sets'][0])
+print('first line of first set:', a['sets'][0][0])
 """
