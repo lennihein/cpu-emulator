@@ -8,7 +8,7 @@ Supports flushing the queue and adding a micro program directly to the queue.
 
 TODO:discuss if we need getter/ setter functions for the pc for rollback handling and if so, should they look a certain way?
 TODO:discuss other points as indicated in the code.
-TODO:make the test prettier/ split it up between functions.
+TODO:make the test prettier/ maybe split it up between functions.
 
 # Example
 
