@@ -35,17 +35,17 @@ TODO:make the test prettier/ maybe split it up between functions.
 ...     parser.Instruction(addi, [1, 0, 97]),
 ... ]
 >>> front = Frontend(cpu_bpu, instrs, 3)
+>>> cpu_bpu.update(2, True)
 >>> next_instr = front.fetch_instruction_from_queue()
 no instruction in queue
->>> front.add_instruction_to_queue()
->>> front.add_instruction_to_queue()
->>> front.add_instruction_to_queue()
->>> cpu_bpu.update(2, True)
+>>> front.add_instructions_to_queue()
 >>> print(front.instr_queue)
 deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0])])
->>> front.add_instruction_to_queue()
+>>> front.add_instructions_to_queue()
 >>> print(front.instr_queue)
 deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0])])
+>>> print(front.get_pc())
+0
 >>> next_instr = front.fetch_instruction_from_queue()
 >>> print(next_instr)
 Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100])
@@ -53,37 +53,43 @@ Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops
 deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0])])
 >>> print(cpu_bpu.counter)
 [2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
->>> front.add_instruction_to_queue()
+>>> print(front.get_pc())
+0
+>>> front.add_instructions_to_queue()
 >>> print(front.instr_queue)
 deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100])])
 >>> front.flush_instruction_queue()
 >>> print(front.instr_queue)
 deque([])
->>> front.add_instruction_to_queue()
->>> print(front.instr_queue)
-deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99])])
 >>> cpu_bpu.update(2, False)
 >>> cpu_bpu.update(2, False)
 >>> print(cpu_bpu.counter)
 [2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
->>> front.add_instruction_to_queue()
->>> front.add_instruction_to_queue()
+>>> front.add_instructions_to_queue()
 >>> print(front.instr_queue)
 deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 98])])
->>> micro_program=list([parser.Instruction(addi, [1, 1, 2]), parser.Instruction(j, [4])])
+>>> micro_program=list([parser.Instruction(addi, [1, 1, 2]), parser.Instruction(j, [1])])
 >>> front.add_micro_program(micro_program)
 >>> print(front.instr_queue)
-deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 98]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 1, 2]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[4])])
+deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 98]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 1, 2]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[1])])
 >>> next_instr = front.fetch_instruction_from_queue()
 >>> next_instr = front.fetch_instruction_from_queue()
 >>> next_instr = front.fetch_instruction_from_queue()
->>> front.add_instruction_to_queue()
+>>> front.add_instructions_to_queue()
 >>> print(front.instr_queue)
-deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 1, 2]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[4]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 97])])
+deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 1, 2]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[1]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99])])
 >>> next_instr = front.fetch_instruction_from_queue()
->>> front.add_instruction_to_queue()
-end of program reached
+>>> next_instr = front.fetch_instruction_from_queue()
+>>> front.set_pc(-1)
+new pc out of range
+>>> front.set_pc(6)
+new pc out of range
+>>> front.set_pc(4)
+>>> front.add_instructions_to_queue()
+end of program reached by instruction queue
 **goodbye**
+>>> print(front.instr_queue)
+deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 97])])
 """
 
 
@@ -117,7 +123,7 @@ class Frontend:
         self.instr_list = cpu_instr_list
         self.instr_queue = deque()
 
-    def add_instruction_to_queue(self) -> None:
+    def add_instructions_to_queue(self) -> None:
         '''
         Adds the next instructions from the instruction list, as indicated by the pc, to the queue, until the queue is full.
 
@@ -134,13 +140,13 @@ class Frontend:
         This has to be modified if a branch order buffer should be used.
         '''
 
-        if self.pc >= len(self.instr_list):
-            #TODO: discuss if we have/ want a functionality to properly raise errors
-            #TODO: discuss if we have/ want something like an exit funtion/ operation or is this the only way a program ends and therefore not actually an error?
-            print("end of program reached\n**goodbye**")
-            return
-
         while (len(self.instr_queue) < self.max_length):
+
+            if self.pc >= len(self.instr_list):
+                #TODO: discuss if we have/ want a functionality to properly raise errors
+                #TODO: discuss if we have/ want something like an exit funtion/ operation or is this the only way a program ends and therefore not actually an error?
+                print("end of program reached by instruction queue\n**goodbye**")
+                return
             
             current_instr : parser.Instruction = self.instr_list[self.pc]
             self.instr_queue.append(current_instr)
