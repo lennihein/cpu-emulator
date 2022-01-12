@@ -58,16 +58,6 @@ def print_memory(lines=8, base=0x0000):
             i += 1
         print()
 
-# # test image
-# print_header("nocursetest.py", BOLD + RED)
-# print(YELLOW + UNDERLINE + "Terminal Dimensions:" + ENDC + " " + FAINT + str(columns) + "x" + str(rows) + ENDC)
-# print("")
-# print(RED + "This" + ENDC + " uses " + GREEN + BOLD + "no library!" + ENDC + " - cool, isn't it?")
-# print_div(RED + BOLD)
-# print()
-
-# proper usage
-
 # print current PC position
 print_header("Program", BOLD + RED + ENDC)
 print("  " + FAINT + "37 " + ENDC + CYAN + "ADD " + ENDC + YELLOW + "R0, R0" + ENDC)
