@@ -147,6 +147,12 @@ class Frontend:
                 #TODO: discuss if we have/ want something like an exit funtion/ operation or is this the only way a program ends and therefore not actually an error?
                 print("end of program reached by instruction queue\n**goodbye**")
                 return
+
+            #sanity check, should never happen since the set_pc function checks for this too and jump goals are set by the parser from labels within the code
+            if self.pc < 0:
+                #TODO: exception interface
+                print("pc out of bounds")
+                return
             
             current_instr : parser.Instruction = self.instr_list[self.pc]
             self.instr_queue.append(current_instr)
