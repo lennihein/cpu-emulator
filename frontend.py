@@ -6,7 +6,6 @@ Instructions are taken from a list provided by the parser and added to the queue
 Instructions can be fetched from the queue, e.g. by reservation stations.
 Supports flushing the queue and adding a micro program directly to the queue.
 
-TODO:discuss if we need getter/ setter functions for the pc for rollback handling and if so, should they look a certain way?
 TODO:discuss other points as indicated in the code.
 TODO:make the test prettier/ maybe split it up between functions.
 
@@ -120,7 +119,7 @@ class Frontend:
 
     def add_instruction_to_queue(self) -> None:
         '''
-        Adds the next instruction from the instruction list, as indicated by the pc, to the queue.
+        Adds the next instructions from the instruction list, as indicated by the pc, to the queue, until the queue is full.
 
         Only adds an instruction, if max_langth is not yet reached.
         If the queue is full, the function returns withput further effect.
@@ -141,27 +140,26 @@ class Frontend:
             print("end of program reached\n**goodbye**")
             return
 
-        if len(self.instr_queue) >= self.max_length:
-            return
+        while (len(self.instr_queue) < self.max_length):
             
-        current_instr : parser.Instruction = self.instr_list[self.pc]
-        self.instr_queue.append(current_instr)
+            current_instr : parser.Instruction = self.instr_list[self.pc]
+            self.instr_queue.append(current_instr)
 
-        #this needs to be modified if further jump instruction types are implemented
-        if type(current_instr.ty) == parser.InstrBranch:
-        
-            #true if branch was/ should be taken
-            prediction : bool = self.bpu.predict(self.pc)
+            #this needs to be modified if further jump instruction types are implemented
+            if type(current_instr.ty) == parser.InstrBranch:
+            
+                #true if branch was/ should be taken
+                prediction : bool = self.bpu.predict(self.pc)
 
-            if prediction == True:
-                self.pc = current_instr.ops[0]
+                if prediction == True:
+                    self.pc = current_instr.ops[0]
 
-            else:
+                else:
+                    self.pc = self.pc + 1
+
+            else:            
+                
                 self.pc = self.pc + 1
-
-        else:            
-            
-            self.pc = self.pc + 1
         return
 
     def fetch_instruction_from_queue(self) -> parser.Instruction:
@@ -204,6 +202,28 @@ class Frontend:
         
                 self.pc = current_instr.ops[0]
         return
+
+    def set_pc(self, new_pc : int) -> None:
+        '''
+        Provides an interface to change the program counter to an arbitrary position within the instruction list.
+        Does not consider or change the instructions which are already in the instruction queue.
+        '''
+        if (new_pc >= 0 and new_pc < len(self.instr_list)):
+
+            self.pc = new_pc
+
+        #TODO: actual exception/ error interface
+        else: 
+            print("new pc out of range")
+
+        return
+
+    def get_pc(self) -> int:
+        '''
+        Interface to retrieve the current value of the program counter.
+        '''
+        return self.pc
+
 
 if __name__ == "__main__":
     import doctest
