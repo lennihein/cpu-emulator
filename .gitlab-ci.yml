@@ -1,0 +1,8 @@
+image: python:latest
+
+before_script:
+  - python3 -V  # Print out python version for debugging
+
+test:
+  script:
+      - python3 -m unittest

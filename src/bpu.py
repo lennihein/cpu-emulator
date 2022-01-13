@@ -1,5 +1,3 @@
-from typing import Counter
-
 class BPU:
     def __init__(self, indexing_bits=4, init_counter=2) -> None:
         self.indexing_bits = indexing_bits
