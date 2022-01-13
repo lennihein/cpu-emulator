@@ -1,7 +1,7 @@
 import unittest
 from src import bpu
 
-class grafanaTests(unittest.TestCase):
+class BPUTests(unittest.TestCase):
 
     def test_simple_bpu(self):
         predictor = bpu.SimpleBPU()
