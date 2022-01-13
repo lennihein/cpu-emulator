@@ -93,8 +93,8 @@ deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm'
 """
 
 
-import parser
-import bpu
+from . import parser
+from . import bpu
 from collections import deque
 
 

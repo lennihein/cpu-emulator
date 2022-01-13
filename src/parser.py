@@ -33,7 +33,7 @@ ValueError: Wrong number of operands for 'addi' instruction: 3 expected, 2 given
 from dataclasses import dataclass
 from typing import Callable, Iterable, Literal, Union
 
-from word import Word
+from src.word import Word
 
 Operand = Union[Literal["reg"], Literal["imm"], Literal["label"]]
 
