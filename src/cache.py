@@ -1,7 +1,8 @@
 import math
 import random
 from time import time
-from word import Word
+# from word import Word
+from .word import Word
 
 class CacheLine:
     """
@@ -316,7 +317,7 @@ class Cache:
                 if self.sets[i][j].is_in_use():
                     print("*", end='')
                 for a in range(len(self.sets[i][j].data)):
-                    print(self.sets[i][j].data[a], end='')
+                    print(self.sets[i][j].data[a], end='|')
                 # print(self.sets[i][j].data)
                 print(' ', end='')
             print('')
@@ -448,7 +449,8 @@ class CacheFIFO(Cache):
         self.sets[index][fifo_index].set_tag(tag)
         self.sets[index][fifo_index].write(offset, data)
 
-c = CacheLRU(1, 1, 1)
+"""
+c = CacheLRU(4, 2, 2)
 c.write(0, 0)
 c.write(1, 1)
 
@@ -464,17 +466,4 @@ for i in range(num_sets):
             print("\tLine not in use")
         else:
             print("\tLine with Tag", line["tag"], ":", line["data"])
-
-"""
-c = CacheFIFO(2, 2, 2)
-c.write(40, 40)
-c.write(0, 1)
-c.print_cache()
-c.write(100, 99)
-c.write(0, 1)
-c.print_cache()
-a = c.get_cache_dump()
-print(a)
-print('first set:', a['sets'][0])
-print('first line of first set:', a['sets'][0][0])
 """

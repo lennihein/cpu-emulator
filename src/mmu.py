@@ -1,6 +1,9 @@
-from cache import CacheRR, CacheLRU, CacheFIFO
-from byte import Byte
-from word import Word
+# from cache import CacheRR, CacheLRU, CacheFIFO
+from .cache import CacheRR, CacheLRU, CacheFIFO
+# from byte import Byte
+from .byte import Byte
+# from word import Word
+from .word import Word
 
 class MMU:
     """
@@ -19,7 +22,7 @@ class MMU:
 
     memory: list
     mem_size: int
-    cache: CacheRR
+    cache: CacheLRU
 
     def __init__(self, mem_size: int):
         self.memory = [0] * mem_size
@@ -84,7 +87,7 @@ class MMU:
 
         result = (upper_half.value << (Word.WIDTH // 2)) + lower_half.value
 
-        return result, max(cycles_lower, cycles_upper)
+        return Word(result), max(cycles_lower, cycles_upper)
 
     def write_word(self, index: int, data: Word) -> None:
         """
@@ -131,11 +134,11 @@ class MMU:
         """
         return self.read_byte(index)[1] == self.cache_hit_cycles
 
+"""
 mmu = MMU(1024)
 print("Cached?", mmu.is_addr_cached(4))
-mmu.write_word(4, Word(820))
+mmu.write_word(4, Word(-820))
 print(mmu.read_word(4))
-print("Cached?", mmu.is_addr_cached(4))
 mmu.flush_addr(5)
-print("Cached?", mmu.is_addr_cached(5))
 print(mmu.read_word(4))
+"""
