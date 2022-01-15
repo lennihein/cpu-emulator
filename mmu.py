@@ -107,11 +107,35 @@ class MMU:
         self.write_byte(index, Byte(lower_half))
         self.write_byte(index + 1, Byte(upper_half))
 
-    def flush(self, index: int) -> None:
+    def flush_addr(self, index: int) -> None:
+        """
+        Flushes an address from the cache.
+
+        Parameters:
+            index (int) -- the memory address to which to write
+
+        Returns:
+            This function does not have a return value.
+        """
         self.cache.flush(index)
 
+    def is_addr_cached(self, index: int) -> bool:
+        """
+        Returns whether the data at an address is cached.
+
+        Parameters:
+            index (int) -- the memory address of the data
+
+        Returns:
+            bool: True if data at address is cached
+        """
+        return self.read_byte(index)[1] == self.cache_hit_cycles
+
 mmu = MMU(1024)
+print("Cached?", mmu.is_addr_cached(4))
 mmu.write_word(4, Word(820))
 print(mmu.read_word(4))
-mmu.flush(5)
+print("Cached?", mmu.is_addr_cached(4))
+mmu.flush_addr(5)
+print("Cached?", mmu.is_addr_cached(5))
 print(mmu.read_word(4))

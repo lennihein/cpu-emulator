@@ -95,7 +95,7 @@ class MMU:
 
     def __init__(self, memSize: int) -> None:
         self.memory = [[None, False]] * memSize
-                
+
     def read_word(self, idx: int) -> tuple[Word, int]:
         pass
 

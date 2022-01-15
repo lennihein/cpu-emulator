@@ -24,14 +24,14 @@ class CacheLine:
         self.tag = None
         self.line_size = line_size
 
-    def isInUse(self):
+    def is_in_use(self):
         """
         Returns true if the current cache line is
         in use by checking if the tag is set.
         """
         return self.tag is not None
 
-    def checkTag(self, tag: int) -> bool:
+    def check_tag(self, tag: int) -> bool:
         """
         Returns if the given tag matches this cache
         line's tag.
@@ -42,9 +42,9 @@ class CacheLine:
         Returns:
             bool: True if the cache line's tag matches
         """
-        return self.isInUse() and self.tag == tag
+        return self.is_in_use() and self.tag == tag
 
-    def setTag(self, tag: int) -> None:
+    def set_tag(self, tag: int) -> None:
         """
         Sets the cache line's tag.
 
@@ -56,7 +56,7 @@ class CacheLine:
         """
         self.tag = tag
 
-    def clearData(self) -> None:
+    def clear_data(self) -> None:
         """
         Removes all data of this cache line and clears
         the tag.
@@ -64,7 +64,7 @@ class CacheLine:
         for i in range(self.line_size):
             self.data[i] = None
 
-        self.setTag(None)
+        self.set_tag(None)
 
     def read(self, offset: int) -> int:
         """
@@ -117,7 +117,7 @@ class CacheLine:
             if self.data[i] is not None:
                 return
 
-        self.setTag(None)
+        self.set_tag(None)
 
 class Cache:
     """
@@ -133,11 +133,15 @@ class Cache:
 
     def __init__(self, num_sets: int, num_lines: int, line_size: int):
         self.sets = [[CacheLine(line_size) for a in range(num_lines)] for b in range(num_sets)]
+
+        if num_sets <= 0 or num_lines <= 0 or line_size <= 0:
+            raise Exception("Invalid cache parameters.")
+
         self.num_sets = num_sets
         self.num_lines = num_lines
         self.line_size = line_size
 
-    def __parseAddr__(self, addr: int) -> tuple[int, int, int]:
+    def _parse_addr(self, addr: int) -> tuple[int, int, int]:
         """
         Parses the given address and returns a 3-tuple consisting of
         tag, index, and offset to access the cache.
@@ -152,16 +156,23 @@ class Cache:
         num_index_bits = math.floor(math.log2(self.num_sets))
         num_tag_bits = Word.WIDTH - num_offset_bits - num_index_bits
 
-        # TODO: check special cases, such as line_size = 1
+        if num_tag_bits == 0:
+            raise Exception("Not enough bits for cache tag left")
 
         addr_bits = bin(addr)[2:].zfill(Word.WIDTH)
         tag = int(addr_bits[:num_tag_bits], base=2)
-        index = int(addr_bits[num_tag_bits:num_tag_bits + num_index_bits], base=2)
-        offset = int(addr_bits[num_tag_bits + num_index_bits:], base=2)
+
+        index = 0
+        if num_index_bits > 0:
+            index = int(addr_bits[num_tag_bits:num_tag_bits + num_index_bits], base=2)
+
+        offset = 0
+        if num_offset_bits != 0:
+            offset = int(addr_bits[num_tag_bits + num_index_bits:], base=2)
 
         return tag, index, offset
 
-    def __applyReplacementPolicy__(self, addr: int, data: int) -> None:
+    def _apply_replacement_policy(self, addr: int, data: int) -> None:
         """
         Applies the corresponding replacement policy by choosing a cache line that
         is to be replaced.
@@ -190,10 +201,10 @@ class Cache:
             Returns 'None' if 'addr' is not cached.
         """
 
-        tag, index, offset = self.__parseAddr__(addr)
+        tag, index, offset = self._parse_addr(addr)
 
         for i in range(self.num_lines):
-            if self.sets[index][i].checkTag(tag):
+            if self.sets[index][i].check_tag(tag):
                 return self.sets[index][i].read(offset)
 
         return None
@@ -210,19 +221,19 @@ class Cache:
         Returns:
             This function does not have a return value.
         """
-        tag, index, offset = self.__parseAddr__(addr)
+        tag, index, offset = self._parse_addr(addr)
 
         # check if all cache lines of the corresponding cache
         # set are already in use.
         for i in range(self.num_lines):
-            if not self.sets[index][i].isInUse():
-                self.sets[index][i].setTag(tag)
-            if self.sets[index][i].checkTag(tag):
+            if not self.sets[index][i].is_in_use():
+                self.sets[index][i].set_tag(tag)
+            if self.sets[index][i].check_tag(tag):
                 self.sets[index][i].write(offset, data)
                 return
 
         # apply replacement policy of all cache lines are in use
-        self.__applyReplacementPolicy__(addr, data)
+        self._apply_replacement_policy(addr, data)
 
     def flush(self, addr: int) -> None:
         """
@@ -235,26 +246,26 @@ class Cache:
             This function does not have a return value.
         """
 
-        tag, index, offset = self.__parseAddr__(addr)
+        tag, index, offset = self._parse_addr(addr)
 
         for i in range(self.num_lines):
-            if self.sets[index][i].checkTag(tag):
+            if self.sets[index][i].check_tag(tag):
                 self.sets[index][i].flush(offset)
                 return
 
-    def getNumSets(self):
+    def get_num_sets(self):
         """Returns the number of sets this cache uses."""
         return self.num_sets
 
-    def getNumLines(self):
+    def get_num_lines(self):
         """Returns the number of lines per set."""
         return self.num_lines
 
-    def getLineSize(self):
+    def get_line_size(self):
         """Returns the number of entries per cache line."""
         return self.line_size
 
-    def getCacheDump(self):
+    def get_cache_dump(self):
         """
         Returns a dictionary that contains the number of cache sets,
         the number of cache lines per set, and the size of each line.
@@ -290,19 +301,19 @@ class Cache:
                         "tag": self.sets[i][j].tag
                     } for j in range(self.num_lines)
                 ] for i in range(self.num_sets)],
-            "num_sets": self.getNumSets(),
-            "num_lines": self.getNumLines(),
-            "line_size": self.getLineSize()
+            "num_sets": self.get_num_sets(),
+            "num_lines": self.get_num_lines(),
+            "line_size": self.get_line_size()
         }
         return cache
 
 
-    def printCache(self) -> None:
+    def print_cache(self) -> None:
         """Prints the cache. Only to be used during development."""
         for i in range(len(self.sets)):
             print(i, end=' ')
             for j in range(len(self.sets[i])):
-                if self.sets[i][j].isInUse():
+                if self.sets[i][j].is_in_use():
                     print("*", end='')
                 for a in range(len(self.sets[i][j].data)):
                     print(self.sets[i][j].data[a], end='')
@@ -316,12 +327,12 @@ class CacheRR(Cache):
     def __init__(self, num_sets: int, num_lines: int, line_size: int):
         super().__init__(num_sets, num_lines, line_size)
 
-    def __applyReplacementPolicy__(self, addr: int, data: int):
-        tag, index, offset = self.__parseAddr__(addr)
+    def _apply_replacement_policy(self, addr: int, data: int) -> None:
+        tag, index, offset = self._parse_addr(addr)
 
         replaceIndex = random.randrange(self.num_lines)
-        self.sets[index][replaceIndex].clearData()
-        self.sets[index][replaceIndex].setTag(tag)
+        self.sets[index][replaceIndex].clear_data()
+        self.sets[index][replaceIndex].set_tag(tag)
         self.sets[index][replaceIndex].write(offset, data)
 
 
@@ -348,7 +359,7 @@ class CacheLineLRU(CacheLine):
         super().write(offset, data)
         self.lru_timestamp = time()
 
-    def getLRUTime(self):
+    def get_lru_time(self):
         return self.lru_timestamp
 
     # Should flushing count as an access to a cache line?
@@ -364,23 +375,23 @@ class CacheLRU(Cache):
         super().__init__(num_sets, num_lines, line_size)
         self.sets = [[CacheLineLRU(line_size) for a in range(num_lines)] for b in range(num_sets)]
 
-    def __applyReplacementPolicy__(self, addr: int, data: int):
+    def _apply_replacement_policy(self, addr: int, data: int) -> None:
         """
         Implements a least-recently-used policy by using the lru_timestamp variable
         from CacheLineLRU.
         """
 
-        tag, index, offset = self.__parseAddr__(addr)
+        tag, index, offset = self._parse_addr(addr)
 
         lru_index = 0
-        lru_time = self.sets[index][0].getLRUTime()
-        for i in range(self.line_size):
-            if self.sets[index][i].getLRUTime() < lru_time:
+        lru_time = self.sets[index][0].get_lru_time()
+        for i in range(self.num_lines):
+            if self.sets[index][i].get_lru_time() < lru_time:
                 lru_index = i
-                lru_time = self.sets[index][i].getLRUTime()
+                lru_time = self.sets[index][i].get_lru_time()
 
-        self.sets[index][lru_index].clearData()
-        self.sets[index][lru_index].setTag(tag)
+        self.sets[index][lru_index].clear_data()
+        self.sets[index][lru_index].set_tag(tag)
         self.sets[index][lru_index].write(offset, data)
 
 class CacheLineFIFO(CacheLine):
@@ -408,7 +419,7 @@ class CacheLineFIFO(CacheLine):
 
         super().write(offset, data)
 
-    def getFIFOTime(self):
+    def get_fifo_time(self):
         return self.first_write
 
 class CacheFIFO(Cache):
@@ -418,34 +429,51 @@ class CacheFIFO(Cache):
         super().__init__(num_sets, num_lines, line_size)
         self.sets = [[CacheLineFIFO(line_size) for a in range(num_lines)] for b in range(num_sets)]
 
-    def __applyReplacementPolicy__(self, addr: int, data: int):
+    def _apply_replacement_policy(self, addr: int, data: int) -> None:
         """
         Implements a least-recently-used policy by using the first_write variable
         from CacheLineFIFO.
         """
 
-        tag, index, offset = self.__parseAddr__(addr)
+        tag, index, offset = self._parse_addr(addr)
 
         fifo_index = 0
-        fifo_time = self.sets[index][0].getFIFOTime()
-        for i in range(self.line_size):
-            if self.sets[index][i].getFIFOTime() < fifo_time:
+        fifo_time = self.sets[index][0].get_fifo_time()
+        for i in range(self.num_lines):
+            if self.sets[index][i].get_fifo_time() < fifo_time:
                 fifo_index = i
-                fifo_time = self.sets[index][i].getFIFOTime()
+                fifo_time = self.sets[index][i].get_fifo_time()
 
-        self.sets[index][fifo_index].clearData()
-        self.sets[index][fifo_index].setTag(tag)
+        self.sets[index][fifo_index].clear_data()
+        self.sets[index][fifo_index].set_tag(tag)
         self.sets[index][fifo_index].write(offset, data)
+
+c = CacheLRU(1, 1, 1)
+c.write(0, 0)
+c.write(1, 1)
+
+cache_dump = c.get_cache_dump()
+num_sets = cache_dump["num_sets"]
+num_lines = cache_dump["num_lines"]
+line_size = cache_dump["line_size"]
+for i in range(num_sets):
+    print("Set", i)
+    for j in range(num_lines):
+        line = cache_dump["sets"][i][j]
+        if line["tag"] is None:
+            print("\tLine not in use")
+        else:
+            print("\tLine with Tag", line["tag"], ":", line["data"])
 
 """
 c = CacheFIFO(2, 2, 2)
 c.write(40, 40)
 c.write(0, 1)
-c.printCache()
+c.print_cache()
 c.write(100, 99)
 c.write(0, 1)
-c.printCache()
-a = c.getCacheDump()
+c.print_cache()
+a = c.get_cache_dump()
 print(a)
 print('first set:', a['sets'][0])
 print('first line of first set:', a['sets'][0][0])
