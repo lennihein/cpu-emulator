@@ -112,8 +112,6 @@ class Frontend:
     pc: int 
     bpu : bpu.BPU
 
-
-    #TODO: discuss whether 5 is a reasonable default value for the max_length
     def __init__(self, cpu_bpu : bpu.BPU, cpu_instr_list, maximum=5) -> None:
 
         self.max_length = maximum
@@ -143,16 +141,12 @@ class Frontend:
         while (len(self.instr_queue) < self.max_length):
 
             if self.pc >= len(self.instr_list):
-                #TODO: discuss if we have/ want a functionality to properly raise errors
-                #TODO: discuss if we have/ want something like an exit funtion/ operation or is this the only way a program ends and therefore not actually an error?
-                print("end of program reached by instruction queue\n**goodbye**")
-                return
+
+                raise IndexError("end of program reached by instruction queue")
 
             #sanity check, should never happen since the set_pc function checks for this too and jump goals are set by the parser from labels within the code
             if self.pc < 0:
-                #TODO: exception interface
-                print("pc out of bounds")
-                return
+                raise IndexError("pc negative")
             
             current_instr : parser.Instruction = self.instr_list[self.pc]
             self.instr_queue.append(current_instr)
@@ -183,8 +177,8 @@ class Frontend:
             return self.instr_queue.popleft()
 
         else:
-            print("no instruction in queue")
-            #TODO: proper handling/ interface design if the queue is empty
+            #TODO: discuss whether throwing an error makes sense here; can occur in a normal program sequence, e.g. after the queue was flushed
+            #raise LookupError ("instruction queue is empty")
             return None
 
 
@@ -203,13 +197,13 @@ class Frontend:
         The queue is not automatically flushed.
         This can be done separately as a "mitigation" against Meltdown.
         The max_length of the queue is disregarded when adding the µ-program, so µ-programs can be arbitrarily long and added to full queues.
+        If the µ-code contains jump instructions, the pc will be set according to the last of these jump instructions.
         '''
         
         for current_instr in micro_prog:
 
             self.instr_queue.append(current_instr)
 
-            #do we want to allow this functionality?
             if type(current_instr.ty) == parser.InstrBranch:
         
                 self.pc = current_instr.ops[0]
@@ -224,9 +218,8 @@ class Frontend:
 
             self.pc = new_pc
 
-        #TODO: actual exception/ error interface
         else: 
-            print("new pc out of range")
+            raise IndexError ("new pc out of range")
 
         return
 
@@ -235,8 +228,3 @@ class Frontend:
         Interface to retrieve the current value of the program counter.
         '''
         return self.pc
-
-
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
