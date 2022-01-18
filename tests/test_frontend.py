@@ -35,8 +35,9 @@ class FrontendTest(unittest.TestCase):
 
         front = Frontend(cpu_bpu, instrs, 3)
         cpu_bpu.update(2, True)
-        next_instr = front.fetch_instruction_from_queue()
-        self.assertIsNone(next_instr)   
+        with self.assertRaises(Exception) as context:
+            front.fetch_instruction_from_queue()
+        self.assertTrue('instruction queue is empty' in str(context.exception))   
         front.add_instructions_to_queue()
         self.assertTrue("deque([Instruction(ty=InstructionType(name='addi', opera" in str(front.instr_queue))
         front.add_instructions_to_queue()
