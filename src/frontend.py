@@ -145,7 +145,6 @@ class Frontend:
         else:
             #TODO: discuss whether throwing an error makes sense here; can occur in a normal program sequence, e.g. after the queue was flushed
             raise LookupError("instruction queue is empty")
-            return None
 
 
     def flush_instruction_queue(self) -> None:
