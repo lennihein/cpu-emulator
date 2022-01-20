@@ -13,7 +13,7 @@ class MMUTests(unittest.TestCase):
         # to this address.
         address = random.randint(0, 2 ** word.Word.WIDTH) - (word.Word.WIDTH // 8)
 
-        print("TODO: Test MMU with negative numbers")
+        # TODO: Test MMU with negative numbers
 
         # Reading / Writing bytes
         # random_byte = byte.Byte(random.randint(0, 2 ** 8))
