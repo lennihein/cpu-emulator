@@ -10,10 +10,10 @@ logger.addHandler(stream_handler)
 class FrontendTest(unittest.TestCase):
 
     def test_frontend(self):
-        from src import bpu, parser
+        from src import bpu, parser, instructions
         cpu_bpu = bpu.BPU()
-        addi = parser.InstructionType("addi", ["reg", "reg", "imm"])
-        j = parser.InstrBranch("j", ["label"], "condition needed")
+        addi = instructions.addi
+        j = instructions.InstrBranch("j", ["label"], "condition needed")
         p = parser.Parser()
         p.add_instruction(addi)
         p.add_instruction(j)
@@ -26,11 +26,11 @@ class FrontendTest(unittest.TestCase):
             addi r1, r0, 97
         ''')
         self.assertEqual(instrs, [
-            parser.Instruction(addi, [1, 0, 100]),
-            parser.Instruction(addi, [1, 0, 99]),
-            parser.Instruction(j, [0]),
-            parser.Instruction(addi, [1, 0, 98]),
-            parser.Instruction(addi, [1, 0, 97]),
+            instructions.Instruction(addi, [1, 0, 100]),
+            instructions.Instruction(addi, [1, 0, 99]),
+            instructions.Instruction(j, [0]),
+            instructions.Instruction(addi, [1, 0, 98]),
+            instructions.Instruction(addi, [1, 0, 97]),
         ])
 
         front = Frontend(cpu_bpu, instrs, 3)
@@ -66,7 +66,7 @@ class FrontendTest(unittest.TestCase):
         front.add_instructions_to_queue()
         self.assertTrue("deque([Instruction(ty=InstructionType(name='addi', operan" in str(front.instr_queue))
 
-        micro_program=list([parser.Instruction(addi, [1, 1, 2]), parser.Instruction(j, [1])])
+        micro_program=list([instructions.Instruction(addi, [1, 1, 2]), instructions.Instruction(j, [1])])
         front.add_micro_program(micro_program)
 
         self.assertTrue("deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100])," in str(front.instr_queue))
