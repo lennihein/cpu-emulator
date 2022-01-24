@@ -35,8 +35,9 @@ class FrontendTest(unittest.TestCase):
 
         front = Frontend(cpu_bpu, instrs, 3)
         cpu_bpu.update(2, True)
-        next_instr = front.fetch_instruction_from_queue()
-        self.assertIsNone(next_instr)   
+        with self.assertRaises(Exception) as context:
+            front.fetch_instruction_from_queue()
+        self.assertTrue('instruction queue is empty' in str(context.exception))   
         front.add_instructions_to_queue()
         self.assertTrue("deque([Instruction(ty=InstructionType(name='addi', opera" in str(front.instr_queue))
         front.add_instructions_to_queue()
@@ -52,6 +53,10 @@ class FrontendTest(unittest.TestCase):
 
         front.flush_instruction_queue()
         self.assertEqual(str(front.instr_queue), "deque([])")
+
+        with self.assertRaises(Exception) as context:
+            front.fetch_instruction_from_queue()
+        self.assertTrue('instruction queue is empty' in str(context.exception))
 
         cpu_bpu.update(2, False)
         cpu_bpu.update(2, False)
@@ -76,16 +81,20 @@ class FrontendTest(unittest.TestCase):
         next_instr = front.fetch_instruction_from_queue()
         next_instr = front.fetch_instruction_from_queue()
 
-        front.set_pc(-1)
-        # TODO: test if out of bounds
+        with self.assertRaises(Exception) as context:
+            front.set_pc(-1)
+        self.assertTrue('new pc out of range' in str(context.exception))
 
-        front.set_pc(6)
-        # TODO: test if out of bounds
+        with self.assertRaises(Exception) as context:
+            front.set_pc(6)
+        self.assertTrue('new pc out of range' in str(context.exception))
 
         front.set_pc(4)
-        front.add_instructions_to_queue()
 
-        # TODO: test if end of program reached
+        with self.assertRaises(Exception) as context:
+            front.add_instructions_to_queue()
+        self.assertTrue('end of program reached by instruction queue' in str(context.exception))
+
 
 
 if __name__ == '__main__':

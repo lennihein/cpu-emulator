@@ -6,13 +6,11 @@ Instructions are taken from a list provided by the parser and added to the queue
 Instructions can be fetched from the queue, e.g. by reservation stations.
 Supports flushing the queue and adding a micro program directly to the queue.
 
-TODO:discuss other points as indicated in the code.
-TODO:make the test prettier/ maybe split it up between functions.
-
 # Example
 
 >>> import bpu
 >>> import parser
+
 >>> cpu_bpu = bpu.BPU()
 >>> addi = parser.InstructionType("addi", ["reg", "reg", "imm"])
 >>> j = parser.InstrBranch("j", ["label"], "condition needed")
@@ -25,71 +23,39 @@ TODO:make the test prettier/ maybe split it up between functions.
 ...     addi r1, r0, 99
 ...     j a    
 ...     addi r1, r0, 98
-...     addi r1, r0, 97
 ... ''')
->>> assert instrs == [
-...     parser.Instruction(addi, [1, 0, 100]),
-...     parser.Instruction(addi, [1, 0, 99]),
-...     parser.Instruction(j, [0]),
-...     parser.Instruction(addi, [1, 0, 98]),
-...     parser.Instruction(addi, [1, 0, 97]),
-... ]
+
 >>> front = Frontend(cpu_bpu, instrs, 3)
 >>> cpu_bpu.update(2, True)
->>> next_instr = front.fetch_instruction_from_queue()
-no instruction in queue
->>> front.add_instructions_to_queue()
->>> print(front.instr_queue)
-deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0])])
+
 >>> front.add_instructions_to_queue()
 >>> print(front.instr_queue)
 deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0])])
 >>> print(front.get_pc())
 0
+
 >>> next_instr = front.fetch_instruction_from_queue()
 >>> print(next_instr)
 Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100])
 >>> print(front.instr_queue)
 deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0])])
->>> print(cpu_bpu.counter)
-[2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
->>> print(front.get_pc())
-0
+
 >>> front.add_instructions_to_queue()
 >>> print(front.instr_queue)
 deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100])])
->>> front.flush_instruction_queue()
->>> print(front.instr_queue)
-deque([])
->>> cpu_bpu.update(2, False)
->>> cpu_bpu.update(2, False)
->>> print(cpu_bpu.counter)
-[2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
->>> front.add_instructions_to_queue()
->>> print(front.instr_queue)
-deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 98])])
+
 >>> micro_program=list([parser.Instruction(addi, [1, 1, 2]), parser.Instruction(j, [1])])
 >>> front.add_micro_program(micro_program)
 >>> print(front.instr_queue)
-deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 98]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 1, 2]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[1])])
->>> next_instr = front.fetch_instruction_from_queue()
->>> next_instr = front.fetch_instruction_from_queue()
->>> next_instr = front.fetch_instruction_from_queue()
->>> front.add_instructions_to_queue()
+deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 1, 2]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[1])])
+
+>>> front.flush_instruction_queue()
 >>> print(front.instr_queue)
-deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 1, 2]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[1]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99])])
->>> next_instr = front.fetch_instruction_from_queue()
->>> next_instr = front.fetch_instruction_from_queue()
->>> front.set_pc(-1)
-new pc out of range
->>> front.set_pc(6)
-new pc out of range
+deque([])
+
 >>> front.set_pc(4)
 >>> front.add_instructions_to_queue()
-end of program reached by instruction queue
-**goodbye**
->>> print(front.instr_queue)
-deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 97])])
+Error: end of program reached by instruction queue
 """
 
 
@@ -103,7 +69,7 @@ class Frontend:
     '''
     Holds and manages a queue of at most max_length instructions.
     An exception to this max length is made when adding micro programs.
-    Expects a already initialised bpu (e.g. shallow copy of the bpu from a surrounding cpu class) and a list of instructions (e.g. as provided by the Parser in paser.py) upon initilisation.
+    Expects an already initialised bpu (e.g. shallow copy of the bpu from a surrounding cpu class) and a list of instructions (e.g. as provided by the Parser in paser.py) upon initilisation.
     Max_length can be initialised, too, otherwise a default of 5 is used.
     Uses a program counter pc to keep track of the next instruction from the provided instruction list that should be added to the queue.
     '''
@@ -112,8 +78,6 @@ class Frontend:
     pc: int 
     bpu : bpu.BPU
 
-
-    #TODO: discuss whether 5 is a reasonable default value for the max_length
     def __init__(self, cpu_bpu : bpu.BPU, cpu_instr_list, maximum=5) -> None:
 
         self.max_length = maximum
@@ -143,16 +107,12 @@ class Frontend:
         while (len(self.instr_queue) < self.max_length):
 
             if self.pc >= len(self.instr_list):
-                #TODO: discuss if we have/ want a functionality to properly raise errors
-                #TODO: discuss if we have/ want something like an exit funtion/ operation or is this the only way a program ends and therefore not actually an error?
-                print("end of program reached by instruction queue\n**goodbye**")
-                return
+
+                raise IndexError("end of program reached by instruction queue")
 
             #sanity check, should never happen since the set_pc function checks for this too and jump goals are set by the parser from labels within the code
             if self.pc < 0:
-                #TODO: exception interface
-                print("pc out of bounds")
-                return
+                raise IndexError("pc negative")
             
             current_instr : parser.Instruction = self.instr_list[self.pc]
             self.instr_queue.append(current_instr)
@@ -183,9 +143,8 @@ class Frontend:
             return self.instr_queue.popleft()
 
         else:
-            print("no instruction in queue")
-            #TODO: proper handling/ interface design if the queue is empty
-            return None
+            #TODO: discuss whether throwing an error makes sense here; can occur in a normal program sequence, e.g. after the queue was flushed
+            raise LookupError("instruction queue is empty")
 
 
     def flush_instruction_queue(self) -> None:
@@ -203,13 +162,13 @@ class Frontend:
         The queue is not automatically flushed.
         This can be done separately as a "mitigation" against Meltdown.
         The max_length of the queue is disregarded when adding the µ-program, so µ-programs can be arbitrarily long and added to full queues.
+        If the µ-code contains jump instructions, the pc will be set according to the last of these jump instructions.
         '''
         
         for current_instr in micro_prog:
 
             self.instr_queue.append(current_instr)
 
-            #do we want to allow this functionality?
             if type(current_instr.ty) == parser.InstrBranch:
         
                 self.pc = current_instr.ops[0]
@@ -224,9 +183,8 @@ class Frontend:
 
             self.pc = new_pc
 
-        #TODO: actual exception/ error interface
         else: 
-            print("new pc out of range")
+            raise IndexError ("new pc out of range")
 
         return
 
@@ -235,8 +193,3 @@ class Frontend:
         Interface to retrieve the current value of the program counter.
         '''
         return self.pc
-
-
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
