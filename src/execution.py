@@ -1,25 +1,15 @@
-"""
-Execution Engine that executes instructions out-of-order.
-
-The main component here is the Reservation Station; we don't model individual Execution Units and
-just pretend there is an infinite number of them.
-"""
+"""Execution Engine that executes instructions out-of-order."""
 
 from dataclasses import dataclass
-from typing import NewType, Optional, Union, cast
+from typing import NewType, Optional, TypeVar, Union, cast
 
-from .instructions import (
-    InstrImm,
-    InstrLoad,
-    InstrReg,
-    InstrStore,
-    Instruction,
-    InstructionType,
-    OperandKind,
-    RegID,
-)
+from .instructions import InstrImm, InstrLoad, InstrReg, InstrStore, Instruction, RegID
 from .mmu import MMU
 from .word import Word
+
+__all__ = ["ExecutionEngine"]
+
+T = TypeVar("T")
 
 # ID of a slot of the Reservation Station or the Load Buffer, also used as an index
 SlotID = NewType("SlotID", int)
@@ -29,7 +19,7 @@ SlotID = NewType("SlotID", int)
 class SlotALU:
     """An occupied slot in the Reservation Station, storing an ALU instruction in flight."""
 
-    instr_ty: InstructionType
+    instr_ty: Union[InstrReg, InstrImm]
     # Either a `Word` with the operand's value, or a `SlotID` referencing the slot that will produce
     # the operand value
     operands: list[Union[Word, SlotID]]
@@ -40,8 +30,10 @@ class SlotALU:
 class SlotLoad:
     """An occupied slot in the Load Buffer, storing a load instruction in flight."""
 
-    instr_ty: InstructionType
+    instr_ty: InstrLoad
+    # Effective address of the memory access
     address: Word
+    # Value loaded from memory, or `None` if the load instruction was issued this cycle
     value: Optional[Word]
     cycles_remaining: int
 
@@ -50,24 +42,34 @@ class SlotLoad:
 class SlotStore:
     """An occupied slot in the Store Buffer, storing a store instruction in flight."""
 
-    instr_ty: InstructionType
+    instr_ty: InstrStore
+    # Effective address of the memory access
     address: Word
+    # Value stored to memory, or a `SlotID` if the value is yet to be produced by another slot
     value: Union[Word, SlotID]
     cycles_remaining: int
+    # Tracks if we already performed the store operation
+    completed: bool
 
 
 class ExecutionEngine:
     """
-    Reseration Station, containing of a number of slots and the register file.
+    Execution Engine that executes instructions out-of-order.
+
+    The Execution Engine contains the register file and the Reservation Station, Load Buffer, and
+    Store Buffer. The latter contain a number of slots for ALU, load, and store instructions,
+    respectively.
 
     Each slot is either free or contains an `Instruction` in flight. An instruction in flight is
     either still waiting for some of its operands to be produced by preceding instructions, or being
-    executed.
+    executed. The number of instructions that can execute concurrently is only limited by the amount
+    of slots; we don't model individual Execution Units and just pretend there is an infinite number
+    of them.
 
     Each register in the register file either contains a value or references a slot that will
-    produce the register's value. Since instructions are executed out-of-order, the state of the
-    register file at a single point in time might not represent the architectural register state at
-    that or any other point in time.
+    produce the register's value. Since instructions are issued in-order, the state of the register
+    file at a single point in time represents the architectural register state at that point in
+    time, with yet-unknown register values present as slot references.
     """
 
     _mmu: MMU
@@ -75,8 +77,11 @@ class ExecutionEngine:
     # Register file, either a `Word` with a value or a `SlotID` referencing the slot that will
     # produce the register value
     _registers: list[Union[Word, SlotID]]
+    # Reservation Station with slots for ALU instructions
     _alus: list[Optional[SlotALU]]
+    # Load Buffer with slots for load instructions
     _loads: list[Optional[SlotLoad]]
+    # Store Buffer with slots for store instructions
     _stores: list[Optional[SlotStore]]
 
     def __init__(self, mmu, regs=32, alus=8, loads=4, stores=4):
@@ -91,20 +96,8 @@ class ExecutionEngine:
         self._loads = [None for _ in range(loads)]
         self._stores = [None for _ in range(stores)]
 
-    def _initial_operand(self, ty: OperandKind, op: int) -> Union[Word, SlotID]:
-        """Return the initial operand to be stored in a newly populated slot."""
-        if ty == "reg":
-            return self._registers[op]
-
-        if ty == "imm":
-            return Word(op)
-
-        if ty == "label":
-            return Word(op)
-
-        raise ValueError(f"Unknown operand type {ty!r}")
-
-    def _put_into_free_slot(self, slots, new_slot) -> Optional[int]:
+    @staticmethod
+    def _put_into_free_slot(slots: list[Optional[T]], new_slot: T) -> Optional[int]:
         """Try to put the given new slot into a free slot of the given slots."""
         for i, slot in enumerate(slots):
             if slot is not None:
@@ -118,25 +111,44 @@ class ExecutionEngine:
 
     def _try_issue_alu(self, instr: Instruction) -> bool:
         """Try to issue the given ALU instruction."""
-        operands = [
-            self._initial_operand(ty, op)
-            for ty, op in zip(instr.ty.operand_types[1:], instr.ops[1:])
-        ]
+        # Get the source operands depending on the instruction type
+        if isinstance(instr.ty, InstrReg):
+            # This is an `InstrReg` instruction, with source operands `reg`, `reg`
+            operands = [self._registers[instr.ops[1]], self._registers[instr.ops[2]]]
+        else:
+            # This is an `InstrImm` instruction, with source operands `reg`, `imm`
+            operands = [self._registers[instr.ops[1]], Word(instr.ops[2])]
+
+        # Create slot entry and put it into a free slot
         alu = SlotALU(
-            instr_ty=instr.ty,
+            instr_ty=cast(Union[InstrReg, InstrImm], instr.ty),
             operands=operands,
             cycles_remaining=instr.ty.cycles,
         )
-
         idx = self._put_into_free_slot(self._alus, alu)
         if idx is None:
             return False
 
         # Mark destination register as waiting on new slot
-        assert instr.ty.operand_types[0] == "reg"
         self._registers[instr.ops[0]] = SlotID(idx)
 
         return True
+
+    @staticmethod
+    def _accesses_overlap(
+        slot: Union[SlotLoad, SlotStore],
+        addr: Word,
+        ty: Union[InstrLoad, InstrStore],
+    ) -> bool:
+        """Check if two memory accesses overlap."""
+
+        def access(addr, ty):
+            if ty.width_byte:
+                return {addr.value}
+            else:
+                return {addr.value, addr.value + 1}
+
+        return bool(access(slot.address, slot.instr_ty) & access(addr, ty))
 
     def _try_issue_mem(self, instr: Instruction) -> bool:
         """Try to issue the given load or store instruction."""
@@ -151,14 +163,15 @@ class ExecutionEngine:
         address = cast(Word, self._registers[base]) + offset
 
         # Check for RAW / WAW hazards
-        for store in self._stores:
-            # TODO: Check for overlap in address
-            if store is not None and store.address == address:
+        for haz_store in self._stores:
+            ty = cast(Union[InstrLoad, InstrStore], instr.ty)
+            if haz_store is not None and self._accesses_overlap(haz_store, address, ty):
                 return False
 
         if isinstance(instr.ty, InstrLoad):
+            # Create slot entry and put it into a free slot
             load = SlotLoad(
-                instr_ty=instr.ty,
+                instr_ty=cast(InstrLoad, instr.ty),
                 address=address,
                 value=None,
                 cycles_remaining=0,
@@ -174,27 +187,30 @@ class ExecutionEngine:
 
         else:
             # Check for WAR hazard
-            for load in self._loads:
-                # TODO: Check for overlap in address
-                if load is not None and load.address == address:
+            for haz_load in self._loads:
+                ty = cast(Union[InstrLoad, InstrStore], instr.ty)
+                if haz_load is not None and self._accesses_overlap(haz_load, address, ty):
                     return False
 
+            # Create slot entry and put it into a free slot
             store = SlotStore(
-                instr_ty=instr.ty,
+                instr_ty=cast(InstrStore, instr.ty),
                 address=address,
                 value=self._registers[instr.ops[0]],
                 cycles_remaining=0,
+                completed=False,
             )
-
             idx = self._put_into_free_slot(self._stores, store)
             return idx is not None
 
     def try_issue(self, instr: Instruction) -> bool:
-        """Try to issue the given instruction by putting it in a free slot.
+        """
+        Try to issue the given instruction by putting it in a free slot.
 
         ALU instructions will be put in the Reservation Station, load instructions in the Load
         Buffer and store instructions in the Store Buffer. Additionally, load and store instructions
-        are only issued once the effective address of their memory access can be computed.
+        are only issued once the effective address of their memory access can be computed and there
+        are no hazards with load or store instructions in-flight.
 
         Return whether the instruction was issued.
         """
@@ -206,7 +222,8 @@ class ExecutionEngine:
         raise ValueError(f"Unsupported instruction type {instr.ty!r}")
 
     def _update_waiting(self, slot_id: SlotID, result: Word):
-        """Update all registers and slots that wait on the given slot.
+        """
+        Update all registers and slots that wait on the given slot.
 
         This models broadcasting the given result on the CDB.
         """
@@ -267,7 +284,10 @@ class ExecutionEngine:
 
             # Inform the memory subsystem of loads that just got issued
             if load.value is None:
-                val, cycles = self._mmu.read_word(load.address.value)
+                if load.instr_ty.width_byte:
+                    val, cycles = self._mmu.read_byte(load.address.value)
+                else:
+                    val, cycles = self._mmu.read_word(load.address.value)
                 load.value = val
                 load.cycles_remaining = cycles
 
@@ -295,6 +315,16 @@ class ExecutionEngine:
             if not isinstance(store.value, Word):
                 continue
 
+            if not store.completed:
+                # Actually perform the store
+                if store.instr_ty.width_byte:
+                    cycles = self._mmu.write_byte(store.address.value, store.value)
+                else:
+                    cycles = self._mmu.write_word(store.address.value, store.value)
+
+                store.cycles_remaining = cycles
+                store.completed = True
+
             # Execute store
             store.cycles_remaining -= 1
             # Check if store is done
@@ -304,9 +334,6 @@ class ExecutionEngine:
             if retired:
                 continue
             retired = True
-
-            # Actually perform the store
-            self._mmu.write_word(store.address.value, store.value)
 
             # Free retired slot
             self._stores[i] = None

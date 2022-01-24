@@ -3,7 +3,7 @@
 import operator
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Iterable, Literal, NewType, Optional, Union
+from typing import Callable, Literal, NewType, Union
 
 from .word import Word
 
@@ -85,18 +85,6 @@ class Instruction:
 
     ty: InstructionType
     ops: list[int]
-
-    def destination(self) -> Optional[RegID]:
-        if isinstance(self.ty, (InstrReg, InstrImm, InstrLoad)):
-            assert self.ty.operand_types[0] == "reg"
-            return RegID(self.ops[0])
-        return None
-
-    def sources(self) -> Iterable[Union[Word, RegID]]:
-        if isinstance(self.ty, (InstrReg, InstrImm, InstrLoad)):
-            assert self.ty.operand_types[0] == "reg"
-            return RegID(self.ops[0])
-        return None
 
 
 add = InstrReg("add", operator.add)
