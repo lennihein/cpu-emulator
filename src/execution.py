@@ -8,7 +8,16 @@ just pretend there is an infinite number of them.
 from dataclasses import dataclass
 from typing import NewType, Optional, Union, cast
 
-from .instructions import InstrLoad, InstrStore, Instruction, InstructionType, OperandKind, RegID
+from .instructions import (
+    InstrImm,
+    InstrLoad,
+    InstrReg,
+    InstrStore,
+    Instruction,
+    InstructionType,
+    OperandKind,
+    RegID,
+)
 from .mmu import MMU
 from .word import Word
 
@@ -17,10 +26,10 @@ SlotID = NewType("SlotID", int)
 
 
 @dataclass
-class Slot:
-    """An occupied slot in the Reservation Station, storing an instruction in flight."""
+class SlotALU:
+    """An occupied slot in the Reservation Station, storing an ALU instruction in flight."""
 
-    instr: InstructionType
+    instr_ty: InstructionType
     # Either a `Word` with the operand's value, or a `SlotID` referencing the slot that will produce
     # the operand value
     operands: list[Union[Word, SlotID]]
@@ -28,22 +37,26 @@ class Slot:
 
 
 @dataclass
-class Load:
-    instr: InstructionType
+class SlotLoad:
+    """An occupied slot in the Load Buffer, storing a load instruction in flight."""
+
+    instr_ty: InstructionType
     address: Word
     value: Optional[Word]
     cycles_remaining: int
 
 
 @dataclass
-class Store:
-    instr: InstructionType
+class SlotStore:
+    """An occupied slot in the Store Buffer, storing a store instruction in flight."""
+
+    instr_ty: InstructionType
     address: Word
     value: Union[Word, SlotID]
     cycles_remaining: int
 
 
-class ReservationStation:
+class ExecutionEngine:
     """
     Reseration Station, containing of a number of slots and the register file.
 
@@ -59,21 +72,23 @@ class ReservationStation:
 
     _mmu: MMU
 
-    _slots: list[Optional[Slot]]
+    # Register file, either a `Word` with a value or a `SlotID` referencing the slot that will
+    # produce the register value
     _registers: list[Union[Word, SlotID]]
-    _loads: list[Optional[Load]]
-    _stores: list[Optional[Store]]
+    _alus: list[Optional[SlotALU]]
+    _loads: list[Optional[SlotLoad]]
+    _stores: list[Optional[SlotStore]]
 
-    def __init__(self, mmu, slots=8, regs=32, loads=4, stores=4):
+    def __init__(self, mmu, regs=32, alus=8, loads=4, stores=4):
         """Create a new Reservation Station, with empty slots and zeroed registers."""
         self._mmu = mmu
-        # Initialize slots to empty
-        self._slots = [None for _ in range(slots)]
+
         # Initialize registers to zero
         self._registers = [Word(0) for _ in range(regs)]
-        # Initialize loads to empty
+
+        # Initialize slots to empty
+        self._alus = [None for _ in range(alus)]
         self._loads = [None for _ in range(loads)]
-        # Initialize stores to empty
         self._stores = [None for _ in range(stores)]
 
     def _initial_operand(self, ty: OperandKind, op: int) -> Union[Word, SlotID]:
@@ -89,91 +104,138 @@ class ReservationStation:
 
         raise ValueError(f"Unknown operand type {ty!r}")
 
-    def try_issue(self, instr: Instruction) -> bool:
-        """Put the given instruction in a free slot."""
-        if isinstance(instr.ty, (InstrLoad, InstrStore)):
-            base = RegID(instr.ops[1])
-            offset = Word(instr.ops[2])
+    def _put_into_free_slot(self, slots, new_slot) -> Optional[int]:
+        """Try to put the given new slot into a free slot of the given slots."""
+        for i, slot in enumerate(slots):
+            if slot is not None:
+                continue
 
-            # Only issue memory instructions when the effective address is available
-            if not isinstance(self._registers[base], Word):
+            # Found a free slot, populate it
+            slots[i] = new_slot
+
+            return i
+        return None
+
+    def _try_issue_alu(self, instr: Instruction) -> bool:
+        """Try to issue the given ALU instruction."""
+        operands = [
+            self._initial_operand(ty, op)
+            for ty, op in zip(instr.ty.operand_types[1:], instr.ops[1:])
+        ]
+        alu = SlotALU(
+            instr_ty=instr.ty,
+            operands=operands,
+            cycles_remaining=instr.ty.cycles,
+        )
+
+        idx = self._put_into_free_slot(self._alus, alu)
+        if idx is None:
+            return False
+
+        # Mark destination register as waiting on new slot
+        assert instr.ty.operand_types[0] == "reg"
+        self._registers[instr.ops[0]] = SlotID(idx)
+
+        return True
+
+    def _try_issue_mem(self, instr: Instruction) -> bool:
+        """Try to issue the given load or store instruction."""
+        base = RegID(instr.ops[1])
+        offset = Word(instr.ops[2])
+
+        # Only issue memory instructions when the effective address is available
+        if not isinstance(self._registers[base], Word):
+            return False
+
+        # Compute effective address
+        address = cast(Word, self._registers[base]) + offset
+
+        # Check for RAW / WAW hazards
+        for store in self._stores:
+            # TODO: Check for overlap in address
+            if store is not None and store.address == address:
                 return False
 
-            # Compute effective address
-            address = cast(Word, self._registers[base]) + offset
+        if isinstance(instr.ty, InstrLoad):
+            load = SlotLoad(
+                instr_ty=instr.ty,
+                address=address,
+                value=None,
+                cycles_remaining=0,
+            )
+            idx = self._put_into_free_slot(self._loads, load)
+            if idx is None:
+                return False
 
-            # Check for RAW / WAW hazards
-            for store in self._stores:
-                # TODO: Check for overlap in address
-                if store is not None and store.address == address:
-                    return False
+            # Mark destination register as waiting on this slot
+            self._registers[instr.ops[0]] = SlotID(len(self._alus) + idx)
 
-            if isinstance(instr.ty, InstrLoad):
-                # Put load instruction into the load buffer
-                for i, load in enumerate(self._loads):
-                    if load is not None:
-                        continue
-
-                    # Found a free slot, populate it
-                    self._loads[i] = Load(
-                        instr=instr.ty,
-                        address=address,
-                        value=None,
-                        cycles_remaining=0,
-                    )
-
-                    # Mark destination register as waiting on this slot
-                    self._registers[instr.ops[0]] = SlotID(len(self._slots) + i)
-
-                    return True
-
-            else:
-                # Check for WAR hazard
-                for load in self._loads:
-                    # TODO: Check for overlap in address
-                    if load is not None and load.address == address:
-                        return False
-
-                # Put store instruction into the store buffer
-                for i, store in enumerate(self._stores):
-                    if store is not None:
-                        continue
-
-                    # Found a free slot, populate it
-                    self._stores[i] = Store(
-                        instr=instr.ty,
-                        address=address,
-                        value=self._registers[instr.ops[0]],
-                        cycles_remaining=0,
-                    )
-
-                    return True
+            return True
 
         else:
-            for i, slot in enumerate(self._slots):
-                if slot is not None:
-                    continue
+            # Check for WAR hazard
+            for load in self._loads:
+                # TODO: Check for overlap in address
+                if load is not None and load.address == address:
+                    return False
 
-                # Found a free slot, populate it
-                operands = [
-                    self._initial_operand(ty, op)
-                    for ty, op in zip(instr.ty.operand_types[1:], instr.ops[1:])
-                ]
-                self._slots[i] = Slot(instr.ty, operands, instr.ty.cycles)
+            store = SlotStore(
+                instr_ty=instr.ty,
+                address=address,
+                value=self._registers[instr.ops[0]],
+                cycles_remaining=0,
+            )
 
-                # Mark destination register as waiting on this slot
-                assert instr.ty.operand_types[0] == "reg"
-                self._registers[instr.ops[0]] = SlotID(i)
+            idx = self._put_into_free_slot(self._stores, store)
+            return idx is not None
 
-                return True
-        return False
+    def try_issue(self, instr: Instruction) -> bool:
+        """Try to issue the given instruction by putting it in a free slot.
+
+        ALU instructions will be put in the Reservation Station, load instructions in the Load
+        Buffer and store instructions in the Store Buffer. Additionally, load and store instructions
+        are only issued once the effective address of their memory access can be computed.
+
+        Return whether the instruction was issued.
+        """
+        if isinstance(instr.ty, (InstrReg, InstrImm)):
+            return self._try_issue_alu(instr)
+        if isinstance(instr.ty, (InstrLoad, InstrStore)):
+            return self._try_issue_mem(instr)
+
+        raise ValueError(f"Unsupported instruction type {instr.ty!r}")
+
+    def _update_waiting(self, slot_id: SlotID, result: Word):
+        """Update all registers and slots that wait on the given slot.
+
+        This models broadcasting the given result on the CDB.
+        """
+        # Update all waiting registers
+        for i, reg in enumerate(self._registers):
+            if reg == slot_id:
+                self._registers[i] = result
+
+        # Update all waiting alus
+        for alu in self._alus:
+            if alu is None:
+                continue
+            for i, op in enumerate(alu.operands):
+                if op == slot_id:
+                    alu.operands[i] = result
+
+        # Update all waiting stores
+        for store in self._stores:
+            if store is None:
+                continue
+            if store.value == slot_id:
+                store.value = result
 
     def tick(self):
         """Execute instructions that are ready."""
         # We only retire up to one instruction each cycle
         retired = False
 
-        for i, slot in enumerate(self._slots):
+        for i, slot in enumerate(self._alus):
             # Skip free slots
             if slot is None:
                 continue
@@ -192,30 +254,11 @@ class ReservationStation:
             retired = True
 
             # Compute result
-            res = slot.instr.compute_result(*slot.operands)
-
-            # Update all waiting registers
-            for j, reg in enumerate(self._registers):
-                if reg == SlotID(i):
-                    self._registers[j] = res
-
-            # Update all waiting slots
-            for waiting in self._slots:
-                if waiting is None:
-                    continue
-                for j, op in enumerate(waiting.operands):
-                    if op == SlotID(i):
-                        waiting.operands[j] = res
-
-            # Update all waiting stores
-            for waiting in self._stores:
-                if waiting is None:
-                    continue
-                if waiting.value == SlotID(i):
-                    waiting.value = res
+            res = slot.instr_ty.compute_result(*slot.operands)
+            self._update_waiting(SlotID(i), res)
 
             # Free retired slot
-            self._slots[i] = None
+            self._alus[i] = None
 
         for i, load in enumerate(self._loads):
             # Skip free slots
@@ -238,25 +281,8 @@ class ReservationStation:
                 continue
             retired = True
 
-            # Update all waiting registers
-            for j, reg in enumerate(self._registers):
-                if reg == SlotID(len(self._slots) + i):
-                    self._registers[j] = load.value
-
-            # Update all waiting slots
-            for waiting in self._slots:
-                if waiting is None:
-                    continue
-                for j, op in enumerate(waiting.operands):
-                    if op == SlotID(len(self._slots) + i):
-                        waiting.operands[j] = load.value
-
-            # Update all waiting stores
-            for waiting in self._stores:
-                if waiting is None:
-                    continue
-                if waiting.value == SlotID(len(self._slots) + i):
-                    waiting.value = load.value
+            # Broadcast result
+            self._update_waiting(SlotID(len(self._alus) + i), load.value)
 
             # Free retired slot
             self._loads[i] = None

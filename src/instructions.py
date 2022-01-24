@@ -1,6 +1,7 @@
 """All the instructions in our instruction set, and the types used to describe them."""
 
 import operator
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Callable, Iterable, Literal, NewType, Optional, Union
 
@@ -12,15 +13,17 @@ OperandKind = Union[Literal["reg"], Literal["imm"], Literal["label"]]
 RegID = NewType("RegID", int)
 
 
-class InstructionType:
+class InstructionType(ABC):
     """Information about a type of instruction, e.g. `add reg, reg, reg` or `subi reg, reg, imm`."""
 
     operand_types: list[OperandKind]
     name: str
     cycles: int
 
-    def __init__(self):
-        raise TypeError("Don't instantiate InstructionType directly, use one of its subclasses")
+    @abstractmethod
+    def __init__(self, name, cycles):
+        self.name = name
+        self.cycles = cycles
 
     def __repr__(self):
         return f"<InstructionType '{self.name} {', '.join(self.operand_types)}'>"
@@ -32,8 +35,8 @@ class InstrReg(InstructionType):
     compute_result: Callable[[Word, Word], Word]
 
     def __init__(self, name, compute_result, cycles=1):
-        self.name = name
-        self.cycles = cycles
+        super().__init__(name, cycles)
+
         self.compute_result = compute_result
 
 
@@ -43,8 +46,8 @@ class InstrImm(InstructionType):
     compute_result: Callable[[Word, Word], Word]
 
     def __init__(self, name, compute_result, cycles=1):
-        self.name = name
-        self.cycles = cycles
+        super().__init__(name, cycles)
+
         self.compute_result = compute_result
 
 
@@ -60,8 +63,8 @@ class InstrLoad(InstructionType):
     width_byte: bool
 
     def __init__(self, name, width_byte, cycles=1):
-        self.name = name
-        self.cycles = cycles
+        super().__init__(name, cycles)
+
         self.width_byte = width_byte
 
 
@@ -71,8 +74,8 @@ class InstrStore(InstructionType):
     width_byte: bool
 
     def __init__(self, name, width_byte, cycles=1):
-        self.name = name
-        self.cycles = cycles
+        super().__init__(name, cycles)
+
         self.width_byte = width_byte
 
 
@@ -84,10 +87,16 @@ class Instruction:
     ops: list[int]
 
     def destination(self) -> Optional[RegID]:
-        ...
+        if isinstance(self.ty, (InstrReg, InstrImm, InstrLoad)):
+            assert self.ty.operand_types[0] == "reg"
+            return RegID(self.ops[0])
+        return None
 
     def sources(self) -> Iterable[Union[Word, RegID]]:
-        ...
+        if isinstance(self.ty, (InstrReg, InstrImm, InstrLoad)):
+            assert self.ty.operand_types[0] == "reg"
+            return RegID(self.ops[0])
+        return None
 
 
 add = InstrReg("add", operator.add)
