@@ -134,7 +134,7 @@ class Frontend:
                 self.pc = self.pc + 1
         return
 
-    def fetch_instruction_from_queue(self) -> parser.Instruction:
+    def pop_instruction_from_queue(self) -> parser.Instruction:
         '''
         Takes the first (current first in) instruction from the instruction queue and returns it.
         '''
@@ -146,6 +146,8 @@ class Frontend:
             #TODO: discuss whether throwing an error makes sense here; can occur in a normal program sequence, e.g. after the queue was flushed
             raise LookupError("instruction queue is empty")
 
+    def fetch_instruction_from_queue(self) -> parser.Instruction:
+        return self.instr_queue[0] if len(self.instr_queue) > 0 else None
 
     def flush_instruction_queue(self) -> None:
         '''
