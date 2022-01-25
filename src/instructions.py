@@ -57,6 +57,13 @@ class InstrBranch(InstructionType):
     operand_types = ["reg", "reg", "label"]
 
     condition: Callable[[Word, Word], bool]
+    cycles: int
+
+    def __init__(self, name, condition, cycles=1):
+        super().__init__(name)
+
+        self.condition = condition
+        self.cycles = cycles
 
 
 class InstrLoad(InstructionType):
