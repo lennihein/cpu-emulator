@@ -18,12 +18,10 @@ class InstructionType(ABC):
 
     operand_types: list[OperandKind]
     name: str
-    cycles: int
 
     @abstractmethod
-    def __init__(self, name, cycles):
+    def __init__(self, name):
         self.name = name
-        self.cycles = cycles
 
     def __repr__(self):
         return f"<InstructionType '{self.name} {', '.join(self.operand_types)}'>"
@@ -33,22 +31,26 @@ class InstrReg(InstructionType):
     operand_types = ["reg", "reg", "reg"]
 
     compute_result: Callable[[Word, Word], Word]
+    cycles: int
 
     def __init__(self, name, compute_result, cycles=1):
-        super().__init__(name, cycles)
+        super().__init__(name)
 
         self.compute_result = compute_result
+        self.cycles = cycles
 
 
 class InstrImm(InstructionType):
     operand_types = ["reg", "reg", "imm"]
 
     compute_result: Callable[[Word, Word], Word]
+    cycles: int
 
     def __init__(self, name, compute_result, cycles=1):
-        super().__init__(name, cycles)
+        super().__init__(name)
 
         self.compute_result = compute_result
+        self.cycles = cycles
 
 
 class InstrBranch(InstructionType):
@@ -62,8 +64,8 @@ class InstrLoad(InstructionType):
 
     width_byte: bool
 
-    def __init__(self, name, width_byte, cycles=1):
-        super().__init__(name, cycles)
+    def __init__(self, name, width_byte):
+        super().__init__(name)
 
         self.width_byte = width_byte
 
@@ -73,8 +75,8 @@ class InstrStore(InstructionType):
 
     width_byte: bool
 
-    def __init__(self, name, width_byte, cycles=1):
-        super().__init__(name, cycles)
+    def __init__(self, name, width_byte):
+        super().__init__(name)
 
         self.width_byte = width_byte
 
