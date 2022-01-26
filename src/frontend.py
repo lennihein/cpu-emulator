@@ -12,8 +12,8 @@ Supports flushing the queue and adding a micro program directly to the queue.
 >>> import parser
 
 >>> cpu_bpu = bpu.BPU()
->>> addi = parser.InstructionType("addi", ["reg", "reg", "imm"])
->>> j = parser.InstrBranch("j", ["label"], "condition needed")
+>>> addi = instructions.InstructionType("addi", ["reg", "reg", "imm"])
+>>> j = instructions.InstrBranch("j", ["label"], "condition needed")
 >>> p = parser.Parser()
 >>> p.add_instruction(addi)
 >>> p.add_instruction(j)
@@ -44,7 +44,7 @@ deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm'
 >>> print(front.instr_queue)
 deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100])])
 
->>> micro_program=list([parser.Instruction(addi, [1, 1, 2]), parser.Instruction(j, [1])])
+>>> micro_program=list([instructions.Instruction(addi, [1, 1, 2]), instructions.Instruction(j, [1])])
 >>> front.add_micro_program(micro_program)
 >>> print(front.instr_queue)
 deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 1, 2]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[1])])
@@ -61,6 +61,7 @@ Error: end of program reached by instruction queue
 
 from . import parser
 from . import bpu
+from . import instructions
 from collections import deque
 
 
@@ -114,11 +115,11 @@ class Frontend:
             if self.pc < 0:
                 raise IndexError("pc negative")
             
-            current_instr : parser.Instruction = self.instr_list[self.pc]
+            current_instr : instructions.Instruction = self.instr_list[self.pc]
             self.instr_queue.append(current_instr)
 
             #this needs to be modified if further jump instruction types are implemented
-            if type(current_instr.ty) == parser.InstrBranch:
+            if type(current_instr.ty) == instructions.InstrBranch:
             
                 #true if branch was/ should be taken
                 prediction : bool = self.bpu.predict(self.pc)
@@ -134,7 +135,7 @@ class Frontend:
                 self.pc = self.pc + 1
         return
 
-    def fetch_instruction_from_queue(self) -> parser.Instruction:
+    def pop_instruction_from_queue(self) -> instructions.Instruction:
         '''
         Takes the first (current first in) instruction from the instruction queue and returns it.
         '''
@@ -146,6 +147,8 @@ class Frontend:
             #TODO: discuss whether throwing an error makes sense here; can occur in a normal program sequence, e.g. after the queue was flushed
             raise LookupError("instruction queue is empty")
 
+    def fetch_instruction_from_queue(self) -> instructions.Instruction:
+        return self.instr_queue[0] if len(self.instr_queue) > 0 else None
 
     def flush_instruction_queue(self) -> None:
         '''
@@ -156,7 +159,7 @@ class Frontend:
         return
 
 
-    def add_micro_program(self, micro_prog : list[parser.Instruction]) -> None:
+    def add_micro_program(self, micro_prog : list[instructions.Instruction]) -> None:
         '''
         Adds a list of instructions as a µ-program to the queue.
         The queue is not automatically flushed.
@@ -169,7 +172,7 @@ class Frontend:
 
             self.instr_queue.append(current_instr)
 
-            if type(current_instr.ty) == parser.InstrBranch:
+            if type(current_instr.ty) == instructions.InstrBranch:
         
                 self.pc = current_instr.ops[0]
         return
