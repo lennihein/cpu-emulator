@@ -17,17 +17,22 @@ class MMU:
     does not matter.
     """
 
-    cache_hit_cycles: int = 2
-    cache_miss_cycles: int = 5
+    cache_hit_cycles: int
+    cache_miss_cycles: int
+    write_cycles: int
 
     memory: list
     mem_size: int
     cache: CacheLRU
 
-    def __init__(self, mem_size: int):
+    def __init__(self, mem_size: int, cache_hit_cycles=2, cache_miss_cycles=5, write_cycles=5, replacement_policy="RR"):
         self.memory = [0] * mem_size
         self.mem_size = mem_size
+        # TODO: build this with optional params
         self.cache = CacheRR(4, 4, 4)
+        self.cache_hit_cycles = cache_hit_cycles
+        self.cache_miss_cycles = cache_miss_cycles
+        self.write_cycles = write_cycles
 
     def read_byte(self, index: int) -> tuple[Byte, int]:
         """
@@ -52,7 +57,7 @@ class MMU:
         return Byte(data), cycles
 
 
-    def write_byte(self, index: int, data: Byte) -> None:
+    def write_byte(self, index: int, data: Byte) -> int:
         """
         Writes a byte to memory.
 
@@ -66,6 +71,7 @@ class MMU:
 
         self.memory[index] = data.value
         self.cache.write(index, data.value)
+        return self.write_cycles
 
     def read_word(self, index: int) -> tuple[Word, int]:
         """
@@ -89,7 +95,7 @@ class MMU:
 
         return Word(result), max(cycles_lower, cycles_upper)
 
-    def write_word(self, index: int, data: Word) -> None:
+    def write_word(self, index: int, data: Word) -> int:
         """
         Writes a word to memory. The architecture is assumed to be little-endian.
 
@@ -109,6 +115,7 @@ class MMU:
 
         self.write_byte(index, Byte(lower_half))
         self.write_byte(index + 1, Byte(upper_half))
+        return self.write_cycles
 
     def flush_addr(self, index: int) -> None:
         """
