@@ -1,48 +1,50 @@
-import logging
-import sys
-import unittest
+from unittest import TestCase
 
-from src.instructions import Instruction, InstructionType, addi
+from src.instructions import InstrBranch, Instruction, addi
 from src.parser import Parser
 
-logger = logging.getLogger()
-logger.level = logging.DEBUG
-stream_handler = logging.StreamHandler(sys.stdout)
-logger.addHandler(stream_handler)
 
+class ParserTest(TestCase):
+    """Test the parser."""
 
-class parserTests(unittest.TestCase):
-    def test_parser(self):
-
-        j = InstructionType("j", None)
-        j.operand_types = ["label"]
+    def test_program(self):
+        """Test parsing of a simple program."""
+        beq = InstrBranch("beq", None)
         p = Parser()
 
         p.add_instruction(addi)
-        p.add_instruction(j)
+        p.add_instruction(beq)
         instrs = p.parse(
-            """a:
-                addi r1, r0, 100
-                j a
-                """
+            """
+            a:
+            addi r1, r0, 100
+            beq r0, r0, a
+            """
         )
 
-        self.assertTrue(
-            instrs
-            == [
+        self.assertEqual(
+            instrs,
+            [
                 Instruction(addi, [1, 0, 100]),
-                Instruction(j, [0]),
-            ]
+                Instruction(beq, [0, 0, 0]),
+            ],
         )
 
-        with self.assertRaises(Exception) as context:
+    def test_exceptions(self):
+        """Test that the correct exceptions are raised on invalid instructions."""
+        beq = InstrBranch("beq", None)
+        p = Parser()
+
+        p.add_instruction(addi)
+        p.add_instruction(beq)
+
+        with self.assertRaises(ValueError) as exc:
             p.parse("invalid r0, 0")
-        self.assertTrue("Unknown instruction type" in str(context.exception))
+        self.assertEqual(str(exc.exception), "Unknown instruction type 'invalid'")
 
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(ValueError) as exc:
             p.parse("addi r0, 0")
-        self.assertTrue("Wrong" in str(context.exception))
-
-
-if __name__ == "__main__":
-    unittest.main()
+        self.assertEqual(
+            str(exc.exception),
+            "Wrong number of operands for 'addi' instruction: 3 expected, 2 given",
+        )
