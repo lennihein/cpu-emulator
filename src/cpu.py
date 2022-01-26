@@ -3,7 +3,7 @@ from mmu import MMU
 from word import Word
 from frontend import Frontend
 from parser import Parser, InstructionType
-from execution import ReservationStation
+from execution import ExecutionEngine
 import copy
 
 class CPU:
@@ -16,10 +16,8 @@ class CPU:
 
     _mmu: MMU
 
-    # Reservation stations.
-    # Should we put this functionality in its own class (e.g. ExecutionEngine)?
-    _num_reservation_stations: int = 4
-    _reservation_stations: list[ReservationStation]
+    # Execution engine.
+    _exec_engine: ExecutionEngine
 
     # Snapshots. Intended for usage by the UI to allow users to
     # step forward/backwards freely.
@@ -27,11 +25,6 @@ class CPU:
     _snapshot_index: int
 
     def __init__(self):
-        self._mmu = MMU(Word.WIDTH)
-
-        # cannot initialize frontend without list of instructions
-        # to execute
-        self._frontend = None
 
         self._parser = Parser()
         # set of valid instructions
@@ -39,8 +32,16 @@ class CPU:
             InstructionType("addi", ["reg", "reg", "imm"])
         )
 
+        self._mmu = MMU(Word.WIDTH)
+
+        self._bpu = SimpleBPU()
+
+        # cannot initialize frontend without list of instructions
+        # to execute
+        self._frontend = None
+
         # Reservation stations
-        self._reservation_stations = [ReservationStation() for _ in range(self._num_reservation_stations)]
+        self._exec_engine = ExecutionEngine(self._mmu)
 
         # Snapshots
         self._snapshots = [copy.deepcopy(self)]
@@ -62,6 +63,7 @@ class CPU:
         self._frontend = Frontend(self._bpu, instructions)
 
         # reset reservation stations?
+        # self._exec_engine = ExecutionEngine(self.mmu)
 
         # take snapshot
         self.take_snapshot()
@@ -77,18 +79,15 @@ class CPU:
         # fill up instruction queue / reorder buffer
         self._frontend.add_instructions_to_queue()
 
-        # For now we only take one instruction from the instruction qeueu per tick
-        for _ in range(1):
-            instr = self._frontend.fetch_instruction_from_queue()
-            if instr is not None:
-                for i, rs in enumerate(self._reservation_stations):
-                    if rs.issue(instr):
-                        self._frontend.pop_instruction_from_queue()
-                        break
+        # fill execution units
+        while (instr := self._frontend.fetch_instruction_from_queue()) is not None:
+            if self._exec_engine.try_issue(instr):
+                self._frontend.pop_instruction_from_queue()
+            else:
+                break
 
-        # tick reservation stations
-        for i, rs in enumerate(self._reservation_stations):
-            rs.tick()
+        # tick execution engine
+        self._exec_engine.tick()
 
         # create snapshot
         self.take_snapshot()
