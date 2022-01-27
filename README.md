@@ -2,6 +2,12 @@
 
 [![pipeline status](https://git.cs.uni-bonn.de/boes/lab_transient_ws_2122/badges/main/pipeline.svg)](https://git.cs.uni-bonn.de/boes/lab_transient_ws_2122/-/commits/main)
 
+## Using Autopep8
+
+```bash
+autopep8 . --recursive --in-place --pep8-passes 2000 --aggressive --verbose
+```
+
 ## Coding Conventions 
 
 Zusammenfassung von https://www.python.org/dev/peps/pep-0008/

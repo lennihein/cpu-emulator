@@ -1,5 +1,5 @@
 # from cache import CacheRR, CacheLRU, CacheFIFO
-from .cache import CacheRR, CacheLRU, CacheFIFO
+from .cache import CacheRR, CacheLRU
 # from byte import Byte
 from .byte import Byte
 # from word import Word

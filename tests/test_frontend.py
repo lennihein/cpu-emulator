@@ -44,7 +44,7 @@ class FrontendTest(unittest.TestCase):
 
         self.assertEqual(front.get_pc(), 0)
 
-        next_instr = front.fetch_instruction_from_queue()
+        _ = front.fetch_instruction_from_queue()
         # self.assertTrue("Instruction(ty=<InstructionType 'addi reg, reg, imm'>, ops=[1, 0, 100])" in str(next_instr))
         # self.assertEqual("deque([Instruction(ty=<InstructionType 'addi reg, reg, imm'>, ops=[1, 0, 99]), Instruction(ty=<InstructionType 'beq reg, reg, label'>, ops=[0, 0, 0])])", str(front.instr_queue))
 
@@ -75,15 +75,15 @@ class FrontendTest(unittest.TestCase):
 
         # self.assertTrue("deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100])," in str(front.instr_queue))
 
-        next_instr = front.fetch_instruction_from_queue()
-        next_instr = front.fetch_instruction_from_queue()
-        next_instr = front.fetch_instruction_from_queue()
+        _ = front.fetch_instruction_from_queue()
+        _ = front.fetch_instruction_from_queue()
+        _ = front.fetch_instruction_from_queue()
 
         front.add_instructions_to_queue()
         # self.assertTrue("deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 1, 2])," in str(front.instr_queue))
 
-        next_instr = front.fetch_instruction_from_queue()
-        next_instr = front.fetch_instruction_from_queue()
+        _ = front.fetch_instruction_from_queue()
+        _ = front.fetch_instruction_from_queue()
 
         with self.assertRaises(Exception) as context:
             front.set_pc(-1)

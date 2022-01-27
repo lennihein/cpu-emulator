@@ -59,7 +59,6 @@ Error: end of program reached by instruction queue
 """
 
 
-from . import parser
 from . import bpu
 from . import instructions
 from collections import deque
@@ -126,7 +125,7 @@ class Frontend:
                 # true if branch was/ should be taken
                 prediction: bool = self.bpu.predict(self.pc)
 
-                if prediction == True:
+                if prediction:
                     self.pc = current_instr.ops[0]
 
                 else:
