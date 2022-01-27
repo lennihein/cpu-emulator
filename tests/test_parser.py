@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from src.instructions import InstrBranch, Instruction, addi
+from src.instructions import Instruction, all_instructions
 from src.parser import Parser
 
 
@@ -9,11 +9,10 @@ class ParserTest(TestCase):
 
     def test_program(self):
         """Test parsing of a simple program."""
-        beq = InstrBranch("beq", None)
-        p = Parser()
+        addi = all_instructions["addi"]
+        beq = all_instructions["beq"]
 
-        p.add_instruction(addi)
-        p.add_instruction(beq)
+        p = Parser.from_default()
         instrs = p.parse(
             """
             a:
@@ -32,9 +31,10 @@ class ParserTest(TestCase):
 
     def test_exceptions(self):
         """Test that the correct exceptions are raised on invalid instructions."""
-        beq = InstrBranch("beq", None)
-        p = Parser()
+        addi = all_instructions["addi"]
+        beq = all_instructions["beq"]
 
+        p = Parser.from_default()
         p.add_instruction(addi)
         p.add_instruction(beq)
 

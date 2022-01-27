@@ -5,19 +5,15 @@ Before any code can be parsed, the available instruction types have to be regist
 parser.
 
 Example:
->>> addi = InstructionType("addi", ["reg", "reg", "imm"])
->>> j = InstructionType("j", ["label"])
->>> p = Parser()
->>> p.add_instruction(addi)
->>> p.add_instruction(j)
+>>> p = Parser.from_default()
 >>> instrs = p.parse('''
 ...     a:
 ...     addi r1, r0, 100
-...     j a
+...     beq r0, r0, a
 ... ''')
 >>> assert instrs == [
-...     Instruction(addi, [1, 0, 100]),
-...     Instruction(j, [0]),
+...     Instruction(all_instructions["addi"], [1, 0, 100]),
+...     Instruction(all_instructions["beq"], [0, 0, 0]),
 ... ]
 """
 
@@ -39,7 +35,7 @@ class Parser:
     def from_default(cls):
         """Create a new parser with knowledge of our instruction set."""
         p = cls()
-        for instr in all_instructions:
+        for instr in all_instructions.values():
             p.add_instruction(instr)
         return p
 

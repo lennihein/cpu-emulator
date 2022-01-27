@@ -7,27 +7,25 @@ from .instructions import InstrImm, InstrLoad, InstrReg, InstrStore, Instruction
 from .mmu import MMU
 from .word import Word
 
-__all__ = ["ExecutionEngine"]
-
-T = TypeVar("T")
+_T = TypeVar("_T")
 
 # ID of a slot of the Reservation Station or the Load Buffer, also used as an index
-SlotID = NewType("SlotID", int)
+_SlotID = NewType("_SlotID", int)
 
 
 @dataclass
-class SlotALU:
+class _SlotALU:
     """An occupied slot in the Reservation Station, storing an ALU instruction in flight."""
 
     instr_ty: Union[InstrReg, InstrImm]
-    # Either a `Word` with the operand's value, or a `SlotID` referencing the slot that will produce
-    # the operand value
-    operands: list[Union[Word, SlotID]]
+    # Either a `Word` with the operand's value, or a `_SlotID` referencing the slot that will
+    # produce the operand value
+    operands: list[Union[Word, _SlotID]]
     cycles_remaining: int
 
 
 @dataclass
-class SlotLoad:
+class _SlotLoad:
     """An occupied slot in the Load Buffer, storing a load instruction in flight."""
 
     instr_ty: InstrLoad
@@ -39,14 +37,14 @@ class SlotLoad:
 
 
 @dataclass
-class SlotStore:
+class _SlotStore:
     """An occupied slot in the Store Buffer, storing a store instruction in flight."""
 
     instr_ty: InstrStore
     # Effective address of the memory access
     address: Word
-    # Value stored to memory, or a `SlotID` if the value is yet to be produced by another slot
-    value: Union[Word, SlotID]
+    # Value stored to memory, or a `_SlotID` if the value is yet to be produced by another slot
+    value: Union[Word, _SlotID]
     cycles_remaining: int
     # Tracks if we already performed the store operation
     completed: bool
@@ -74,15 +72,15 @@ class ExecutionEngine:
 
     _mmu: MMU
 
-    # Register file, either a `Word` with a value or a `SlotID` referencing the slot that will
+    # Register file, either a `Word` with a value or a `_SlotID` referencing the slot that will
     # produce the register value
-    _registers: list[Union[Word, SlotID]]
+    _registers: list[Union[Word, _SlotID]]
     # Reservation Station with slots for ALU instructions
-    _alus: list[Optional[SlotALU]]
+    _alus: list[Optional[_SlotALU]]
     # Load Buffer with slots for load instructions
-    _loads: list[Optional[SlotLoad]]
+    _loads: list[Optional[_SlotLoad]]
     # Store Buffer with slots for store instructions
-    _stores: list[Optional[SlotStore]]
+    _stores: list[Optional[_SlotStore]]
 
     def __init__(self, mmu, regs=32, alus=8, loads=4, stores=4):
         """Create a new Reservation Station, with empty slots and zeroed registers."""
@@ -97,7 +95,7 @@ class ExecutionEngine:
         self._stores = [None for _ in range(stores)]
 
     @staticmethod
-    def _put_into_free_slot(slots: list[Optional[T]], new_slot: T) -> Optional[int]:
+    def _put_into_free_slot(slots: list[Optional[_T]], new_slot: _T) -> Optional[int]:
         """Try to put the given new slot into a free slot of the given slots."""
         for i, slot in enumerate(slots):
             if slot is not None:
@@ -120,23 +118,24 @@ class ExecutionEngine:
             operands = [self._registers[instr.ops[1]], Word(instr.ops[2])]
 
         # Create slot entry and put it into a free slot
-        alu = SlotALU(
-            instr_ty=cast(Union[InstrReg, InstrImm], instr.ty),
+        ty = cast(Union[InstrReg, InstrImm], instr.ty)
+        alu = _SlotALU(
+            instr_ty=ty,
             operands=operands,
-            cycles_remaining=instr.ty.cycles,
+            cycles_remaining=ty.cycles,
         )
         idx = self._put_into_free_slot(self._alus, alu)
         if idx is None:
             return False
 
         # Mark destination register as waiting on new slot
-        self._registers[instr.ops[0]] = SlotID(idx)
+        self._registers[instr.ops[0]] = _SlotID(idx)
 
         return True
 
     @staticmethod
     def _accesses_overlap(
-        slot: Union[SlotLoad, SlotStore],
+        slot: Union[_SlotLoad, _SlotStore],
         addr: Word,
         ty: Union[InstrLoad, InstrStore],
     ) -> bool:
@@ -170,7 +169,7 @@ class ExecutionEngine:
 
         if isinstance(instr.ty, InstrLoad):
             # Create slot entry and put it into a free slot
-            load = SlotLoad(
+            load = _SlotLoad(
                 instr_ty=cast(InstrLoad, instr.ty),
                 address=address,
                 value=None,
@@ -181,7 +180,7 @@ class ExecutionEngine:
                 return False
 
             # Mark destination register as waiting on this slot
-            self._registers[instr.ops[0]] = SlotID(len(self._alus) + idx)
+            self._registers[instr.ops[0]] = _SlotID(len(self._alus) + idx)
 
             return True
 
@@ -193,7 +192,7 @@ class ExecutionEngine:
                     return False
 
             # Create slot entry and put it into a free slot
-            store = SlotStore(
+            store = _SlotStore(
                 instr_ty=cast(InstrStore, instr.ty),
                 address=address,
                 value=self._registers[instr.ops[0]],
@@ -221,7 +220,7 @@ class ExecutionEngine:
 
         raise ValueError(f"Unsupported instruction type {instr.ty!r}")
 
-    def _update_waiting(self, slot_id: SlotID, result: Word):
+    def _update_waiting(self, slot_id: _SlotID, result: Word):
         """
         Update all registers and slots that wait on the given slot.
 
@@ -272,7 +271,7 @@ class ExecutionEngine:
 
             # Compute result
             res = slot.instr_ty.compute_result(*slot.operands)
-            self._update_waiting(SlotID(i), res)
+            self._update_waiting(_SlotID(i), res)
 
             # Free retired slot
             self._alus[i] = None
@@ -302,7 +301,7 @@ class ExecutionEngine:
             retired = True
 
             # Broadcast result
-            self._update_waiting(SlotID(len(self._alus) + i), load.value)
+            self._update_waiting(_SlotID(len(self._alus) + i), load.value)
 
             # Free retired slot
             self._loads[i] = None

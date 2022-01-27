@@ -3,7 +3,7 @@
 import operator
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Literal, NewType, Union
+from typing import Callable, Iterable, Literal, NewType, Union
 
 from .word import Word
 
@@ -28,6 +28,8 @@ class InstructionType(ABC):
 
 
 class InstrReg(InstructionType):
+    """An ALU instruction that operates solely on registers."""
+
     operand_types = ["reg", "reg", "reg"]
 
     compute_result: Callable[[Word, Word], Word]
@@ -41,6 +43,8 @@ class InstrReg(InstructionType):
 
 
 class InstrImm(InstructionType):
+    """An ALU instruction that takes an immediate operand."""
+
     operand_types = ["reg", "reg", "imm"]
 
     compute_result: Callable[[Word, Word], Word]
@@ -53,7 +57,35 @@ class InstrImm(InstructionType):
         self.cycles = cycles
 
 
+class InstrLoad(InstructionType):
+    """A load instruction, loading a word or a zero-extended byte."""
+
+    operand_types = ["reg", "reg", "imm"]
+
+    width_byte: bool
+
+    def __init__(self, name, width_byte):
+        super().__init__(name)
+
+        self.width_byte = width_byte
+
+
+class InstrStore(InstructionType):
+    """A store instruction, storing a word or a byte."""
+
+    operand_types = ["reg", "reg", "imm"]
+
+    width_byte: bool
+
+    def __init__(self, name, width_byte):
+        super().__init__(name)
+
+        self.width_byte = width_byte
+
+
 class InstrBranch(InstructionType):
+    """A branch instruction, branching to the destination when the condition is met."""
+
     operand_types = ["reg", "reg", "label"]
 
     condition: Callable[[Word, Word], bool]
@@ -66,28 +98,6 @@ class InstrBranch(InstructionType):
         self.cycles = cycles
 
 
-class InstrLoad(InstructionType):
-    operand_types = ["reg", "reg", "imm"]
-
-    width_byte: bool
-
-    def __init__(self, name, width_byte):
-        super().__init__(name)
-
-        self.width_byte = width_byte
-
-
-class InstrStore(InstructionType):
-    operand_types = ["reg", "reg", "imm"]
-
-    width_byte: bool
-
-    def __init__(self, name, width_byte):
-        super().__init__(name)
-
-        self.width_byte = width_byte
-
-
 @dataclass
 class Instruction:
     """A concrete instruction in program code."""
@@ -96,48 +106,42 @@ class Instruction:
     ops: list[int]
 
 
-add = InstrReg("add", operator.add)
-sub = InstrReg("sub", operator.sub)
-sll = InstrReg("sll", operator.lshift)
-srl = InstrReg("srl", Word.shift_right_logical)
-sra = InstrReg("sra", Word.shift_right_arithmetic)
-xor = InstrReg("xor", operator.xor)
-or_ = InstrReg("or", operator.or_)
-and_ = InstrReg("and", operator.and_)
+def _all_instructions() -> Iterable[InstructionType]:
+    """Generate all instructions of our ISA."""
+    # ALU instructions, with and without immediate operand
+    for name, op in [
+        ("add", operator.add),
+        ("sub", operator.sub),
+        ("sll", operator.lshift),
+        ("srl", Word.shift_right_logical),
+        ("sra", Word.shift_right_arithmetic),
+        ("xor", operator.xor),
+        ("or", operator.or_),
+        ("and", operator.and_),
+    ]:
+        yield InstrReg(name, op)
+        yield InstrImm(name + "i", op)
 
-addi = InstrImm("addi", operator.add)
-subi = InstrImm("subi", operator.sub)
-slli = InstrImm("slli", operator.lshift)
-srli = InstrImm("srli", Word.shift_right_logical)
-srai = InstrImm("srai", Word.shift_right_arithmetic)
-xori = InstrImm("xori", operator.xor)
-ori = InstrImm("ori", operator.or_)
-andi = InstrImm("andi", operator.and_)
+    # Memory instructions
+    yield InstrLoad("lw", False)
+    yield InstrLoad("lb", True)
+    yield InstrStore("sw", False)
+    yield InstrStore("sb", True)
 
-lw = InstrLoad("lw", False)
-lb = InstrLoad("lb", True)
-sw = InstrStore("sw", False)
-sb = InstrStore("sb", True)
+    # Branch instructions
+    for name, op in [
+        ("beq", operator.eq),
+        ("bne", operator.ne),
+        ("bltu", Word.unsigned_lt),
+        ("bleu", Word.unsigned_le),
+        ("bgtu", Word.unsigned_gt),
+        ("bgeu", Word.unsigned_ge),
+        ("blts", Word.signed_lt),
+        ("bles", Word.signed_le),
+        ("bgts", Word.signed_gt),
+        ("bges", Word.signed_ge),
+    ]:
+        yield InstrBranch(name, op)
 
-all_instructions = [
-    add,
-    sub,
-    sll,
-    srl,
-    sra,
-    xor,
-    or_,
-    and_,
-    addi,
-    subi,
-    slli,
-    srli,
-    srai,
-    xori,
-    ori,
-    andi,
-    lw,
-    lb,
-    sw,
-    sb,
-]
+
+all_instructions = dict((instr.name, instr) for instr in _all_instructions())

@@ -12,8 +12,8 @@ class FrontendTest(unittest.TestCase):
     def test_frontend(self):
         from src import bpu, parser, instructions
         cpu_bpu = bpu.BPU()
-        addi = instructions.addi
-        beq = instructions.InstrBranch("beq", None)
+        addi = instructions.all_instructions["addi"]
+        beq = instructions.all_instructions["beq"]
         p = parser.Parser()
         p.add_instruction(addi)
         p.add_instruction(beq)
