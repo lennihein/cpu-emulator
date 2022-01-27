@@ -45,4 +45,5 @@ class ExecutionTest(TestCase):
             rs.tick()
 
         # Check that the registers have the correct values
-        self.assertEqual(rs._registers[:7], [Word(x) for x in (0, 1, 2, 3, 4, 5, 0x105)])
+        self.assertEqual(rs._registers[:7], [Word(x)
+                         for x in (0, 1, 2, 3, 4, 5, 0x105)])

@@ -1,6 +1,7 @@
 import unittest
 from src import bpu
 
+
 class BPUTests(unittest.TestCase):
 
     def test_simple_bpu(self):
@@ -23,6 +24,7 @@ class BPUTests(unittest.TestCase):
         advanced_predictor.update(1, False)
         self.assertIs(advanced_predictor.predict(1), False)
         self.assertIs(advanced_predictor.predict(17), False)
+
 
 if __name__ == '__main__':
     unittest.main()

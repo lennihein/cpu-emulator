@@ -50,7 +50,8 @@ class Parser:
             yield strip
 
     @staticmethod
-    def _parse_operand(op: str, ty: OperandKind, labels: dict[str, int]) -> int:
+    def _parse_operand(op: str, ty: OperandKind,
+                       labels: dict[str, int]) -> int:
         """Parse a single operand of the given type."""
         if ty == "reg":
             if not op.startswith("r"):
@@ -65,7 +66,8 @@ class Parser:
 
         raise ValueError(f"Unknown operand type {ty!r}")
 
-    def _parse_instruction(self, instr: str, labels: dict[str, int]) -> Instruction:
+    def _parse_instruction(
+            self, instr: str, labels: dict[str, int]) -> Instruction:
         """Parse a single instruction."""
         # Split into mnemonic and operands
         name, op = instr.split(maxsplit=1)

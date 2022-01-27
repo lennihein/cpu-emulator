@@ -9,7 +9,8 @@ from .word import Word
 
 _T = TypeVar("_T")
 
-# ID of a slot of the Reservation Station or the Load Buffer, also used as an index
+# ID of a slot of the Reservation Station or the Load Buffer, also used as
+# an index
 _SlotID = NewType("_SlotID", int)
 
 
@@ -31,7 +32,8 @@ class _SlotLoad:
     instr_ty: InstrLoad
     # Effective address of the memory access
     address: Word
-    # Value loaded from memory, or `None` if the load instruction was issued this cycle
+    # Value loaded from memory, or `None` if the load instruction was issued
+    # this cycle
     value: Optional[Word]
     cycles_remaining: int
 
@@ -43,7 +45,8 @@ class _SlotStore:
     instr_ty: InstrStore
     # Effective address of the memory access
     address: Word
-    # Value stored to memory, or a `_SlotID` if the value is yet to be produced by another slot
+    # Value stored to memory, or a `_SlotID` if the value is yet to be
+    # produced by another slot
     value: Union[Word, _SlotID]
     cycles_remaining: int
     # Tracks if we already performed the store operation
@@ -95,7 +98,8 @@ class ExecutionEngine:
         self._stores = [None for _ in range(stores)]
 
     @staticmethod
-    def _put_into_free_slot(slots: list[Optional[_T]], new_slot: _T) -> Optional[int]:
+    def _put_into_free_slot(
+            slots: list[Optional[_T]], new_slot: _T) -> Optional[int]:
         """Try to put the given new slot into a free slot of the given slots."""
         for i, slot in enumerate(slots):
             if slot is not None:
@@ -111,10 +115,13 @@ class ExecutionEngine:
         """Try to issue the given ALU instruction."""
         # Get the source operands depending on the instruction type
         if isinstance(instr.ty, InstrReg):
-            # This is an `InstrReg` instruction, with source operands `reg`, `reg`
-            operands = [self._registers[instr.ops[1]], self._registers[instr.ops[2]]]
+            # This is an `InstrReg` instruction, with source operands `reg`,
+            # `reg`
+            operands = [self._registers[instr.ops[1]],
+                        self._registers[instr.ops[2]]]
         else:
-            # This is an `InstrImm` instruction, with source operands `reg`, `imm`
+            # This is an `InstrImm` instruction, with source operands `reg`,
+            # `imm`
             operands = [self._registers[instr.ops[1]], Word(instr.ops[2])]
 
         # Create slot entry and put it into a free slot
@@ -154,7 +161,8 @@ class ExecutionEngine:
         base = RegID(instr.ops[1])
         offset = Word(instr.ops[2])
 
-        # Only issue memory instructions when the effective address is available
+        # Only issue memory instructions when the effective address is
+        # available
         if not isinstance(self._registers[base], Word):
             return False
 
@@ -164,7 +172,8 @@ class ExecutionEngine:
         # Check for RAW / WAW hazards
         for haz_store in self._stores:
             ty = cast(Union[InstrLoad, InstrStore], instr.ty)
-            if haz_store is not None and self._accesses_overlap(haz_store, address, ty):
+            if haz_store is not None and self._accesses_overlap(
+                    haz_store, address, ty):
                 return False
 
         if isinstance(instr.ty, InstrLoad):
@@ -188,7 +197,8 @@ class ExecutionEngine:
             # Check for WAR hazard
             for haz_load in self._loads:
                 ty = cast(Union[InstrLoad, InstrStore], instr.ty)
-                if haz_load is not None and self._accesses_overlap(haz_load, address, ty):
+                if haz_load is not None and self._accesses_overlap(
+                        haz_load, address, ty):
                     return False
 
             # Create slot entry and put it into a free slot
@@ -317,9 +327,11 @@ class ExecutionEngine:
             if not store.completed:
                 # Actually perform the store
                 if store.instr_ty.width_byte:
-                    cycles = self._mmu.write_byte(store.address.value, store.value)
+                    cycles = self._mmu.write_byte(
+                        store.address.value, store.value)
                 else:
-                    cycles = self._mmu.write_word(store.address.value, store.value)
+                    cycles = self._mmu.write_word(
+                        store.address.value, store.value)
 
                 store.cycles_remaining = cycles
                 store.completed = True

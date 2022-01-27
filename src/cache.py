@@ -4,6 +4,7 @@ from time import time
 # from word import Word
 from .word import Word
 
+
 class CacheLine:
     """
     A helper class representing a cache line in a cache.
@@ -93,7 +94,8 @@ class CacheLine:
         Returns:
             This function does not have a return value.
         """
-        if data is None: return
+        if data is None:
+            return
         self.data[offset] = data
 
     def flush(self, offset: int) -> None:
@@ -120,6 +122,7 @@ class CacheLine:
 
         self.set_tag(None)
 
+
 class Cache:
     """
     An abstract class implementing a cache. Using this class directly is not possible, as it
@@ -128,12 +131,13 @@ class Cache:
     Instead, use any of the following classes: CacheRR, CacheLRU, CacheFIFO
     """
 
-    num_sets:int
+    num_sets: int
     num_lines: int
     sets: list[list[CacheLine]]
 
     def __init__(self, num_sets: int, num_lines: int, line_size: int):
-        self.sets = [[CacheLine(line_size) for a in range(num_lines)] for b in range(num_sets)]
+        self.sets = [[CacheLine(line_size) for a in range(num_lines)]
+                     for b in range(num_sets)]
 
         if num_sets <= 0 or num_lines <= 0 or line_size <= 0:
             raise Exception("Invalid cache parameters.")
@@ -165,7 +169,8 @@ class Cache:
 
         index = 0
         if num_index_bits > 0:
-            index = int(addr_bits[num_tag_bits:num_tag_bits + num_index_bits], base=2)
+            index = int(
+                addr_bits[num_tag_bits:num_tag_bits + num_index_bits], base=2)
 
         offset = 0
         if num_offset_bits != 0:
@@ -308,7 +313,6 @@ class Cache:
         }
         return cache
 
-
     def print_cache(self) -> None:
         """Prints the cache. Only to be used during development."""
         for i in range(len(self.sets)):
@@ -321,6 +325,7 @@ class Cache:
                 # print(self.sets[i][j].data)
                 print(' ', end='')
             print('')
+
 
 class CacheRR(Cache):
     """A cache implementing the random replacement policy."""
@@ -369,12 +374,14 @@ class CacheLineLRU(CacheLine):
         super().flush(offset)
         self.lru_timestamp = time()
 
+
 class CacheLRU(Cache):
     """A cache implementing the least-recently-used replacement policy."""
 
     def __init__(self, num_sets: int, num_lines: int, line_size: int):
         super().__init__(num_sets, num_lines, line_size)
-        self.sets = [[CacheLineLRU(line_size) for a in range(num_lines)] for b in range(num_sets)]
+        self.sets = [[CacheLineLRU(line_size) for a in range(
+            num_lines)] for b in range(num_sets)]
 
     def _apply_replacement_policy(self, addr: int, data: int) -> None:
         """
@@ -394,6 +401,7 @@ class CacheLRU(Cache):
         self.sets[index][lru_index].clear_data()
         self.sets[index][lru_index].set_tag(tag)
         self.sets[index][lru_index].write(offset, data)
+
 
 class CacheLineFIFO(CacheLine):
     """
@@ -423,12 +431,14 @@ class CacheLineFIFO(CacheLine):
     def get_fifo_time(self):
         return self.first_write
 
+
 class CacheFIFO(Cache):
     """A Cache implementing the first-in-first-out replacement policy."""
 
     def __init__(self, num_sets: int, num_lines: int, line_size: int):
         super().__init__(num_sets, num_lines, line_size)
-        self.sets = [[CacheLineFIFO(line_size) for a in range(num_lines)] for b in range(num_sets)]
+        self.sets = [[CacheLineFIFO(line_size) for a in range(
+            num_lines)] for b in range(num_sets)]
 
     def _apply_replacement_policy(self, addr: int, data: int) -> None:
         """
@@ -448,6 +458,7 @@ class CacheFIFO(Cache):
         self.sets[index][fifo_index].clear_data()
         self.sets[index][fifo_index].set_tag(tag)
         self.sets[index][fifo_index].write(offset, data)
+
 
 """
 c = CacheLRU(4, 2, 2)

@@ -6,6 +6,7 @@ from parser import Parser, InstructionType
 from execution import ExecutionEngine
 import copy
 
+
 class CPU:
 
     _parser: Parser
@@ -131,7 +132,8 @@ class CPU:
 
     @staticmethod
     def restore_snapshot(cpu: CPU, steps: int) -> CPU:
-        if cpu._snapshot_index + steps < 0 or cpu._snapshot_index + steps >= len(cpu._snapshots):
+        if cpu._snapshot_index + steps < 0 or cpu._snapshot_index + \
+                steps >= len(cpu._snapshots):
             return None
 
         return cpu._snapshots[cpu._snapshot_index + steps]

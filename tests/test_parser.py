@@ -40,7 +40,8 @@ class ParserTest(TestCase):
 
         with self.assertRaises(ValueError) as exc:
             p.parse("invalid r0, 0")
-        self.assertEqual(str(exc.exception), "Unknown instruction type 'invalid'")
+        self.assertEqual(str(exc.exception),
+                         "Unknown instruction type 'invalid'")
 
         with self.assertRaises(ValueError) as exc:
             p.parse("addi r0, 0")

@@ -5,6 +5,7 @@ from .byte import Byte
 # from word import Word
 from .word import Word
 
+
 class MMU:
     """
     The memory management unit (MMU).
@@ -25,7 +26,8 @@ class MMU:
     mem_size: int
     cache: CacheLRU
 
-    def __init__(self, mem_size: int, cache_hit_cycles=2, cache_miss_cycles=5, write_cycles=5, replacement_policy="RR"):
+    def __init__(self, mem_size: int, cache_hit_cycles=2,
+                 cache_miss_cycles=5, write_cycles=5, replacement_policy="RR"):
         self.memory = [0] * mem_size
         self.mem_size = mem_size
         # TODO: build this with optional params
@@ -55,7 +57,6 @@ class MMU:
             self.cache.write(index, data)
 
         return Byte(data), cycles
-
 
     def write_byte(self, index: int, data: Byte) -> int:
         """
@@ -140,6 +141,7 @@ class MMU:
             bool: True if data at address is cached
         """
         return self.read_byte(index)[1] == self.cache_hit_cycles
+
 
 """
 mmu = MMU(1024)
