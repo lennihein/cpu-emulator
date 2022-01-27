@@ -11,7 +11,7 @@ linting:
   stage: linting
   image: registry.gitlab.com/mafda/python-linting
   script:
-    - flake8 --ignore=E501,F821
+    - flake8 --ignore=E501,F821,W503
 
 test:
   script:
