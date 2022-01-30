@@ -1,6 +1,5 @@
 from bpu import SimpleBPU
 from mmu import MMU
-from word import Word
 from frontend import Frontend
 from parser import Parser, InstructionType
 from execution import ExecutionEngine
