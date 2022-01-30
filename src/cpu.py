@@ -33,7 +33,7 @@ class CPU:
             InstructionType("addi", ["reg", "reg", "imm"])
         )
 
-        self._mmu = MMU(Word.WIDTH)
+        self._mmu = MMU()
 
         self._bpu = SimpleBPU()
 
