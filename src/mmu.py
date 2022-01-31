@@ -20,7 +20,7 @@ class MMU:
 
     cache_hit_cycles: int
     cache_miss_cycles: int
-    write_cycles: int
+    num_write_cycles: int
 
     memory: list
     mem_size: int
@@ -173,4 +173,4 @@ class MMU:
         """
         Returns the number of cycles needed to write to memory.
         """
-        return self.write_cycles()
+        return self.num_write_cycles
