@@ -87,7 +87,7 @@ class MMU:
 
         return Byte(data), cycles
 
-    def write_byte(self, index: int, data: Byte) -> int:
+    def write_byte(self, index: int, data: Byte) -> None:
         """
         Writes a byte to memory.
 
@@ -96,12 +96,11 @@ class MMU:
             data (Byte) -- the Byte to write to this address
 
         Returns:
-            int: The number of cycles it takes to complete the write.
+            This function does not have a return value.
         """
 
         self.memory[index] = data.value
         self.cache.write(index, data.value)
-        return self.write_cycles
 
     def read_word(self, index: int) -> tuple[Word, int]:
         """
@@ -125,7 +124,7 @@ class MMU:
 
         return Word(result), max(cycles_lower, cycles_upper)
 
-    def write_word(self, index: int, data: Word) -> int:
+    def write_word(self, index: int, data: Word) -> None:
         """
         Writes a word to memory. The architecture is assumed to be little-endian.
 
@@ -134,7 +133,7 @@ class MMU:
             data (Word) -- the Word to write to this address
 
         Returns:
-            int: The number of cycles it takes to complete the write.
+            This function does not have a return value.
         """
 
         data = data.value
@@ -145,7 +144,6 @@ class MMU:
 
         self.write_byte(index, Byte(lower_half))
         self.write_byte(index + 1, Byte(upper_half))
-        return self.write_cycles
 
     def flush_addr(self, index: int) -> None:
         """
@@ -171,12 +169,8 @@ class MMU:
         """
         return self.read_byte(index)[1] == self.cache_hit_cycles
 
-
-"""
-mmu = MMU(1024)
-print("Cached?", mmu.is_addr_cached(4))
-mmu.write_word(4, Word(-820))
-print(mmu.read_word(4))
-mmu.flush_addr(5)
-print(mmu.read_word(4))
-"""
+    def write_cycles(self) -> int:
+        """
+        Returns the number of cycles needed to write to memory.
+        """
+        return self.write_cycles()
