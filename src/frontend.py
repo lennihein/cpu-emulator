@@ -138,7 +138,7 @@ class Frontend:
 
     def pop_instruction_from_queue(self) -> instructions.Instruction:
         '''
-        Takes the first (current first in) instruction from the instruction queue and returns it.
+        Deletes the first (current first in) instruction from the instruction queue and returns it.
         '''
 
         if len(self.instr_queue) > 0:
@@ -151,6 +151,10 @@ class Frontend:
             raise LookupError("instruction queue is empty")
 
     def fetch_instruction_from_queue(self) -> instructions.Instruction:
+        '''
+        Returns the first (current first in) instruction from the instruction queue without deleting it from the queue.
+        '''
+
         return self.instr_queue[0] if len(self.instr_queue) > 0 else None
 
     def flush_instruction_queue(self) -> None:
