@@ -313,20 +313,6 @@ class Cache:
         }
         return cache
 
-    def print_cache(self) -> None:
-        """Prints the cache. Only to be used during development."""
-        for i in range(len(self.sets)):
-            print(i, end=' ')
-            for j in range(len(self.sets[i])):
-                if self.sets[i][j].is_in_use():
-                    print("*", end='')
-                for a in range(len(self.sets[i][j].data)):
-                    print(self.sets[i][j].data[a], end='|')
-                # print(self.sets[i][j].data)
-                print(' ', end='')
-            print('')
-
-
 class CacheRR(Cache):
     """A cache implementing the random replacement policy."""
 

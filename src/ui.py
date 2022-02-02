@@ -1,4 +1,7 @@
 import os
+from src.mmu import MMU
+from src.execution import ExecutionEngine
+from math import ceil
 
 HEADER = '\033[95m'
 BLUE = '\033[94m'
@@ -42,47 +45,60 @@ def print_hex(num:int, p_end=" ", base=True, base_style=FAINT, style=ENDC)->None
     base_str = base_style + "0x" + ENDC if base else ""
     print(base_str + num_str, end=p_end)
 
-def is_cached(addr):
-    return True if addr == 0x15 else False
-
-def print_memory(lines=8, base=0x0000):
+def print_memory(mmu: MMU, lines=8, base=0x0000):
     fits = (columns - 8) // 7
     i = base
     for _ in range(lines):
+        if i>= mmu.mem_size:
+            return
         print_hex(i, p_end=": ", base_style=BOLD+YELLOW, style=BOLD+YELLOW)
         for _ in range(fits):
-            if(is_cached(i)):
-                print_hex(arr[i], base_style=FAINT+RED, style=RED)
+            if i >= mmu.mem_size: 
+                return
+            if(mmu.is_addr_cached(i)):
+                print_hex(mmu.memory[i], base_style=FAINT+RED, style=RED)
             else:
-                print_hex(arr[i])
+                print_hex(mmu.memory[i])
             i += 1
         print()
 
-# print current PC position
-print_header("Program", BOLD + RED + ENDC)
-print("  " + FAINT + "37 " + ENDC + CYAN + "ADD " + ENDC + YELLOW + "R0, R0" + ENDC)
-print(GREEN + "► " + ENDC + FAINT + "38 " + ENDC + CYAN + "MOV " + ENDC + YELLOW + "R1, R7" + ENDC)
-print("  " + FAINT + "39 " + ENDC + CYAN + "LD  " + ENDC + YELLOW + "R1, R0" + ENDC)
-print("  " + FAINT + "40 " + ENDC + CYAN + "DIV " + ENDC + YELLOW + "R0, R0" + ENDC)
+def print_regs(engine: ExecutionEngine):
+    regs = engine._registers
+    fits = (columns + 3) // 14
+    lines = ceil(len(regs) / fits)
+    i = 0
+    for _ in range(lines):
+        for j in range(fits):
+            if i >= 32:
+                break
+            print(" " if j != 0 else "", end="")
+            print(BOLD+GREEN + "R" + str(i) + (" : " if i < 10 else ": "), end="")
+            print_hex(regs[i].value, p_end="", base_style=ENDC+FAINT)
+            print(" |" if j != fits-1 else "\n", end="")
+            i+=1
 
-# print reservation stations
-print_header("ReservationStations", BOLD + GREEN + ENDC)
-from tabulate import tabulate
-print()
-print(tabulate([["ADD", "R0", "R0"], ["FLUSH", "-","-"]], headers=['Instruction', 'OP1', 'OP2'], tablefmt='orgtbl'))
-print()
+def print_cache(mmu: MMU) -> None:
+    """Prints the cache. Only to be used during development."""
+    for i in range(len(mmu.cache.sets)):
+        print(i, end=' ')
+        for j in range(len(mmu.cache.sets[i])):
+            if mmu.cache.sets[i][j].is_in_use():
+                print("*", end='')
+            for a in range(len(mmu.cache.sets[i][j].data)):
+                val = mmu.cache.sets[i][j].data[a]
+                print('{:04x}'.format(val) if val is not None else "none", end='|')
+            # print(mmu.cache.sets[i][j].data)
+            print(' ', end='')
+        print('')
 
-# print memory
-print_header("Memory", BOLD + YELLOW + ENDC)
-print()
-from random import randrange
-arr = [randrange(0, 0xFFFF) for _ in range(0xFFFF)]
-print_memory(lines=8, base=0x0000)
-print()
+def header_memory(mmu: MMU):
+    print_header("Memory", BOLD + YELLOW + ENDC)
+    print()
+    print_memory(mmu, lines=8, base=0x0000)
+    print()
 
-# print registers
-print_header("Registers", BOLD + CYAN + ENDC)
-print(BOLD+GREEN + "R0:" + ENDC + " " + FAINT + "0x" + ENDC + "EB83")
-print(BOLD+GREEN + "R1:" + ENDC + " " + FAINT + "0x" + ENDC + "031C")
-print(BOLD+GREEN + "R2:" + ENDC + " " + FAINT + "0x" + ENDC + "0000")
-print(BOLD+GREEN + "R3:" + ENDC + " " + FAINT + "0x" + ENDC + "DEAD")
+def header_regs(engine: ExecutionEngine):
+    print_header("Registers", BOLD + CYAN + ENDC)
+    print()
+    print_regs(engine)
+    print("\n")
