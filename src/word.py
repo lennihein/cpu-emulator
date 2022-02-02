@@ -5,16 +5,20 @@ class Word:
     WIDTH: int = 16
 
     # Always positive
-    value: int
+    _value: int
 
     def __init__(self, value: int):
-        self.value = value % (1 << self.WIDTH)
+        self._value = value % (1 << self.WIDTH)
 
     @classmethod
     def from_bytes(cls, b: Sequence[int]) -> "Word":
         if len(b) != 2:
             raise ValueError(f"Invalid number of bytes: {b:r}")
         return Word(b[0] + b[1] * 0x100)
+
+    @property
+    def value(self):
+        return self._value
 
     def __eq__(self, rhs: object) -> bool:
         if not isinstance(rhs, Word):

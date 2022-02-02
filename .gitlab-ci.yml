@@ -1,7 +1,17 @@
 image: python:latest
 
+stages:
+  - test
+  - linting
+
 before_script:
   - python3 -V  # Print out python version for debugging
+
+linting:
+  stage: linting
+  image: registry.gitlab.com/mafda/python-linting
+  script:
+    - flake8 --ignore=E501,F821,W503
 
 test:
   script:

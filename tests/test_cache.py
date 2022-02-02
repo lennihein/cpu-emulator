@@ -1,6 +1,7 @@
 import unittest
 from src import cache
 
+
 class CacheTests(unittest.TestCase):
 
     def test_lru(self):

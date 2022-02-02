@@ -3,6 +3,7 @@ from src import mmu as MMU
 from src import byte
 from src import word
 
+
 class MMUTests(unittest.TestCase):
 
     def test_mmu(self):
@@ -11,7 +12,8 @@ class MMUTests(unittest.TestCase):
         import random
         # make sure we do not pick the highest address and try to write a Word (> 1 byte)
         # to this address.
-        address = random.randint(0, 2 ** word.Word.WIDTH) - (word.Word.WIDTH // 8)
+        address = random.randint(
+            0, 2 ** word.Word.WIDTH) - (word.Word.WIDTH // 8)
 
         # TODO: Test MMU with negative numbers
 
@@ -24,7 +26,10 @@ class MMUTests(unittest.TestCase):
         self.assertEqual(returned_byte[1], mmu.cache_hit_cycles)
 
         # Reading / Writing words
-        random_word = word.Word(random.randint(2 ** 8 + 1, 2 ** word.Word.WIDTH))
+        random_word = word.Word(
+            random.randint(
+                2 ** 8 + 1,
+                2 ** word.Word.WIDTH))
         mmu.write_word(address, random_word)
         returned_word = mmu.read_word(address)
         self.assertEqual(returned_word[0].value, random_word.value)
@@ -35,7 +40,8 @@ class MMUTests(unittest.TestCase):
         mmu.flush_addr(address + 1)
         self.assertEqual(mmu.read_word(address + 1)[1], mmu.cache_miss_cycles)
 
-        # Now, (address + 1) should not be cached again (because we read from it).
+        # Now, (address + 1) should not be cached again (because we read from
+        # it).
         self.assertIs(mmu.is_addr_cached(address + 1), True)
 
         # But if we flush it again, it shouldn't.

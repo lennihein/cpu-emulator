@@ -5,6 +5,7 @@ from .byte import Byte
 # from word import Word
 from .word import Word
 
+
 class MMU:
     """
     The memory management unit (MMU).
@@ -24,15 +25,45 @@ class MMU:
     memory: list
     mem_size: int
     cache: CacheLRU
+    cache_replacement_policy: str
 
-    def __init__(self, mem_size: int, cache_hit_cycles=2, cache_miss_cycles=5, write_cycles=5, replacement_policy="RR"):
+    def __init__(self, mem_size: int = Word.WIDTH, cache_hit_cycles: int = 2,
+                 cache_miss_cycles: int = 5, write_cycles: int = 5,
+                 cache_config: tuple = (4, 4, 4), replacement_policy="RR"):
+        """
+        A class representing the memory management unit of a CPU.
+        It holds the memory itself as well as a cache.
+
+        Parameters (optional):
+            mem_size (int) -- the size of the memory (default = 2**(word size))
+            cache_hit_cycles (int) -- the number of cycles it takes to read data
+                from the cache (default = 2).
+            cache_miss_cycles (int) -- the number of cycles it takes to read data
+                from the main memory (default = 5).
+            write_cycles (int) -- the number of cycles it takes to complete write
+                operations (default = 5).
+            cache_config(3tuple) -- the configuration of the cache. The first
+                number of the number of sets, then comes the number of ways,
+                and, finally, the number of entries per cache way.
+                (default = (4, 4, 4))
+            replacement_policy (str) -- the replacement policy to be used
+                by the cache. Options are: RR (random replacement), LRU (least
+                recently used), and FIFO (first-in-first-out). (default = "RR")
+        """
         self.memory = [0] * mem_size
         self.mem_size = mem_size
-        # TODO: build this with optional params
-        self.cache = CacheRR(4, 4, 4)
+
         self.cache_hit_cycles = cache_hit_cycles
         self.cache_miss_cycles = cache_miss_cycles
+
         self.write_cycles = write_cycles
+
+        if replacement_policy == "RR":
+            self.cache = CacheRR(*cache_config)
+        elif replacement_policy == "LRU":
+            self.cache = CacheLRU(*cache_config)
+        elif replacement_policy == "FIFO":
+            self.cache = CacheFIFO(*cache_config)
 
     def read_byte(self, index: int) -> tuple[Byte, int]:
         """
@@ -56,7 +87,6 @@ class MMU:
 
         return Byte(data), cycles
 
-
     def write_byte(self, index: int, data: Byte) -> int:
         """
         Writes a byte to memory.
@@ -66,7 +96,7 @@ class MMU:
             data (Byte) -- the Byte to write to this address
 
         Returns:
-            This function does not have a return value.
+            int: The number of cycles it takes to complete the write.
         """
 
         self.memory[index] = data.value
@@ -104,7 +134,7 @@ class MMU:
             data (Word) -- the Word to write to this address
 
         Returns:
-            This function does not have a return value.
+            int: The number of cycles it takes to complete the write.
         """
 
         data = data.value
@@ -140,6 +170,7 @@ class MMU:
             bool: True if data at address is cached
         """
         return self.read_byte(index)[1] == self.cache_hit_cycles
+
 
 """
 mmu = MMU(1024)

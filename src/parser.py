@@ -4,100 +4,43 @@ Assembly code parser, used to convert assembly code with labels into a list of i
 Before any code can be parsed, the available instruction types have to be registered with the
 parser.
 
-# Example
-
->>> addi = InstructionType("addi", ["reg", "reg", "imm"])
->>> j = InstructionType("j", ["label"])
->>> p = Parser()
->>> p.add_instruction(addi)
->>> p.add_instruction(j)
+Example:
+>>> p = Parser.from_default()
 >>> instrs = p.parse('''
 ...     a:
 ...     addi r1, r0, 100
-...     j a
+...     beq r0, r0, a
 ... ''')
 >>> assert instrs == [
-...     Instruction(addi, [1, 0, 100]),
-...     Instruction(j, [0]),
+...     Instruction(all_instructions["addi"], [1, 0, 100]),
+...     Instruction(all_instructions["beq"], [0, 0, 0]),
 ... ]
->>> p.parse("invalid r0, 0")
-Traceback (most recent call last):
-    ...
-ValueError: Unknown instruction type 'invalid'
->>> p.parse("addi r0, 0")
-Traceback (most recent call last):
-    ...
-ValueError: Wrong number of operands for 'addi' instruction: 3 expected, 2 given
 """
 
-from dataclasses import dataclass
-from typing import Callable, Iterable, Literal, Union
+from typing import Iterable
 
-from src.word import Word
-
-Operand = Union[Literal["reg"], Literal["imm"], Literal["label"]]
-
-
-@dataclass
-class InstructionType:
-    name: str
-    operands: list[Operand]
-
-
-@dataclass
-class InstrReg(InstructionType):
-    operands = ["reg", "reg", "reg"]
-
-    result: Callable[[Word, Word], Word]
-
-
-@dataclass
-class InstrImm(InstructionType):
-    operands = ["reg", "reg", "imm"]
-
-    result: Callable[[Word, Word], Word]
-
-
-@dataclass
-class InstrBranch(InstructionType):
-    operands = ["label", "reg", "reg"]
-
-    condition: Callable[[Word, Word], bool]
-
-
-@dataclass
-class InstrLoad(InstructionType):
-    operands = ["reg", "reg", "imm"]
-
-    width: int
-
-
-@dataclass
-class InstrStore(InstructionType):
-    operands = ["reg", "reg", "imm"]
-
-    width: int
-
-
-@dataclass
-class Instruction:
-    """A concrete instruction in program code."""
-
-    ty: InstructionType
-    ops: list[int]
+from .instructions import Instruction, InstructionType, OperandKind, all_instructions
 
 
 class Parser:
     """Assembly code parser. Converts assembly code with labels to a list of instructions."""
 
-    instructions: dict[str, InstructionType]
+    _instr_types: dict[str, InstructionType]
 
     def __init__(self):
         """Create a new parser without knowledge of any instructions."""
-        self.instructions = {}
+        self._instr_types = {}
+
+    @classmethod
+    def from_default(cls):
+        """Create a new parser with knowledge of our instruction set."""
+        p = cls()
+        for instr in all_instructions.values():
+            p.add_instruction(instr)
+        return p
 
     @staticmethod
-    def split_instructions(src: str) -> Iterable[str]:
+    def _split_instructions(src: str) -> Iterable[str]:
         """Split assembly code into instructions and labels."""
         for line in src.splitlines():
             strip = line.strip()
@@ -107,7 +50,8 @@ class Parser:
             yield strip
 
     @staticmethod
-    def parse_operand(op: str, ty: Operand, labels: dict[str, int]) -> int:
+    def _parse_operand(op: str, ty: OperandKind,
+                       labels: dict[str, int]) -> int:
         """Parse a single operand of the given type."""
         if ty == "reg":
             if not op.startswith("r"):
@@ -122,7 +66,8 @@ class Parser:
 
         raise ValueError(f"Unknown operand type {ty!r}")
 
-    def parse_instruction(self, instr: str, labels: dict[str, int]) -> Instruction:
+    def _parse_instruction(
+            self, instr: str, labels: dict[str, int]) -> Instruction:
         """Parse a single instruction."""
         # Split into mnemonic and operands
         name, op = instr.split(maxsplit=1)
@@ -130,16 +75,19 @@ class Parser:
         ops = [x.strip() for x in op.split(",")]
 
         # Get instruction type
-        if name not in self.instructions:
+        if name not in self._instr_types:
             raise ValueError(f"Unknown instruction type {name!r}")
-        ty = self.instructions[name]
+        ty = self._instr_types[name]
 
         # Parse each operand
-        if len(ops) != len(ty.operands):
+        if len(ops) != len(ty.operand_types):
             raise ValueError(
-                f"Wrong number of operands for {name!r} instruction: {len(ty.operands)} expected, {len(ops)} given"
+                f"Wrong number of operands for {name!r} instruction: "
+                + f"{len(ty.operand_types)} expected, {len(ops)} given"
             )
-        ops_parsed = [self.parse_operand(op, op_ty, labels) for op, op_ty in zip(ops, ty.operands)]
+        ops_parsed = [
+            self._parse_operand(op, op_ty, labels) for op, op_ty in zip(ops, ty.operand_types)
+        ]
 
         # Create instruction object
         return Instruction(ty, ops_parsed)
@@ -147,7 +95,7 @@ class Parser:
     def parse(self, src: str) -> list[Instruction]:
         """Parse assembly code into a list of instructions."""
         # Split by instructions
-        split = list(self.split_instructions(src))
+        split = list(self._split_instructions(src))
 
         # First pass to parse all labels
         labels = {}
@@ -164,9 +112,9 @@ class Parser:
             if instr.endswith(":"):
                 continue
 
-            instrs.append(self.parse_instruction(instr, labels))
+            instrs.append(self._parse_instruction(instr, labels))
         return instrs
 
-    def add_instruction(self, inst: InstructionType):
+    def add_instruction(self, instr: InstructionType):
         """Add an instruction type to this parser."""
-        self.instructions[inst.name] = inst
+        self._instr_types[instr.name] = instr
