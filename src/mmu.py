@@ -167,7 +167,7 @@ class MMU:
         Returns:
             bool: True if data at address is cached
         """
-        return self.read_byte(index)[1] == self.cache_hit_cycles
+        return self.cache.read(index) is not None
 
     def write_cycles(self) -> int:
         """
