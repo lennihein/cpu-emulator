@@ -1,10 +1,9 @@
-# from cache import CacheRR, CacheLRU, CacheFIFO
 from .cache import CacheRR, CacheLRU, CacheFIFO
-# from byte import Byte
 from .byte import Byte
-# from word import Word
 from .word import Word
 
+# `Word` with a concrete value together with a boolean that indicates whether a fault occurs
+WordAndFault = tuple[Word, bool]
 
 class MMU:
     """
@@ -66,6 +65,7 @@ class MMU:
             self.cache = CacheFIFO(*cache_config)
 
     def read_byte(self, index: int) -> tuple[Byte, int]:
+        # TODO: Add fault to type
         """
         Reads one byte from memory and returns it along with
         the number of cycles it takes to load it.
@@ -102,7 +102,7 @@ class MMU:
         self.memory[index] = data.value
         self.cache.write(index, data.value)
 
-    def read_word(self, index: int) -> tuple[Word, int]:
+    def read_word(self, address: Word) -> tuple[WordAndFault, int]:
         """
         Reads one word from memory and returns it along with
         the number of cycles it takes to load it.
@@ -124,7 +124,7 @@ class MMU:
 
         return Word(result), max(cycles_lower, cycles_upper)
 
-    def write_word(self, index: int, data: Word) -> None:
+    def write_word(self, address: Word, data: Word) -> tuple[bool, int]:
         """
         Writes a word to memory. The architecture is assumed to be little-endian.
 
@@ -145,7 +145,7 @@ class MMU:
         self.write_byte(index, Byte(lower_half))
         self.write_byte(index + 1, Byte(upper_half))
 
-    def flush_addr(self, index: int) -> None:
+    def flush_line(self, address: Word) -> None:
         """
         Flushes an address from the cache.
 
@@ -157,7 +157,7 @@ class MMU:
         """
         self.cache.flush(index)
 
-    def is_addr_cached(self, index: int) -> bool:
+    def is_addr_cached(self, address: Word) -> bool:
         """
         Returns whether the data at an address is cached.
 
