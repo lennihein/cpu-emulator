@@ -1,7 +1,7 @@
 """Execution Engine that executes instructions out-of-order."""
 
 from dataclasses import dataclass
-from typing import Callable, NewType, Optional, TypeVar, Union, cast, final
+from typing import NewType, Optional, TypeVar, Union, cast, final
 
 from .instructions import (
     InstrBranch,
@@ -12,7 +12,6 @@ from .instructions import (
     InstrStore,
     Instruction,
     InstructionKind,
-    RegID,
 )
 from .mmu import MMU, MemResult
 from .word import Word
