@@ -417,15 +417,14 @@ class ExecutionEngine:
     """
     Execution Engine that executes instructions out-of-order.
 
-    The Execution Engine contains the register file and the Reservation Station, Load Buffer, and
-    Store Buffer. The latter contain a number of slots for ALU, load, and store instructions,
-    respectively.
+    The Execution Engine contains the register file and the Reservation Station. The Reservation
+    Station is completely unified, i.e. each slot can contain any kind of instruction. We don't
+    explicitly model Load Buffers or Store Buffers; the specifics of memory operations are handled
+    by the Slots themselves.
 
-    Each slot is either free or contains an `Instruction` in flight. An instruction in flight is
-    either still waiting for some of its operands to be produced by preceding instructions, or being
-    executed. The number of instructions that can execute concurrently is only limited by the amount
-    of slots; we don't model individual Execution Units and just pretend there is an infinite number
-    of them.
+    Each slot is either free or contains an `Instruction` in flight. The number of instructions that
+    can execute concurrently is only limited by the amount of slots; we don't model individual
+    Execution Units and just pretend there is an infinite number of them.
 
     Each register in the register file either contains a value or references a slot that will
     produce the register's value. Since instructions are issued in-order, the state of the register
