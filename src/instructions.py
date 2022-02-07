@@ -84,12 +84,12 @@ class InstrLoad(InstructionKind):
 
     operand_types = ["reg", "reg", "imm"]
 
-    width_byte: bool
+    width: int
 
     def __init__(self, name: str, width_byte: bool):
         super().__init__(name)
 
-        self.width_byte = width_byte
+        self.width = 1 if width_byte else Word.WIDTH_BYTES
 
     def sources(self) -> Iterable[int]:
         return [1, 2]
@@ -103,15 +103,15 @@ class InstrStore(InstructionKind):
 
     operand_types = ["reg", "reg", "imm"]
 
-    width_byte: bool
+    width: int
 
     def __init__(self, name: str, width_byte: bool):
         super().__init__(name)
 
-        self.width_byte = width_byte
+        self.width = 1 if width_byte else Word.WIDTH_BYTES
 
     def sources(self) -> Iterable[int]:
-        return [0, 1, 2]
+        return [1, 2, 0]
 
     def destination(self) -> Optional[int]:
         return None
@@ -122,8 +122,13 @@ class InstrFlush(InstructionKind):
 
     operand_types = ["reg", "imm"]
 
+    width: int
+
     def __init__(self, name: str):
         super().__init__(name)
+
+        # TODO: Width of cacheline
+        self.width = 32
 
     def sources(self) -> Iterable[int]:
         return [0, 1]
@@ -158,6 +163,7 @@ class InstrBranch(InstructionKind):
 class Instruction:
     """A concrete instruction in program code."""
 
+    # TODO: Rename to `kind`
     ty: InstructionKind
     ops: list[int]
 

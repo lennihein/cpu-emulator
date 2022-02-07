@@ -13,19 +13,19 @@ Example:
 ... ''')
 >>> assert instrs == [
 ...     Instruction(all_instructions["addi"], [1, 0, 100]),
-...     Instruction(all_instructions["beq"], [0, 0, 0]),
+...     Instruction(all_instructions["beq"],  [0, 0, 0]),
 ... ]
 """
 
 from typing import Iterable
 
-from .instructions import Instruction, InstructionType, OperandKind, all_instructions
+from .instructions import Instruction, InstructionKind, OperandKind, all_instructions
 
 
 class Parser:
     """Assembly code parser. Converts assembly code with labels to a list of instructions."""
 
-    _instr_types: dict[str, InstructionType]
+    _instr_types: dict[str, InstructionKind]
 
     def __init__(self):
         """Create a new parser without knowledge of any instructions."""
@@ -50,8 +50,7 @@ class Parser:
             yield strip
 
     @staticmethod
-    def _parse_operand(op: str, ty: OperandKind,
-                       labels: dict[str, int]) -> int:
+    def _parse_operand(op: str, ty: OperandKind, labels: dict[str, int]) -> int:
         """Parse a single operand of the given type."""
         if ty == "reg":
             if not op.startswith("r"):
@@ -66,8 +65,7 @@ class Parser:
 
         raise ValueError(f"Unknown operand type {ty!r}")
 
-    def _parse_instruction(
-            self, instr: str, labels: dict[str, int]) -> Instruction:
+    def _parse_instruction(self, instr: str, labels: dict[str, int]) -> Instruction:
         """Parse a single instruction."""
         # Split into mnemonic and operands
         name, op = instr.split(maxsplit=1)
@@ -115,6 +113,6 @@ class Parser:
             instrs.append(self._parse_instruction(instr, labels))
         return instrs
 
-    def add_instruction(self, instr: InstructionType):
+    def add_instruction(self, instr: InstructionKind):
         """Add an instruction type to this parser."""
         self._instr_types[instr.name] = instr
