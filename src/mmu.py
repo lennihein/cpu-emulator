@@ -1,9 +1,22 @@
-# from cache import CacheRR, CacheLRU, CacheFIFO
+from dataclasses import dataclass
+
 from .cache import CacheRR, CacheLRU, CacheFIFO
-# from byte import Byte
 from .byte import Byte
-# from word import Word
 from .word import Word
+
+
+@dataclass
+class MemResult:
+    """Result of a memory operation."""
+
+    # Value returned by the memory operation
+    value: Word
+    # Whether the operation causes a fault
+    fault: bool
+    # Number of cycles we wait before returning the value
+    cycles_value: int
+    # Number of cycles we wait before signaling whether we fault, after we returned the value
+    cycles_fault: int
 
 
 class MMU:
@@ -27,7 +40,7 @@ class MMU:
     cache: CacheLRU
     cache_replacement_policy: str
 
-    def __init__(self, mem_size: int = Word.WIDTH, cache_hit_cycles: int = 2,
+    def __init__(self, mem_size: int = 1 << Word.WIDTH, cache_hit_cycles: int = 2,
                  cache_miss_cycles: int = 5, write_cycles: int = 5,
                  cache_config: tuple = (4, 4, 4), replacement_policy="RR"):
         """
@@ -66,6 +79,7 @@ class MMU:
             self.cache = CacheFIFO(*cache_config)
 
     def read_byte(self, index: int) -> tuple[Byte, int]:
+        # TODO: Add fault to type
         """
         Reads one byte from memory and returns it along with
         the number of cycles it takes to load it.
@@ -102,7 +116,7 @@ class MMU:
         self.memory[index] = data.value
         self.cache.write(index, data.value)
 
-    def read_word(self, index: int) -> tuple[Word, int]:
+    def read_word(self, address: Word) -> MemResult:
         """
         Reads one word from memory and returns it along with
         the number of cycles it takes to load it.
@@ -124,7 +138,7 @@ class MMU:
 
         return Word(result), max(cycles_lower, cycles_upper)
 
-    def write_word(self, index: int, data: Word) -> None:
+    def write_word(self, address: Word, data: Word) -> MemResult:
         """
         Writes a word to memory. The architecture is assumed to be little-endian.
 
@@ -145,7 +159,7 @@ class MMU:
         self.write_byte(index, Byte(lower_half))
         self.write_byte(index + 1, Byte(upper_half))
 
-    def flush_addr(self, index: int) -> None:
+    def flush_line(self, address: Word) -> None:
         """
         Flushes an address from the cache.
 
@@ -157,7 +171,7 @@ class MMU:
         """
         self.cache.flush(index)
 
-    def is_addr_cached(self, index: int) -> bool:
+    def is_addr_cached(self, address: Word) -> bool:
         """
         Returns whether the data at an address is cached.
 

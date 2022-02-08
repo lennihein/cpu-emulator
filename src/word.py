@@ -3,6 +3,7 @@ from typing import Sequence
 
 class Word:
     WIDTH: int = 16
+    WIDTH_BYTES = WIDTH // 8
 
     # Always positive
     _value: int
@@ -12,9 +13,13 @@ class Word:
 
     @classmethod
     def from_bytes(cls, b: Sequence[int]) -> "Word":
-        if len(b) != 2:
+        if len(b) != cls.WIDTH_BYTES:
             raise ValueError(f"Invalid number of bytes: {b:r}")
-        return Word(b[0] + b[1] * 0x100)
+
+        value = 0
+        for byte in reversed(b):
+            value = value * 0x100 + byte
+        return cls(value)
 
     @property
     def value(self):
@@ -52,6 +57,9 @@ class Word:
     def __repr__(self) -> str:
         fmt = "Word({:#0" + str(self.WIDTH // 4 + 2) + "x})"
         return fmt.format(self.value)
+
+    def __hash__(self):
+        return hash(self.value)
 
     def signed_value(self) -> int:
         if self.value < (1 << (self.WIDTH - 1)):
