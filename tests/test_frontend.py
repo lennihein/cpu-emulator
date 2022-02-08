@@ -30,7 +30,7 @@ class FrontendTest(unittest.TestCase):
         ''')
         cpu_bpu.update(2, True) 
 
-        #build queue
+        #build frontend
         front = Frontend(cpu_bpu, instrs, 3)
 
         #check raised errors when queue is empty
