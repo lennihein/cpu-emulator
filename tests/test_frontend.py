@@ -12,6 +12,7 @@ logger.addHandler(stream_handler)
 class FrontendTest(unittest.TestCase):
 
     def test_frontend(self):
+        #preparations for building a working frontend
         from src import bpu, parser, instructions
         cpu_bpu = bpu.BPU()
         addi = instructions.all_instructions["addi"]
@@ -27,77 +28,114 @@ class FrontendTest(unittest.TestCase):
             addi r1, r0, 98
             addi r1, r0, 97
         ''')
+        cpu_bpu.update(2, True) 
 
+        #build queue
         front = Frontend(cpu_bpu, instrs, 3)
-        cpu_bpu.update(2, True)
+
+        #check raised errors when queue is empty
         with self.assertRaises(Exception) as context:
             front.pop_instruction_from_queue()
         self.assertTrue('instruction queue is empty' in str(context.exception))
-        front.add_instructions_to_queue()
-        self.assertTrue(
-            "deque([Instruction(ty=<InstructionType 'addi" in str(
-                front.instr_queue))
-        front.add_instructions_to_queue()
-        self.assertTrue(
-            "deque([Instruction(ty=<InstructionType 'addi" in str(
-                front.instr_queue))
+        with self.assertRaises(Exception) as context:
+            front.fetch_instruction_from_queue()
+        self.assertTrue('instruction queue is empty' in str(context.exception))
 
+        #check that the queue is filled but not overfilled
+        front.add_instructions_to_queue()
+        self.assertEqual(len(front.instr_queue), 3)
+        self.assertIs(front.instr_queue[0], instrs[0])
+        self.assertIs(front.instr_queue[1], instrs[1])
+        self.assertIs(front.instr_queue[2], instrs[2])
+
+        #check that trying to add instructions to a full queue does not change the queue
+        front.add_instructions_to_queue()
+        self.assertEqual(len(front.instr_queue), 3)
+        self.assertIs(front.instr_queue[0], instrs[0])
+        self.assertIs(front.instr_queue[1], instrs[1])
+        self.assertIs(front.instr_queue[2], instrs[2])
+
+        #check handling of jump instruction and get_pc function
+        self.assertEqual(front.get_pc(), front.pc)
         self.assertEqual(front.get_pc(), 0)
 
-        _ = front.fetch_instruction_from_queue()
-        # self.assertTrue("Instruction(ty=<InstructionType 'addi reg, reg, imm'>, ops=[1, 0, 100])" in str(next_instr))
-        # self.assertEqual("deque([Instruction(ty=<InstructionType 'addi reg, reg, imm'>, ops=[1, 0, 99]), Instruction(ty=<InstructionType 'beq reg, reg, label'>, ops=[0, 0, 0])])", str(front.instr_queue))
+        #fetching should return the first instruction and leave the queue unchanged
+        next_instr = front.fetch_instruction_from_queue()
+        self.assertIs(next_instr, instrs[0])
+        self.assertEqual(len(front.instr_queue), 3)
+        self.assertIs(front.instr_queue[0], instrs[0])
+        self.assertIs(front.instr_queue[1], instrs[1])
+        self.assertIs(front.instr_queue[2], instrs[2])
 
-        self.assertEqual(
-            cpu_bpu.counter, [
-                2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2])
+        #fetching should return the first instruction and remove it from the queue
+        next_instr_two = front.pop_instruction_from_queue()
+        self.assertIs(next_instr_two, instrs[0])
+        self.assertEqual(len(front.instr_queue), 2)
+        self.assertIs(front.instr_queue[0], instrs[1])
+        self.assertIs(front.instr_queue[1], instrs[2])
 
+        #flushing should empty the queue
         front.flush_instruction_queue()
-        self.assertEqual(str(front.instr_queue), "deque([])")
+        self.assertEqual(len(front.instr_queue), 0)
 
-        # with self.assertRaises(Exception) as context:
-        #     front.fetch_instruction_from_queue()
-        # self.assertTrue('instruction queue is empty' in str(context.exception))
-
+        #check correct handling of branch instruction when no jump is predicted
         cpu_bpu.update(2, False)
         cpu_bpu.update(2, False)
-
-        self.assertEqual(
-            cpu_bpu.counter, [
-                2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2])
-
         front.add_instructions_to_queue()
-        # self.assertTrue("deque([Instruction(ty=InstructionType(name='addi', operan" in str(front.instr_queue))
+        next_instr_three = front.pop_instruction_from_queue()
+        front.add_instructions_to_queue()
+        self.assertIs(next_instr_three, instrs[0])
+        self.assertEqual(len(front.instr_queue), 3)
+        self.assertIs(front.instr_queue[0], instrs[1])
+        self.assertIs(front.instr_queue[1], instrs[2])
+        self.assertIs(front.instr_queue[2], instrs[3])
 
+        #check handling of µ-progrm
         micro_program = list([instructions.Instruction(
             addi, [1, 1, 2]), instructions.Instruction(beq, [0, 0, 1])])
         front.add_micro_program(micro_program)
-
-        # self.assertTrue("deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100])," in str(front.instr_queue))
-
-        _ = front.fetch_instruction_from_queue()
-        _ = front.fetch_instruction_from_queue()
-        _ = front.fetch_instruction_from_queue()
+        self.assertEqual(len(front.instr_queue), 5)
+        self.assertIs(front.instr_queue[0], instrs[1])
+        self.assertIs(front.instr_queue[1], instrs[2])
+        self.assertIs(front.instr_queue[2], instrs[3])
+        self.assertIs(front.instr_queue[3], micro_program[0])
+        self.assertIs(front.instr_queue[4], micro_program[1])
 
         front.add_instructions_to_queue()
-        # self.assertTrue("deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 1, 2])," in str(front.instr_queue))
+        self.assertEqual(len(front.instr_queue), 5)
+        self.assertIs(front.instr_queue[0], instrs[1])
+        self.assertIs(front.instr_queue[1], instrs[2])
+        self.assertIs(front.instr_queue[2], instrs[3])
+        self.assertIs(front.instr_queue[3], micro_program[0])
+        self.assertIs(front.instr_queue[4], micro_program[1])
 
-        _ = front.fetch_instruction_from_queue()
-        _ = front.fetch_instruction_from_queue()
+        #check jump out of µ-prog
+        _ = front.pop_instruction_from_queue()
+        _ = front.pop_instruction_from_queue()
+        _ = front.pop_instruction_from_queue()
+        front.add_instructions_to_queue()
+        self.assertEqual(front.get_pc(), 1)
+        self.assertEqual(len(front.instr_queue), 3)
+        self.assertIs(front.instr_queue[0], micro_program[0])
+        self.assertIs(front.instr_queue[1], micro_program[1])
+        self.assertIs(front.instr_queue[2], instrs[0])
 
+        #check pc setter
+        _ = front.pop_instruction_from_queue()
+        _ = front.pop_instruction_from_queue()
         with self.assertRaises(Exception) as context:
             front.set_pc(-1)
         self.assertTrue('new pc out of range' in str(context.exception))
-
         with self.assertRaises(Exception) as context:
             front.set_pc(6)
         self.assertTrue('new pc out of range' in str(context.exception))
-
         front.set_pc(4)
+        self.assertEqual(front.get_pc(), 4)
 
-        # with self.assertRaises(Exception) as context:
-        #     front.add_instructions_to_queue()
-        # self.assertTrue('end of program reached by instruction queue' in str(context.exception))
+        #check handling of the end of the program
+        with self.assertRaises(Exception) as context:
+             front.add_instructions_to_queue()
+        self.assertTrue('end of program reached by instruction queue' in str(context.exception))
 
 
 if __name__ == '__main__':

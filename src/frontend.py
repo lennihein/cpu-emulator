@@ -145,9 +145,6 @@ class Frontend:
             return self.instr_queue.popleft()
 
         else:
-            # TODO: discuss whether throwing an error makes sense here; can
-            # occur in a normal program sequence, e.g. after the queue was
-            # flushed
             raise LookupError("instruction queue is empty")
 
     def fetch_instruction_from_queue(self) -> instructions.Instruction:
@@ -155,7 +152,11 @@ class Frontend:
         Returns the first (current first in) instruction from the instruction queue without deleting it from the queue.
         '''
 
-        return self.instr_queue[0] if len(self.instr_queue) > 0 else None
+        if len(self.instr_queue) > 0:
+            return self.instr_queue[0]
+
+        else:
+            raise LookupError("instruction queue is empty")
 
     def flush_instruction_queue(self) -> None:
         '''
