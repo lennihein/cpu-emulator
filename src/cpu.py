@@ -1,10 +1,10 @@
-from bpu import SimpleBPU
-from mmu import MMU
-from frontend import Frontend
-from parser import Parser, InstructionType
-from execution import ExecutionEngine
+from __future__ import annotations
+from src.bpu import SimpleBPU
+from src.mmu import MMU
+from src.frontend import Frontend
+from src.parser import Parser, InstructionType
+from src.execution import ExecutionEngine
 import copy
-
 
 class CPU:
 
