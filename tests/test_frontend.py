@@ -12,7 +12,7 @@ logger.addHandler(stream_handler)
 class FrontendTest(unittest.TestCase):
 
     def test_frontend(self):
-        #preparations for building a working frontend
+        # preparations for building a working frontend
         from src import bpu, parser, instructions
         cpu_bpu = bpu.BPU()
         addi = instructions.all_instructions["addi"]
@@ -28,12 +28,12 @@ class FrontendTest(unittest.TestCase):
             addi r1, r0, 98
             addi r1, r0, 97
         ''')
-        cpu_bpu.update(2, True) 
+        cpu_bpu.update(2, True)
 
-        #build frontend
+        # build frontend
         front = Frontend(cpu_bpu, instrs, 3)
 
-        #check raised errors when queue is empty
+        # check raised errors when queue is empty
         with self.assertRaises(Exception) as context:
             front.pop_instruction_from_queue()
         self.assertTrue('instruction queue is empty' in str(context.exception))
@@ -42,7 +42,7 @@ class FrontendTest(unittest.TestCase):
             front.fetch_instruction_from_queue()
         self.assertTrue('instruction queue is empty' in str(context.exception))
 
-        #check that the queue is filled but not overfilled
+        # check that the queue is filled but not overfilled
         front.add_instructions_to_queue()
 
         self.assertEqual(len(front.instr_queue), 3)
@@ -50,13 +50,14 @@ class FrontendTest(unittest.TestCase):
         self.assertIs(front.instr_queue[1], instrs[1])
         self.assertIs(front.instr_queue[2], instrs[2])
 
-        #check that the instruction indices are set correctly
+        # check that the instruction indices are set correctly
         self.assertEqual(len(front.instr_index), 3)
         self.assertIs(front.instr_index[0], 0)
         self.assertIs(front.instr_index[1], 1)
         self.assertIs(front.instr_index[2], 2)
 
-        #check that trying to add instructions to a full queue does not change the queue
+        # check that trying to add instructions to a full queue does not change
+        # the queue
         front.add_instructions_to_queue()
 
         self.assertEqual(len(front.instr_queue), 3)
@@ -64,20 +65,21 @@ class FrontendTest(unittest.TestCase):
         self.assertIs(front.instr_queue[1], instrs[1])
         self.assertIs(front.instr_queue[2], instrs[2])
 
-        #check that the instruction indices are set correctly
+        # check that the instruction indices are set correctly
         self.assertEqual(len(front.instr_index), 3)
         self.assertIs(front.instr_index[0], 0)
         self.assertIs(front.instr_index[1], 1)
         self.assertIs(front.instr_index[2], 2)
 
-        #check handling of jump instruction and get_pc function
+        # check handling of jump instruction and get_pc function
         self.assertEqual(front.get_pc(), front.pc)
         self.assertEqual(front.get_pc(), 0)
 
-        #fetching should return the first instruction with its index and leave the queues unchanged
+        # fetching should return the first instruction with its index and leave
+        # the queues unchanged
         next_instr, next_index = front.fetch_instruction_from_queue()
 
-        self.assertIs(next_instr, instrs[0])   
+        self.assertIs(next_instr, instrs[0])
         self.assertEqual(len(front.instr_queue), 3)
         self.assertIs(front.instr_queue[0], instrs[0])
         self.assertIs(front.instr_queue[1], instrs[1])
@@ -89,7 +91,8 @@ class FrontendTest(unittest.TestCase):
         self.assertIs(front.instr_index[1], 1)
         self.assertIs(front.instr_index[2], 2)
 
-        #popping should return the first instruction and remove it from the queue
+        # popping should return the first instruction and remove it from the
+        # queue
         next_instr_two, next_index_two = front.pop_instruction_from_queue()
 
         self.assertIs(next_instr_two, instrs[0])
@@ -102,13 +105,14 @@ class FrontendTest(unittest.TestCase):
         self.assertIs(front.instr_index[0], 1)
         self.assertIs(front.instr_index[1], 2)
 
-        #flushing should empty the queues
+        # flushing should empty the queues
         front.flush_instruction_queue()
 
         self.assertEqual(len(front.instr_queue), 0)
         self.assertEqual(len(front.instr_index), 0)
 
-        #check correct handling of branch instruction when no jump is predicted
+        # check correct handling of branch instruction when no jump is
+        # predicted
         cpu_bpu.update(2, False)
         cpu_bpu.update(2, False)
         front.add_instructions_to_queue()
@@ -127,7 +131,7 @@ class FrontendTest(unittest.TestCase):
         self.assertIs(front.instr_index[1], 2)
         self.assertIs(front.instr_index[2], 3)
 
-        #check handling of µ-progrm
+        # check handling of µ-progrm
         micro_program = list([instructions.Instruction(
             addi, [1, 1, 2]), instructions.Instruction(beq, [0, 0, 1])])
         front.add_micro_program(micro_program)
@@ -162,7 +166,7 @@ class FrontendTest(unittest.TestCase):
         self.assertIs(front.instr_index[3], -1)
         self.assertIs(front.instr_index[4], -1)
 
-        #check jump out of µ-prog
+        # check jump out of µ-prog
         _, _ = front.pop_instruction_from_queue()
         _, _ = front.pop_instruction_from_queue()
         _, _ = front.pop_instruction_from_queue()
@@ -178,7 +182,7 @@ class FrontendTest(unittest.TestCase):
         self.assertIs(front.instr_index[1], -1)
         self.assertIs(front.instr_index[2], 0)
 
-        #check pc setter
+        # check pc setter
         _ = front.pop_instruction_from_queue()
         _ = front.pop_instruction_from_queue()
 
@@ -193,10 +197,12 @@ class FrontendTest(unittest.TestCase):
         front.set_pc(4)
         self.assertEqual(front.get_pc(), 4)
 
-        #check handling of the end of the program
+        # check handling of the end of the program
         with self.assertRaises(Exception) as context:
-             front.add_instructions_to_queue()
-        self.assertTrue('end of program reached by instruction queue' in str(context.exception))
+            front.add_instructions_to_queue()
+        self.assertTrue(
+            'end of program reached by instruction queue' in str(
+                context.exception))
 
 
 if __name__ == '__main__':
