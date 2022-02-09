@@ -102,3 +102,7 @@ def header_regs(engine: ExecutionEngine):
     print()
     print_regs(engine)
     print("\n")
+
+def all_headers(engine: ExecutionEngine):
+    header_regs(engine)
+    header_memory(engine._mmu)
