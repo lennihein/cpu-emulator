@@ -1,71 +1,430 @@
 """Execution Engine that executes instructions out-of-order."""
 
 from dataclasses import dataclass
-from typing import NewType, Optional, TypeVar, Union, cast
+from typing import NewType, Optional, TypeVar, Union, cast, final
 
-from .instructions import InstrImm, InstrLoad, InstrReg, InstrStore, Instruction, RegID
-from .mmu import MMU
+from .instructions import (
+    InstrBranch,
+    InstrFlush,
+    InstrImm,
+    InstrLoad,
+    InstrReg,
+    InstrStore,
+    Instruction,
+    InstructionKind,
+)
+from .mmu import MMU, MemResult
 from .word import Word
 
 _T = TypeVar("_T")
 
-# ID of a slot of the Reservation Station or the Load Buffer, also used as
-# an index
+# ID of a slot of the Reservation Station, also used as an index into the list of slots
 _SlotID = NewType("_SlotID", int)
+# Either a `Word` with a concrete value, or a `_SlotID` referencing the slot that will produce the
+# value
+_WordOrSlot = Union[Word, _SlotID]
 
 
 @dataclass
-class _SlotALU:
-    """An occupied slot in the Reservation Station, storing an ALU instruction in flight."""
+class _FaultState:
+    """Architectural state at the time a fault occurs."""
+
+    registers: list[Word]
+    pc: int
+
+
+def _update_waiting_list(slot: _SlotID, result: Word, values: list[_WordOrSlot]):
+    """Update waiting values using the result from the given slot."""
+    for i, val in enumerate(values):
+        if val == slot:
+            values[i] = result
+
+
+@dataclass
+class _Slot:
+    """
+    An occupied slot in the Reservation Station, storing an instruction in flight.
+
+    Every instruction goes through two phases: executing and retiring. Executing instructions are in
+    the process of computing their result value. Retiring instructions have already produced their
+    result, but have not yet determined if they cause a fault.
+    """
+
+    # Kind of this instruction
+    instr_ty: InstructionKind
+    # Whether we are executing or retiring
+    executing: bool
+    # Whether we are retired
+    retired: bool
+    # Source operands
+    operands: list[_WordOrSlot]
+
+    def __init__(
+        self,
+        exe: "ExecutionEngine",
+        instr: Instruction,
+        pc: int,
+        source_operands: list[_WordOrSlot],
+    ):
+        self.instr_ty = instr.ty
+        self.executing = True
+        self.retired = False
+        self.operands = source_operands
+
+    def notify_result(self, slot: _SlotID, result: Word):
+        """Notify this slot that the given slot produced the given result."""
+        _update_waiting_list(slot, result, self.operands)
+
+    def notify_retired(self, slot: _SlotID):
+        """Notify this slot that the given slot retired without causing a fault."""
+
+    @final
+    def tick_execute(self) -> Optional[Word]:
+        """Continue executing this slot, return its result if it finished executing."""
+        assert self.executing and not self.retired
+
+        r = self._tick_execute()
+
+        if r is not None:
+            self.executing = False
+        return r
+
+    @final
+    def tick_retire(self) -> Optional[tuple[Optional[_FaultState]]]:
+        """Continue retiring this slot, return whether it faults if it finished retiring."""
+        # This return type should be `Optional[Optional[...]]`, but Python
+        assert not self.executing and not self.retired
+
+        r = self._tick_retire()
+
+        if r is not None:
+            self.retired = True
+        return r
+
+    def _tick_execute(self) -> Optional[Word]:
+        raise NotImplementedError("Must be overwritten by a concrete slot type")
+
+    def _tick_retire(self) -> Optional[tuple[Optional[_FaultState]]]:
+        raise NotImplementedError("Must be overwritten by a concrete slot type")
+
+
+@dataclass
+class _SlotFaulting(_Slot):
+    """An occupied slot in the Reservation Station, storing a potentially-faulting instruction."""
+
+    # Slots of potentially faulting instructions that precede this instruction in program order
+    faulting_preceding: set[_SlotID]
+    # Architectural register state when this instruction was issued
+    registers: list[_WordOrSlot]
+    # Address of this instruction
+    pc: int
+
+    def __init__(
+        self,
+        exe: "ExecutionEngine",
+        instr: Instruction,
+        pc: int,
+        source_operands: list[_WordOrSlot],
+    ):
+        super().__init__(exe, instr, pc, source_operands)
+
+        self.faulting_preceding = exe._faulting_inflight.copy()
+        self.registers = exe._registers.copy()
+        self.pc = pc
+
+    def notify_result(self, slot: _SlotID, result: Word):
+        super().notify_result(slot, result)
+
+        _update_waiting_list(slot, result, self.registers)
+
+    def notify_retired(self, slot: _SlotID):
+        super().notify_retired(slot)
+
+        if slot in self.faulting_preceding:
+            self.faulting_preceding.remove(slot)
+
+    def _tick_retire(self) -> Optional[tuple[Optional[_FaultState]]]:
+        if not self.is_faulting():
+            # We don't cause a fault and can retire immediately
+            return (None,)
+
+        # We want to cause a fault, but have to wait on preceding potentially faulting instructions
+        # to be sure that our fault will actually be caused architecturally. We also have to wait
+        # for the architectural register state to be known, so we know which register values to
+        # restore when rolling back to the current architectural state.
+        if self.faulting_preceding:
+            return None
+        for val in self.registers:
+            if not isinstance(val, Word):
+                return None
+
+        # We are done waiting and allowed to cause a fault
+        fault = _FaultState(cast(list[Word], self.registers), self.pc)
+        return (fault,)
+
+    def is_faulting(self) -> bool:
+        """Check if this instruction causes a fault."""
+        raise NotImplementedError("Must be overwritten by a concrete slot type")
+
+
+@dataclass
+class _SlotMem(_SlotFaulting):
+    """An occupied slot in the Reservation Station, storing a memory instruction."""
+
+    instr_ty: Union[InstrLoad, InstrStore, InstrFlush]
+
+    # Reference to MMU so we can perform memory operations
+    mmu: MMU
+    # Reference to Execution Engine so we can check for hazards
+    exe: "ExecutionEngine"
+    # Effective address of the memory access, or `None` if it is not yet available
+    address: Optional[Word]
+    # Memory instructions that have to be retired before this one executes due to hazards, or `None`
+    # if the effective address is not yet available
+    hazards: Optional[set[_SlotID]]
+    # Result of the memory operation, or `None` if we have not yet performed it
+    result: Optional[MemResult]
+
+    def __init__(
+        self,
+        exe: "ExecutionEngine",
+        instr: Instruction,
+        pc: int,
+        source_operands: list[_WordOrSlot],
+    ):
+        super().__init__(exe, instr, pc, source_operands)
+
+        self.mmu = exe._mmu
+        self.exe = exe
+        self.address = None
+        self.hazards = None
+        self.result = None
+
+    def notify_retired(self, slot: _SlotID):
+        super().notify_retired(slot)
+
+        if self.hazards is not None and slot in self.hazards:
+            self.hazards.remove(slot)
+
+    def _tick_execute(self) -> Optional[Word]:
+        base = self.operands[0]
+        offset = self.operands[1]
+        assert isinstance(offset, Word)
+
+        # Wait for base register to be available
+        if not isinstance(base, Word):
+            return None
+
+        # Compute effective address
+        if self.address is None:
+            self.address = base + offset
+
+        # Determine hazards
+        if self.hazards is None:
+            hazards = set()
+            # Hazards can only be caused by preceding potentially-faulting instructions (because all
+            # memory instructions are potentially-faulting), so we only check these
+            for slot_id in self.faulting_preceding:
+                slot = self.exe._slots[slot_id]
+                # We only care about memory instructions
+                if not isinstance(slot, _SlotMem):
+                    continue
+                # We have to wait until the effective address is available
+                if slot.address is None:
+                    return None
+                # Check if accesses overlap
+                if self._accesses_overlap(slot):
+                    hazards.add(slot_id)
+            self.hazards = hazards
+
+        # Wait for hazards
+        if self.hazards:
+            return None
+
+        # Perform memory operation
+        result = self._perform_access()
+        if result is None:
+            return None
+        self.result = result
+
+        # Wait until we want to return the value
+        self.result.cycles_value -= 1
+        if self.result.cycles_value > 0:
+            return None
+
+        # Return the value
+        return self.result.value
+
+    def _accesses_overlap(self, other: "_SlotMem") -> bool:
+        """Check if two memory accesses overlap."""
+
+        def access(slot):
+            addr = slot.address
+            width = slot.instr_ty.width
+            return {addr + Word(i) for i in range(width)}
+
+        return bool(access(self) & access(other))
+
+    def _perform_access(self) -> Optional[MemResult]:
+        """Perform the memory operation and return its result if it is done."""
+        raise NotImplementedError("Must be overwritten by a concrete slot type")
+
+    def _tick_retire(self) -> Optional[tuple[Optional[_FaultState]]]:
+        assert self.result is not None
+
+        # Wait until we want to signal whether we fault
+        self.result.cycles_fault -= 1
+        if self.result.cycles_fault > 0:
+            return None
+
+        # Delegate to base class
+        return super()._tick_retire()
+
+    def is_faulting(self) -> bool:
+        assert self.result is not None
+        return self.result.fault
+
+
+@dataclass
+class _SlotALU(_Slot):
+    """An occupied slot in the Reservation Station, storing an ALU instruction."""
 
     instr_ty: Union[InstrReg, InstrImm]
-    # Either a `Word` with the operand's value, or a `_SlotID` referencing the slot that will
-    # produce the operand value
-    operands: list[Union[Word, _SlotID]]
+
     cycles_remaining: int
+
+    def __init__(
+        self,
+        exe: "ExecutionEngine",
+        instr: Instruction,
+        pc: int,
+        source_operands: list[_WordOrSlot],
+    ):
+        super().__init__(exe, instr, pc, source_operands)
+
+        # Instruction is either of type `InstrReg` or `InstrImm`
+        ty = cast(Union[InstrReg, InstrImm], instr.ty)
+        self.cycles_remaining = ty.cycles
+
+    def _tick_execute(self) -> Optional[Word]:
+        # Wait for operands to be available
+        for op in self.operands:
+            if not isinstance(op, Word):
+                return None
+
+        # Wait the specified amount of cycles
+        self.cycles_remaining -= 1
+        if self.cycles_remaining > 0:
+            return None
+
+        # `operands` contains no more `_SlotID`s
+        operands = cast(list[Word], self.operands)
+        # Compute the result and return it
+        assert self.instr_ty.compute_result is not None
+        return self.instr_ty.compute_result(*operands)
+
+    def _tick_retire(self) -> Optional[tuple[Optional[_FaultState]]]:
+        # Retire immediately without a fault
+        return (None,)
 
 
 @dataclass
-class _SlotLoad:
-    """An occupied slot in the Load Buffer, storing a load instruction in flight."""
+class _SlotLoad(_SlotMem):
+    """An occupied slot in the Reservation Station, storing a load instruction."""
 
     instr_ty: InstrLoad
-    # Effective address of the memory access
-    address: Word
-    # Value loaded from memory, or `None` if the load instruction was issued
-    # this cycle
-    value: Optional[Word]
-    cycles_remaining: int
+
+    def __init__(
+        self,
+        exe: "ExecutionEngine",
+        instr: Instruction,
+        pc: int,
+        source_operands: list[_WordOrSlot],
+    ):
+        super().__init__(exe, instr, pc, source_operands)
+
+    def _perform_access(self) -> Optional[MemResult]:
+        assert self.address is not None
+
+        # Perform load operation
+        return self.mmu.read_word(self.address)
 
 
 @dataclass
-class _SlotStore:
-    """An occupied slot in the Store Buffer, storing a store instruction in flight."""
+class _SlotStore(_SlotMem):
+    """An occupied slot in the Reservation Station, storing a store instruction."""
 
     instr_ty: InstrStore
-    # Effective address of the memory access
-    address: Word
-    # Value stored to memory, or a `_SlotID` if the value is yet to be
-    # produced by another slot
-    value: Union[Word, _SlotID]
-    cycles_remaining: int
-    # Tracks if we already performed the store operation
-    completed: bool
+
+    def __init__(
+        self,
+        exe: "ExecutionEngine",
+        instr: Instruction,
+        pc: int,
+        source_operands: list[_WordOrSlot],
+    ):
+        super().__init__(exe, instr, pc, source_operands)
+
+    def _perform_access(self) -> Optional[MemResult]:
+        assert self.address is not None
+        value = self.operands[2]
+
+        # Wait until the stored value is available
+        if not isinstance(value, Word):
+            return None
+
+        # Before actually performing the store operation, we have to wait until all preceding
+        # potentially faulting instructions are retired, because we don't roll back store operations
+        if self.faulting_preceding:
+            return None
+
+        # Perform the store operation
+        return self.mmu.write_word(self.address, value)
+
+
+@dataclass
+class _SlotFlush(_SlotMem):
+    """An occupied slot in the Reservation Station, storing a flush instruction."""
+
+    instr_ty: InstrFlush
+
+
+@dataclass
+class _SlotBranch(_SlotFaulting):
+    """An occupied slot in the Reservation Station, storing a branch instruction."""
+
+    instr_ty: InstrBranch
+
+    prediction: bool
+
+
+def _get_slot_type(kind: InstructionKind) -> type:
+    if isinstance(kind, (InstrReg, InstrImm)):
+        return _SlotALU
+    if isinstance(kind, InstrLoad):
+        return _SlotLoad
+    if isinstance(kind, InstrStore):
+        return _SlotStore
+    if isinstance(kind, InstrFlush):
+        return _SlotFlush
+    if isinstance(kind, InstrBranch):
+        return _SlotBranch
+
+    raise ValueError(f"Unsupported instruction kind {kind!r}")
 
 
 class ExecutionEngine:
     """
     Execution Engine that executes instructions out-of-order.
 
-    The Execution Engine contains the register file and the Reservation Station, Load Buffer, and
-    Store Buffer. The latter contain a number of slots for ALU, load, and store instructions,
-    respectively.
+    The Execution Engine contains the register file and the Reservation Station. The Reservation
+    Station is completely unified, i.e. each slot can contain any kind of instruction. We don't
+    explicitly model Load Buffers or Store Buffers; the specifics of memory operations are handled
+    by the Slots themselves.
 
-    Each slot is either free or contains an `Instruction` in flight. An instruction in flight is
-    either still waiting for some of its operands to be produced by preceding instructions, or being
-    executed. The number of instructions that can execute concurrently is only limited by the amount
-    of slots; we don't model individual Execution Units and just pretend there is an infinite number
-    of them.
+    Each slot is either free or contains an `Instruction` in flight. The number of instructions that
+    can execute concurrently is only limited by the amount of slots; we don't model individual
+    Execution Units and just pretend there is an infinite number of them.
 
     Each register in the register file either contains a value or references a slot that will
     produce the register's value. Since instructions are issued in-order, the state of the register
@@ -75,17 +434,15 @@ class ExecutionEngine:
 
     _mmu: MMU
 
-    # Register file, either a `Word` with a value or a `_SlotID` referencing the slot that will
-    # produce the register value
-    _registers: list[Union[Word, _SlotID]]
-    # Reservation Station with slots for ALU instructions
-    _alus: list[Optional[_SlotALU]]
-    # Load Buffer with slots for load instructions
-    _loads: list[Optional[_SlotLoad]]
-    # Store Buffer with slots for store instructions
-    _stores: list[Optional[_SlotStore]]
+    # Register file, containing the architectural register state if all in-flight instructions were
+    # completed
+    _registers: list[_WordOrSlot]
+    # Slots of the Reservation Station
+    _slots: list[Optional[_Slot]]
+    # Potentially faulting instructions in flight
+    _faulting_inflight: set[_SlotID]
 
-    def __init__(self, mmu, regs=32, alus=8, loads=4, stores=4):
+    def __init__(self, mmu, regs=32, slots=8):
         """Create a new Reservation Station, with empty slots and zeroed registers."""
         self._mmu = mmu
 
@@ -93,258 +450,122 @@ class ExecutionEngine:
         self._registers = [Word(0) for _ in range(regs)]
 
         # Initialize slots to empty
-        self._alus = [None for _ in range(alus)]
-        self._loads = [None for _ in range(loads)]
-        self._stores = [None for _ in range(stores)]
+        self._slots = [None for _ in range(slots)]
 
-    @staticmethod
-    def _put_into_free_slot(
-            slots: list[Optional[_T]], new_slot: _T) -> Optional[int]:
-        """Try to put the given new slot into a free slot of the given slots."""
-        for i, slot in enumerate(slots):
+        # No instructions in flight
+        self._faulting_inflight = set()
+
+    def try_issue(self, instr: Instruction, pc: int) -> bool:
+        """Try to issue the instruction by putting it in a free slot, return `True` on success."""
+        # Get source operands
+        source_operands = self._source_operands(instr)
+
+        # Create new slot object
+        new_slot = _get_slot_type(instr.ty)(self, instr, pc, source_operands)
+
+        # Try to put new slot in a free slot
+        for i, slot in enumerate(self._slots):
             if slot is not None:
                 continue
 
             # Found a free slot, populate it
-            slots[i] = new_slot
+            self._slots[i] = new_slot
 
-            return i
-        return None
+            # Mark destination register as waiting on new slot
+            dst = instr.destination()
+            if dst is not None:
+                self._registers[dst] = _SlotID(i)
 
-    def _try_issue_alu(self, instr: Instruction) -> bool:
-        """Try to issue the given ALU instruction."""
-        # Get the source operands depending on the instruction type
-        if isinstance(instr.ty, InstrReg):
-            # This is an `InstrReg` instruction, with source operands `reg`,
-            # `reg`
-            operands = [self._registers[instr.ops[1]],
-                        self._registers[instr.ops[2]]]
-        else:
-            # This is an `InstrImm` instruction, with source operands `reg`,
-            # `imm`
-            operands = [self._registers[instr.ops[1]], Word(instr.ops[2])]
-
-        # Create slot entry and put it into a free slot
-        ty = cast(Union[InstrReg, InstrImm], instr.ty)
-        alu = _SlotALU(
-            instr_ty=ty,
-            operands=operands,
-            cycles_remaining=ty.cycles,
-        )
-        idx = self._put_into_free_slot(self._alus, alu)
-        if idx is None:
-            return False
-
-        # Mark destination register as waiting on new slot
-        self._registers[instr.ops[0]] = _SlotID(idx)
-
-        return True
-
-    @staticmethod
-    def _accesses_overlap(
-        slot: Union[_SlotLoad, _SlotStore],
-        addr: Word,
-        ty: Union[InstrLoad, InstrStore],
-    ) -> bool:
-        """Check if two memory accesses overlap."""
-
-        def access(addr, ty):
-            if ty.width_byte:
-                return {addr.value}
-            else:
-                return {addr.value, addr.value + 1}
-
-        return bool(access(slot.address, slot.instr_ty) & access(addr, ty))
-
-    def _try_issue_mem(self, instr: Instruction) -> bool:
-        """Try to issue the given load or store instruction."""
-        base = RegID(instr.ops[1])
-        offset = Word(instr.ops[2])
-
-        # Only issue memory instructions when the effective address is
-        # available
-        if not isinstance(self._registers[base], Word):
-            return False
-
-        # Compute effective address
-        address = cast(Word, self._registers[base]) + offset
-
-        # Check for RAW / WAW hazards
-        for haz_store in self._stores:
-            ty = cast(Union[InstrLoad, InstrStore], instr.ty)
-            if haz_store is not None and self._accesses_overlap(
-                    haz_store, address, ty):
-                return False
-
-        if isinstance(instr.ty, InstrLoad):
-            # Create slot entry and put it into a free slot
-            load = _SlotLoad(
-                instr_ty=cast(InstrLoad, instr.ty),
-                address=address,
-                value=None,
-                cycles_remaining=0,
-            )
-            idx = self._put_into_free_slot(self._loads, load)
-            if idx is None:
-                return False
-
-            # Mark destination register as waiting on this slot
-            self._registers[instr.ops[0]] = _SlotID(len(self._alus) + idx)
+            # Update list of potentially faulting slots
+            if isinstance(new_slot, _SlotFaulting):
+                self._faulting_inflight.add(_SlotID(i))
 
             return True
+        return False
 
-        else:
-            # Check for WAR hazard
-            for haz_load in self._loads:
-                ty = cast(Union[InstrLoad, InstrStore], instr.ty)
-                if haz_load is not None and self._accesses_overlap(
-                        haz_load, address, ty):
-                    return False
+    def _source_operands(self, instr: Instruction) -> list[_WordOrSlot]:
+        """Return the source operands of the given instruction."""
+        sources = []
+        for op, ty in instr.sources():
+            if ty == "reg":
+                val = self._registers[op]
+            elif ty == "imm":
+                val = Word(op)
+            elif ty == "label":
+                val = Word(op)
+            else:
+                raise ValueError(f"Unknown operand type {ty!r}")
+            sources.append(val)
+        return sources
 
-            # Create slot entry and put it into a free slot
-            store = _SlotStore(
-                instr_ty=cast(InstrStore, instr.ty),
-                address=address,
-                value=self._registers[instr.ops[0]],
-                cycles_remaining=0,
-                completed=False,
-            )
-            idx = self._put_into_free_slot(self._stores, store)
-            return idx is not None
-
-    def try_issue(self, instr: Instruction) -> bool:
+    def tick(self) -> Optional[int]:
         """
-        Try to issue the given instruction by putting it in a free slot.
+        Execute instructions that are ready.
 
-        ALU instructions will be put in the Reservation Station, load instructions in the Load
-        Buffer and store instructions in the Store Buffer. Additionally, load and store instructions
-        are only issued once the effective address of their memory access can be computed and there
-        are no hazards with load or store instructions in-flight.
-
-        Return whether the instruction was issued.
+        If a fault occurs, return the address of the faulting instruction.
         """
-        if isinstance(instr.ty, (InstrReg, InstrImm)):
-            return self._try_issue_alu(instr)
-        if isinstance(instr.ty, (InstrLoad, InstrStore)):
-            return self._try_issue_mem(instr)
+        for i, slot in enumerate(self._slots):
+            # Skip free slots
+            if slot is None:
+                continue
 
-        raise ValueError(f"Unsupported instruction type {instr.ty!r}")
+            if slot.executing:
+                # Continue execution
+                result = slot.tick_execute()
+                if result is not None:
+                    # Execution completed, notify other slots
+                    self._notify_result(_SlotID(i), result)
 
-    def _update_waiting(self, slot_id: _SlotID, result: Word):
+            else:
+                # Continue retirement
+                retired = slot.tick_retire()
+                if retired is not None:
+                    # Retirement completed, check for fault
+                    state = retired[0]
+                    if state is None:
+                        # No fault, notify other slots
+                        self._notify_retired(_SlotID(i))
+                        # Free retired slot
+                        self._slots[i] = None
+                    else:
+                        # Fault occurred, roll back to given architectural state and notify frontend
+                        self._rollback(state)
+                        return state.pc
+
+        # No fault occurred
+        return None
+
+    def _notify_result(self, slot_id: _SlotID, result: Word):
         """
-        Update all registers and slots that wait on the given slot.
+        Notify all slots that the given slot produced the given result.
 
         This models broadcasting the given result on the CDB.
         """
-        # Update all waiting registers
+        # Update register file
         for i, reg in enumerate(self._registers):
             if reg == slot_id:
                 self._registers[i] = result
 
-        # Update all waiting alus
-        for alu in self._alus:
-            if alu is None:
-                continue
-            for i, op in enumerate(alu.operands):
-                if op == slot_id:
-                    alu.operands[i] = result
+        # Notify slots
+        for slot in self._slots:
+            if slot is not None:
+                slot.notify_result(slot_id, result)
 
-        # Update all waiting stores
-        for store in self._stores:
-            if store is None:
-                continue
-            if store.value == slot_id:
-                store.value = result
+    def _notify_retired(self, slot_id: _SlotID):
+        """Notify all slots that the given slot retired without causing a fault."""
+        # Remove retired slot from list of potentially faulting slots
+        if slot_id in self._faulting_inflight:
+            self._faulting_inflight.remove(slot_id)
 
-    def tick(self):
-        """Execute instructions that are ready."""
-        # We only retire up to one instruction each cycle
-        retired = False
-
-        for i, slot in enumerate(self._alus):
-            # Skip free slots
+        # Notify slots
+        for slot in self._slots:
             if slot is None:
                 continue
-            # Skip waiting slots
-            if not all(isinstance(op, Word) for op in slot.operands):
-                continue
 
-            # Found ready slot, execute it
-            slot.cycles_remaining -= 1
-            # Check if slot is done
-            if slot.cycles_remaining > 0:
-                continue
-            # Only retire up to one instruction
-            if retired:
-                continue
-            retired = True
+            slot.notify_retired(slot_id)
 
-            # Compute result
-            res = slot.instr_ty.compute_result(*slot.operands)
-            self._update_waiting(_SlotID(i), res)
-
-            # Free retired slot
-            self._alus[i] = None
-
-        for i, load in enumerate(self._loads):
-            # Skip free slots
-            if load is None:
-                continue
-
-            # Inform the memory subsystem of loads that just got issued
-            if load.value is None:
-                if load.instr_ty.width_byte:
-                    val, cycles = self._mmu.read_byte(load.address.value)
-                else:
-                    val, cycles = self._mmu.read_word(load.address.value)
-                load.value = val
-                load.cycles_remaining = cycles
-
-            # Execute load
-            load.cycles_remaining -= 1
-            # Check if load is done
-            if load.cycles_remaining > 0:
-                continue
-            # Only retire up to one instruction
-            if retired:
-                continue
-            retired = True
-
-            # Broadcast result
-            self._update_waiting(_SlotID(len(self._alus) + i), load.value)
-
-            # Free retired slot
-            self._loads[i] = None
-
-        for i, store in enumerate(self._stores):
-            # Skip free slots
-            if store is None:
-                continue
-            # Skip waiting slots
-            if not isinstance(store.value, Word):
-                continue
-
-            if not store.completed:
-                # Actually perform the store
-                if store.instr_ty.width_byte:
-                    cycles = self._mmu.write_byte(
-                        store.address.value, store.value)
-                else:
-                    cycles = self._mmu.write_word(
-                        store.address.value, store.value)
-
-                store.cycles_remaining = cycles
-                store.completed = True
-
-            # Execute store
-            store.cycles_remaining -= 1
-            # Check if store is done
-            if store.cycles_remaining > 0:
-                continue
-            # Only retire up to one instruction
-            if retired:
-                continue
-            retired = True
-
-            # Free retired slot
-            self._stores[i] = None
+    def _rollback(self, state: _FaultState):
+        """Roll back to the given state."""
+        self._registers = cast(list[_WordOrSlot], state.registers)
+        self._slots = [None for _ in range(len(self._slots))]
+        self._faulting_inflight = set()
