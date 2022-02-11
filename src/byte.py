@@ -1,5 +1,6 @@
 from .word import Word
 
+
 class Byte(Word):
 
     def __init__(self, value):
