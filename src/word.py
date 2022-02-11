@@ -3,7 +3,7 @@ from typing import Sequence
 
 class Word:
     WIDTH: int = 16
-    WIDTH_BYTES = WIDTH // 8
+    WIDTH_BYTES: int = WIDTH // 8
 
     # Always positive
     _value: int

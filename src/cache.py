@@ -98,7 +98,7 @@ class CacheLine:
             return
         self.data[offset] = data
 
-    def flush(self, offset: int) -> None:
+    def flush(self) -> None:
         """
         Flushes the data written at the index 'offset'.
         This means that further reads to this index
@@ -113,15 +113,10 @@ class CacheLine:
         Returns:
             This function does not have a return value.
         """
-        self.data[offset] = None
-
-        # clear tag if no more data is stored in this line
-        for i in range(self.line_size):
-            if self.data[i] is not None:
-                return
+        for i in range(len(self.data)):
+            self.data[i] = None
 
         self.set_tag(None)
-
 
 class Cache:
     """
@@ -256,7 +251,7 @@ class Cache:
 
         for i in range(self.num_lines):
             if self.sets[index][i].check_tag(tag):
-                self.sets[index][i].flush(offset)
+                self.sets[index][i].flush()
                 return
 
     def get_num_sets(self):
@@ -371,7 +366,7 @@ class CacheLineLRU(CacheLine):
     # Should flushing count as an access to a cache line?
     # If not, remove the following method:
     def flush(self, offset: int) -> None:
-        super().flush(offset)
+        super().flush()
         self.lru_timestamp = time()
 
 

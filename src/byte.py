@@ -1,5 +1,7 @@
-class Byte:
-    value: int
+from .word import Word
+
+class Byte(Word):
 
     def __init__(self, value):
-        self.value = value % (1 << 8)
+        super().__init__(value)
+        self._value = value % (1 << 8)
