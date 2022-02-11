@@ -4,6 +4,7 @@ from .cache import CacheRR, CacheLRU, CacheFIFO
 from .word import Word
 from .byte import Byte
 
+
 @dataclass
 class MemResult:
     """Result of a memory operation."""
@@ -16,6 +17,7 @@ class MemResult:
     cycles_value: int
     # Number of cycles we wait before signaling whether we fault, after we returned the value
     cycles_fault: int
+
 
 class MMU:
     """

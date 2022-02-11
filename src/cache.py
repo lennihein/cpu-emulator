@@ -118,6 +118,7 @@ class CacheLine:
 
         self.set_tag(None)
 
+
 class Cache:
     """
     An abstract class implementing a cache. Using this class directly is not possible, as it

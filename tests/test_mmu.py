@@ -3,6 +3,7 @@ from src import mmu as MMU
 from src import word
 from src import byte
 
+
 class MMUTests(unittest.TestCase):
 
     def test_mmu(self):
