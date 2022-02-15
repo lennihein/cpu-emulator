@@ -144,7 +144,7 @@ class Frontend:
                 self.pc = self.pc + 1
         return
 
-    def pop_instruction_from_queue(self) -> instructions.Instruction:
+    def pop_instruction_from_queue(self) -> tuple[instructions.Instruction, int]:
         '''
         Deletes the first (current first in) instruction from the instruction queue
         and its respective index from the instruction indices
@@ -157,7 +157,7 @@ class Frontend:
         else:
             raise LookupError("instruction queue is empty")
 
-    def fetch_instruction_from_queue(self) -> instructions.Instruction:
+    def fetch_instruction_from_queue(self) -> tuple[instructions.Instruction, int]:
         '''
         Returns the first (current first in) instruction from the instruction queue
         and its respective index from the instruction indices.
@@ -169,6 +169,9 @@ class Frontend:
 
         else:
             raise LookupError("instruction queue is empty")
+
+    def get_instr_queue_size(self):
+        return len(self.instr_queue)
 
     def flush_instruction_queue(self) -> None:
         '''
