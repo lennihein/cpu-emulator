@@ -2,6 +2,7 @@ import os
 from src.mmu import MMU
 from src.execution import ExecutionEngine
 from math import ceil
+from src.word import Word
 
 HEADER = '\033[95m'
 BLUE = '\033[94m'
@@ -55,7 +56,7 @@ def print_memory(mmu: MMU, lines=8, base=0x0000):
         for _ in range(fits):
             if i >= mmu.mem_size: 
                 return
-            if(mmu.is_addr_cached(i)):
+            if(mmu.is_addr_cached(Word(i))):
                 print_hex(mmu.memory[i], base_style=FAINT+RED, style=RED)
             else:
                 print_hex(mmu.memory[i])
