@@ -84,12 +84,12 @@ class InstrLoad(InstructionKind):
 
     operand_types = ["reg", "reg", "imm"]
 
-    width: int
+    width_byte: bool
 
     def __init__(self, name: str, width_byte: bool):
         super().__init__(name)
 
-        self.width = 1 if width_byte else Word.WIDTH_BYTES
+        self.width_byte = width_byte
 
     def sources(self) -> Iterable[int]:
         return [1, 2]
@@ -97,24 +97,38 @@ class InstrLoad(InstructionKind):
     def destination(self) -> Optional[int]:
         return 0
 
+    @property
+    def width(self) -> int:
+        if self.width_byte:
+            return 1
+        else:
+            return Word.WIDTH_BYTES
+
 
 class InstrStore(InstructionKind):
     """A store instruction, storing a word or a byte."""
 
     operand_types = ["reg", "reg", "imm"]
 
-    width: int
+    width_byte: bool
 
     def __init__(self, name: str, width_byte: bool):
         super().__init__(name)
 
-        self.width = 1 if width_byte else Word.WIDTH_BYTES
+        self.width_byte = width_byte
 
     def sources(self) -> Iterable[int]:
         return [1, 2, 0]
 
     def destination(self) -> Optional[int]:
         return None
+
+    @property
+    def width(self) -> int:
+        if self.width_byte:
+            return 1
+        else:
+            return Word.WIDTH_BYTES
 
 
 class InstrFlush(InstructionKind):

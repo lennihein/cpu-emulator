@@ -242,10 +242,11 @@ class _SlotMem(_SlotFaulting):
             return None
 
         # Perform memory operation
-        result = self._perform_access()
-        if result is None:
-            return None
-        self.result = result
+        if self.result is None:
+            result = self._perform_access()
+            if result is None:
+                return None
+            self.result = result
 
         # Wait until we want to return the value
         self.result.cycles_value -= 1
@@ -346,8 +347,11 @@ class _SlotLoad(_SlotMem):
     def _perform_access(self) -> Optional[MemResult]:
         assert self.address is not None
 
-        # Perform load operation
-        return self.mmu.read_word(self.address)
+        # Perform the load operation
+        if self.instr_ty.width_byte:
+            return self.mmu.read_byte(self.address)
+        else:
+            return self.mmu.read_word(self.address)
 
 
 @dataclass
@@ -379,7 +383,10 @@ class _SlotStore(_SlotMem):
             return None
 
         # Perform the store operation
-        return self.mmu.write_word(self.address, value)
+        if self.instr_ty.width_byte:
+            return self.mmu.write_byte(self.address, value)
+        else:
+            return self.mmu.write_word(self.address, value)
 
 
 @dataclass
@@ -387,6 +394,21 @@ class _SlotFlush(_SlotMem):
     """An occupied slot in the Reservation Station, storing a flush instruction."""
 
     instr_ty: InstrFlush
+
+    def __init__(
+        self,
+        exe: "ExecutionEngine",
+        instr: Instruction,
+        pc: int,
+        source_operands: list[_WordOrSlot],
+    ):
+        super().__init__(exe, instr, pc, source_operands)
+
+    def _perform_access(self) -> Optional[MemResult]:
+        assert self.address is not None
+
+        # Perform the flush operation
+        return self.mmu.flush_line(self.address)
 
 
 @dataclass

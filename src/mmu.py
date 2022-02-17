@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 
-from .cache import CacheRR, CacheLRU, CacheFIFO
+from .cache import CacheFIFO, CacheLRU, CacheRR
 from .word import Word
-from .byte import Byte
 
 
 @dataclass
@@ -41,10 +40,16 @@ class MMU:
     cache: CacheLRU
     cache_replacement_policy: str
 
-    def __init__(self, mem_size: int = 1 << Word.WIDTH, cache_hit_cycles: int = 2,
-                 cache_miss_cycles: int = 5, num_write_cycles: int = 5,
-                 num_fault_cycles: int = 8, cache_config: tuple = (4, 4, 4),
-                 replacement_policy="RR"):
+    def __init__(
+        self,
+        mem_size: int = 1 << Word.WIDTH,
+        cache_hit_cycles: int = 2,
+        cache_miss_cycles: int = 5,
+        num_write_cycles: int = 5,
+        num_fault_cycles: int = 8,
+        cache_config: tuple = (4, 4, 4),
+        replacement_policy="RR",
+    ):
         """
         A class representing the memory management unit of a CPU.
         It holds the memory itself as well as a cache.
@@ -94,18 +99,17 @@ class MMU:
                 operation.
         """
 
-        data = self.cache.read(address)
+        data = self.cache.read(address.value)
         cycles = self.cache_hit_cycles
 
         if data is None:
-            data = self.memory[address]
+            data = self.memory[address.value]
             cycles = self.cache_miss_cycles
-            self.cache.write(address, data)
+            self.cache.write(address.value, data)
 
-        return MemResult(Byte(data), False, cycles,
-                         self.num_fault_cycles)
+        return MemResult(Word(data), False, cycles, self.num_fault_cycles)
 
-    def write_byte(self, address: Word, data: Byte) -> None:
+    def write_byte(self, address: Word, data: Word) -> MemResult:
         """
         Writes a byte to memory.
 
@@ -117,10 +121,11 @@ class MMU:
             This function does not have a return value.
         """
 
-        # value = data._value % (1 << 8)
+        value = data.value % 256
+        self.memory[address.value] = value
+        self.cache.write(address.value, value)
 
-        self.memory[address] = data.value
-        self.cache.write(address, data.value)
+        return MemResult(Word(0), False, self.num_write_cycles, self.num_fault_cycles)
 
     def read_word(self, address: Word) -> MemResult:
         """
@@ -136,22 +141,23 @@ class MMU:
                 operation.
         """
 
-        # little endian
-        lower_half_result = self.read_byte(address)
-        lower_half = lower_half_result.value.value
-        cycles_lower = lower_half_result.cycles_value
+        # Read individual bytes
+        bytes_read = []
+        fault = False
+        cycles_value = 0
+        cycles_fault = 0
+        for i in range(Word.WIDTH_BYTES):
+            byte = self.read_byte(address + Word(i))
 
-        upper_half_result = self.read_byte(address + 1)
-        upper_half = upper_half_result.value.value
-        cycles_upper = upper_half_result.cycles_value
+            bytes_read.append(byte.value.value)
+            if byte.fault:
+                fault = True
+            cycles_value = max(cycles_value, byte.cycles_value)
+            cycles_fault = max(cycles_fault, byte.cycles_fault)
 
-        result = (upper_half << (Word.WIDTH // 2)) + lower_half
+        return MemResult(Word.from_bytes(bytes_read), fault, cycles_value, cycles_fault)
 
-        return MemResult(Word(result), False,
-                         max(cycles_lower, cycles_upper),
-                         self.num_fault_cycles)
-
-    def write_word(self, address: Word, data: Word) -> None:
+    def write_word(self, address: Word, data: Word) -> MemResult:
         """
         Writes a word to memory. The architecture is assumed to be little-endian.
 
@@ -163,16 +169,21 @@ class MMU:
             This function does not have a return value.
         """
 
-        data = data.value
-        data_bits = bin(data)[2:].zfill(Word.WIDTH)
+        # Write individual bytes
+        fault = False
+        cycles_value = 0
+        cycles_fault = 0
+        for i, byte in enumerate(data.as_bytes()):
+            result = self.write_byte(address + Word(i), Word(byte))
 
-        lower_half = int(data_bits[Word.WIDTH // 2:], base=2)
-        upper_half = int(data_bits[:Word.WIDTH // 2], base=2)
+            if result.fault:
+                fault = True
+            cycles_value = max(cycles_value, result.cycles_value)
+            cycles_fault = max(cycles_fault, result.cycles_fault)
 
-        self.write_byte(address, Byte(lower_half))
-        self.write_byte(address + 1, Byte(upper_half))
+        return MemResult(Word(0), fault, cycles_value, cycles_fault)
 
-    def flush_line(self, address: Word) -> None:
+    def flush_line(self, address: Word) -> MemResult:
         """
         Flushes an address from the cache.
 
@@ -182,7 +193,8 @@ class MMU:
         Returns:
             This function does not have a return value.
         """
-        self.cache.flush(address)
+        self.cache.flush(address.value)
+        return MemResult(Word(0), False, self.num_write_cycles, self.num_fault_cycles)
 
     def is_addr_cached(self, address: Word) -> bool:
         """
@@ -194,7 +206,7 @@ class MMU:
         Returns:
             bool: True if data at address is cached
         """
-        return self.cache.read(address) is not None
+        return self.cache.read(address.value) is not None
 
     def write_cycles(self) -> int:
         """
