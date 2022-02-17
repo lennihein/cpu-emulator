@@ -309,6 +309,7 @@ class Cache:
         }
         return cache
 
+
 class CacheRR(Cache):
     """A cache implementing the random replacement policy."""
 

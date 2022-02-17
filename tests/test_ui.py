@@ -1,7 +1,8 @@
 from src.ui import *
-from src.mmu import *
+from src.word import Word
+from src.mmu import MMU
 from src.execution import ExecutionEngine
-        
+
 
 # # print current PC position
 # print_header("Program", BOLD + RED + ENDC)
@@ -34,15 +35,22 @@ from src.execution import ExecutionEngine
 
 from unittest import TestCase
 
+
 class UITest(TestCase):
     """Test the UI."""
 
     def test_memory(self):
         print()
-        mmu = MMU(mem_size=0x80, cache_config=(4,4,1), replacement_policy="LRU")
+        mmu = MMU(mem_size=0x80, cache_config=(
+            4, 4, 1), replacement_policy="LRU")
         from random import randrange
         for _ in range(5000):
-            mmu.write_byte(Word(randrange(0, mmu.mem_size)), Word(randrange(0, 0xFF)))
+            mmu.write_byte(
+                Word(
+                    randrange(
+                        0, mmu.mem_size)), Word(
+                    randrange(
+                        0, 0xFF)))
         header_memory(mmu)
 
     def test_registers(self):
@@ -53,15 +61,20 @@ class UITest(TestCase):
 
     def test_cache(self):
         print()
-        mmu = MMU(mem_size=columns*8, cache_config=(4,4,4))
+        mmu = MMU(mem_size=columns * 8, cache_config=(4, 4, 4))
         from random import randrange
         for _ in range(50000):
-            mmu.write_byte(Word(randrange(0, mmu.mem_size)), Word(randrange(0, 0xFF)))
+            mmu.write_byte(
+                Word(
+                    randrange(
+                        0, mmu.mem_size)), Word(
+                    randrange(
+                        0, 0xFF)))
         print_header("Cache", ENDC)
         print()
         print_cache(mmu)
         print()
-    
+
     def test_end(self):
         print()
         print_header("END")

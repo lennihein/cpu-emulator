@@ -6,6 +6,7 @@ from .parser import Parser
 from .execution import ExecutionEngine
 import copy
 
+
 class CPU:
 
     _parser: Parser
