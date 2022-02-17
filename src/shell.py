@@ -21,7 +21,7 @@ completions = {}
 
 
 def func(f):
-    if len(f.__name__) > 0:
+    if len(f.__name__[2:]) > 0:
         completions[f.__name__[2:]] = None
     return funcs.setdefault(f.__name__, f)
 
