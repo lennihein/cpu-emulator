@@ -49,6 +49,8 @@ class ExecutionTest(TestCase):
         p = Parser.from_default()
         p.add_instruction(mul)
 
+        # TODO: Use frontend, to be able to execute the loop
+
         # Create execution engine with MMU
         exe = ExecutionEngine(MMU())
 

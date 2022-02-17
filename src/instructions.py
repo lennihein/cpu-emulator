@@ -167,7 +167,7 @@ class InstrBranch(InstructionKind):
         self.cycles = cycles
 
     def sources(self) -> Iterable[int]:
-        return [0, 1, 2]
+        return [0, 1]
 
     def destination(self) -> Optional[int]:
         return None
