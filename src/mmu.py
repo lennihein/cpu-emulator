@@ -108,7 +108,7 @@ class MMU:
             cycles = self.cache_miss_cycles
             self._load_line(address)
 
-        return MemResult(Word(data), False, cycles, self.num_fault_cycles)
+        return MemResult(Byte(data), False, cycles, self.num_fault_cycles)
 
     def write_byte(self, address: Word, data: Byte) -> MemResult:
         """
@@ -128,7 +128,7 @@ class MMU:
 
         self._load_line(address)
 
-        return MemResult(Word(0), False, self.num_write_cycles, self.num_fault_cycles)
+        return MemResult(Byte(0), False, self.num_write_cycles, self.num_fault_cycles)
 
     def read_word(self, address: Word) -> MemResult:
         """
