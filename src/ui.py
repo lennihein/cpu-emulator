@@ -19,7 +19,10 @@ YELLOW = '\33[33m'
 
 
 # get terminal size
-columns, rows = os.get_terminal_size(0)
+try:
+    columns, rows = os.get_terminal_size(0)
+except OSError:
+    columns, rows = 120, 30
 
 # print colored text using ANSI escape sequences
 
