@@ -12,6 +12,7 @@ logger.addHandler(stream_handler)
 class FrontendTest(unittest.TestCase):
 
     def test_frontend(self):
+
         # preparations for building a working frontend
         from src import bpu, parser, instructions
         cpu_bpu = bpu.BPU()
@@ -43,8 +44,10 @@ class FrontendTest(unittest.TestCase):
         self.assertTrue('instruction queue is empty' in str(context.exception))
 
         # check that the queue is filled but not overfilled
+        #check function get_instr_queue_size
         front.add_instructions_to_queue()
 
+        self.assertEqual(self.get_instr_queue_size, 3)
         self.assertEqual(len(front.instr_queue), 3)
         self.assertIs(front.instr_queue[0], instrs[0])
         self.assertIs(front.instr_queue[1], instrs[1])
@@ -108,6 +111,7 @@ class FrontendTest(unittest.TestCase):
         # flushing should empty the queues
         front.flush_instruction_queue()
 
+        self.assertEqual(self.get_instr_queue_size, 0)
         self.assertEqual(len(front.instr_queue), 0)
         self.assertEqual(len(front.instr_index), 0)
 
@@ -136,6 +140,7 @@ class FrontendTest(unittest.TestCase):
             addi, [1, 1, 2]), instructions.Instruction(beq, [0, 0, 1])])
         front.add_micro_program(micro_program)
 
+        self.assertEqual(self.get_instr_queue_size, 5)
         self.assertEqual(len(front.instr_queue), 5)
         self.assertIs(front.instr_queue[0], instrs[1])
         self.assertIs(front.instr_queue[1], instrs[2])
