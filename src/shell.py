@@ -1,6 +1,7 @@
 from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from os import system
 
 from src import ui
 # from src.cpu import CPU
@@ -35,6 +36,10 @@ def __example(input):
 def __exit(input):
     exit()
 
+@func
+def __clear(input):
+    system('clear')
+    return
 
 @func
 def __(input):
