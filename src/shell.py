@@ -36,10 +36,12 @@ def __example(input):
 def __exit(input):
     exit()
 
+
 @func
 def __clear(input):
     system('clear')
     return
+
 
 @func
 def __(input):
