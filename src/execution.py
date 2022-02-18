@@ -33,6 +33,17 @@ class _FaultState:
     pc: int
 
 
+@dataclass
+class _ArgsSlot:
+    """Arguments to the `Slot` constructor, just to avoid having to repeat them on each subclass."""
+
+    exe: "ExecutionEngine"
+    instr: Instruction
+    pc: int
+    source_operands: list[_WordOrSlot]
+    prediction: Optional[bool]
+
+
 def _update_waiting_list(slot: _SlotID, result: Word, values: list[_WordOrSlot]):
     """Update waiting values using the result from the given slot."""
     for i, val in enumerate(values):
@@ -40,7 +51,6 @@ def _update_waiting_list(slot: _SlotID, result: Word, values: list[_WordOrSlot])
             values[i] = result
 
 
-@dataclass
 class _Slot:
     """
     An occupied slot in the Reservation Station, storing an instruction in flight.
@@ -59,17 +69,11 @@ class _Slot:
     # Source operands
     operands: list[_WordOrSlot]
 
-    def __init__(
-        self,
-        exe: "ExecutionEngine",
-        instr: Instruction,
-        pc: int,
-        source_operands: list[_WordOrSlot],
-    ):
-        self.instr_ty = instr.ty
+    def __init__(self, args: _ArgsSlot):
+        self.instr_ty = args.instr.ty
         self.executing = True
         self.retired = False
-        self.operands = source_operands
+        self.operands = args.source_operands
 
     def notify_result(self, slot: _SlotID, result: Word):
         """Notify this slot that the given slot produced the given result."""
@@ -108,7 +112,6 @@ class _Slot:
         raise NotImplementedError("Must be overwritten by a concrete slot type")
 
 
-@dataclass
 class _SlotFaulting(_Slot):
     """An occupied slot in the Reservation Station, storing a potentially-faulting instruction."""
 
@@ -119,18 +122,12 @@ class _SlotFaulting(_Slot):
     # Address of this instruction
     pc: int
 
-    def __init__(
-        self,
-        exe: "ExecutionEngine",
-        instr: Instruction,
-        pc: int,
-        source_operands: list[_WordOrSlot],
-    ):
-        super().__init__(exe, instr, pc, source_operands)
+    def __init__(self, args: _ArgsSlot):
+        super().__init__(args)
 
-        self.faulting_preceding = exe._faulting_inflight.copy()
-        self.registers = exe._registers.copy()
-        self.pc = pc
+        self.faulting_preceding = args.exe._faulting_inflight.copy()
+        self.registers = args.exe._registers.copy()
+        self.pc = args.pc
 
     def notify_result(self, slot: _SlotID, result: Word):
         super().notify_result(slot, result)
@@ -167,7 +164,6 @@ class _SlotFaulting(_Slot):
         raise NotImplementedError("Must be overwritten by a concrete slot type")
 
 
-@dataclass
 class _SlotMem(_SlotFaulting):
     """An occupied slot in the Reservation Station, storing a memory instruction."""
 
@@ -185,17 +181,11 @@ class _SlotMem(_SlotFaulting):
     # Result of the memory operation, or `None` if we have not yet performed it
     result: Optional[MemResult]
 
-    def __init__(
-        self,
-        exe: "ExecutionEngine",
-        instr: Instruction,
-        pc: int,
-        source_operands: list[_WordOrSlot],
-    ):
-        super().__init__(exe, instr, pc, source_operands)
+    def __init__(self, args: _ArgsSlot):
+        super().__init__(args)
 
-        self.mmu = exe._mmu
-        self.exe = exe
+        self.mmu = args.exe._mmu
+        self.exe = args.exe
         self.address = None
         self.hazards = None
         self.result = None
@@ -242,10 +232,11 @@ class _SlotMem(_SlotFaulting):
             return None
 
         # Perform memory operation
-        result = self._perform_access()
-        if result is None:
-            return None
-        self.result = result
+        if self.result is None:
+            result = self._perform_access()
+            if result is None:
+                return None
+            self.result = result
 
         # Wait until we want to return the value
         self.result.cycles_value -= 1
@@ -285,7 +276,6 @@ class _SlotMem(_SlotFaulting):
         return self.result.fault
 
 
-@dataclass
 class _SlotALU(_Slot):
     """An occupied slot in the Reservation Station, storing an ALU instruction."""
 
@@ -293,18 +283,10 @@ class _SlotALU(_Slot):
 
     cycles_remaining: int
 
-    def __init__(
-        self,
-        exe: "ExecutionEngine",
-        instr: Instruction,
-        pc: int,
-        source_operands: list[_WordOrSlot],
-    ):
-        super().__init__(exe, instr, pc, source_operands)
+    def __init__(self, args: _ArgsSlot):
+        super().__init__(args)
 
-        # Instruction is either of type `InstrReg` or `InstrImm`
-        ty = cast(Union[InstrReg, InstrImm], instr.ty)
-        self.cycles_remaining = ty.cycles
+        self.cycles_remaining = self.instr_ty.cycles
 
     def _tick_execute(self) -> Optional[Word]:
         # Wait for operands to be available
@@ -328,42 +310,25 @@ class _SlotALU(_Slot):
         return (None,)
 
 
-@dataclass
 class _SlotLoad(_SlotMem):
     """An occupied slot in the Reservation Station, storing a load instruction."""
 
     instr_ty: InstrLoad
 
-    def __init__(
-        self,
-        exe: "ExecutionEngine",
-        instr: Instruction,
-        pc: int,
-        source_operands: list[_WordOrSlot],
-    ):
-        super().__init__(exe, instr, pc, source_operands)
-
     def _perform_access(self) -> Optional[MemResult]:
         assert self.address is not None
 
-        # Perform load operation
-        return self.mmu.read_word(self.address)
+        # Perform the load operation
+        if self.instr_ty.width_byte:
+            return self.mmu.read_byte(self.address)
+        else:
+            return self.mmu.read_word(self.address)
 
 
-@dataclass
 class _SlotStore(_SlotMem):
     """An occupied slot in the Reservation Station, storing a store instruction."""
 
     instr_ty: InstrStore
-
-    def __init__(
-        self,
-        exe: "ExecutionEngine",
-        instr: Instruction,
-        pc: int,
-        source_operands: list[_WordOrSlot],
-    ):
-        super().__init__(exe, instr, pc, source_operands)
 
     def _perform_access(self) -> Optional[MemResult]:
         assert self.address is not None
@@ -379,23 +344,64 @@ class _SlotStore(_SlotMem):
             return None
 
         # Perform the store operation
-        return self.mmu.write_word(self.address, value)
+        if self.instr_ty.width_byte:
+            return self.mmu.write_byte(self.address, value)
+        else:
+            return self.mmu.write_word(self.address, value)
 
 
-@dataclass
 class _SlotFlush(_SlotMem):
     """An occupied slot in the Reservation Station, storing a flush instruction."""
 
     instr_ty: InstrFlush
 
+    def _perform_access(self) -> Optional[MemResult]:
+        assert self.address is not None
 
-@dataclass
+        # Perform the flush operation
+        return self.mmu.flush_line(self.address)
+
+
 class _SlotBranch(_SlotFaulting):
     """An occupied slot in the Reservation Station, storing a branch instruction."""
 
     instr_ty: InstrBranch
 
     prediction: bool
+    cycles_remaining: int
+    condition: Optional[bool]
+
+    def __init__(self, args: _ArgsSlot):
+        super().__init__(args)
+
+        assert args.prediction is not None
+        self.prediction = args.prediction
+
+        self.cycles_remaining = self.instr_ty.cycles
+        self.condition = None
+
+    def _tick_execute(self) -> Optional[Word]:
+        # Wait for operands to be available
+        for op in self.operands:
+            if not isinstance(op, Word):
+                return None
+
+        # Wait the specified amount of cycles
+        self.cycles_remaining -= 1
+        if self.cycles_remaining > 0:
+            return None
+
+        # `operands` contains no more `_SlotID`s
+        operands = cast(list[Word], self.operands)
+        # Compute the branch condition
+        assert self.instr_ty.condition is not None
+        self.condition = self.instr_ty.condition(*operands)
+
+        # Return dummy value
+        return Word(0)
+
+    def is_faulting(self) -> bool:
+        return self.condition != self.prediction
 
 
 def _get_slot_type(kind: InstructionKind) -> type:
@@ -455,13 +461,14 @@ class ExecutionEngine:
         # No instructions in flight
         self._faulting_inflight = set()
 
-    def try_issue(self, instr: Instruction, pc: int) -> bool:
+    def try_issue(self, instr: Instruction, pc: int, prediction: Optional[bool] = None) -> bool:
         """Try to issue the instruction by putting it in a free slot, return `True` on success."""
         # Get source operands
         source_operands = self._source_operands(instr)
 
         # Create new slot object
-        new_slot = _get_slot_type(instr.ty)(self, instr, pc, source_operands)
+        args = _ArgsSlot(self, instr, pc, source_operands, prediction)
+        new_slot = _get_slot_type(instr.ty)(args)
 
         # Try to put new slot in a free slot
         for i, slot in enumerate(self._slots):

@@ -68,7 +68,7 @@ class Frontend:
     '''
     Holds and manages a queue of at most max_length instructions.
     An exception to this max length is made when adding micro programs.
-    Expects an already initialised bpu (e.g. shallow copy of the bpu from a surrounding cpu class) 
+    Expects an already initialised bpu (e.g. shallow copy of the bpu from a surrounding cpu class)
     and a list of instructions (e.g. as provided by the Parser in paser.py) upon initilisation.
     Max_length can be initialised, too, otherwise a default of 5 is used.
     Uses a program counter pc to keep track of the next instruction from the provided instruction list that should be added to the queue.
@@ -96,13 +96,13 @@ class Frontend:
 
         Only adds an instruction, if max_langth is not yet reached.
         If the queue is full, the function returns withput further effect.
-        Notifies the user if the end of the program is reached, 
+        Notifies the user if the end of the program is reached,
         i.e. the pc exceeds the number of instructions in the instr_list.
 
-        If the intruction currently added to the list is of the type InstrBranch, 
-        the pc for the next instruction is set according to the label/ number 
+        If the intruction currently added to the list is of the type InstrBranch,
+        the pc for the next instruction is set according to the label/ number
         provided by the instruction and the bpu prediction for the branch instruction.
-        Important: jump and branching instructions need to be explicitly registered as InstrBranch, 
+        Important: jump and branching instructions need to be explicitly registered as InstrBranch,
         ot the more generic InstructionType, in the instruction list from the parser.
         For all other instructions, the pc is set to the next instruction in the list.
 
@@ -144,10 +144,10 @@ class Frontend:
                 self.pc = self.pc + 1
         return
 
-    def pop_instruction_from_queue(self) -> instructions.Instruction:
+    def pop_instruction_from_queue(self) -> tuple[instructions.Instruction, int]:
         '''
-        Deletes the first (current first in) instruction from the instruction queue 
-        and its respective index from the instruction indices 
+        Deletes the first (current first in) instruction from the instruction queue
+        and its respective index from the instruction indices
         and returns them.
         '''
 
@@ -157,9 +157,9 @@ class Frontend:
         else:
             raise LookupError("instruction queue is empty")
 
-    def fetch_instruction_from_queue(self) -> instructions.Instruction:
+    def fetch_instruction_from_queue(self) -> tuple[instructions.Instruction, int]:
         '''
-        Returns the first (current first in) instruction from the instruction queue 
+        Returns the first (current first in) instruction from the instruction queue
         and its respective index from the instruction indices.
         They are not deleted from the queue.
         '''
@@ -170,11 +170,14 @@ class Frontend:
         else:
             raise LookupError("instruction queue is empty")
 
+    def get_instr_queue_size(self):
+        return len(self.instr_queue)
+
     def flush_instruction_queue(self) -> None:
         '''
         Empties the instruction queue and the queue of respective indices.
-        Does not adjust the pc. 
-        This has to be done separately, 
+        Does not adjust the pc.
+        This has to be done separately,
         otherwise the instructions that were flushed from the queue will be silently skipped.
         '''
         self.instr_queue.clear()
@@ -187,9 +190,9 @@ class Frontend:
         Adds a list of instructions as a µ-program to the queue.
         The queue is not automatically flushed.
         This can be done separately as a "mitigation" against Meltdown.
-        The max_length of the queue is disregarded when adding the µ-program, 
+        The max_length of the queue is disregarded when adding the µ-program,
         so µ-programs can be arbitrarily long and added to full queues.
-        If the µ-code contains jump instructions, 
+        If the µ-code contains jump instructions,
         the pc will be set according to the last of these jump instructions.
         The respective instruction index is -1 for alle instructions in the µ-program.
         '''
@@ -206,7 +209,7 @@ class Frontend:
 
     def set_pc(self, new_pc: int) -> None:
         '''
-        Provides an interface to change the program counter 
+        Provides an interface to change the program counter
         to an arbitrary position within the instruction list.
         Does not consider or change the instructions which are already in the instruction queue.
         '''
