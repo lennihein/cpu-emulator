@@ -2,6 +2,7 @@ import unittest
 
 from src.mmu import MMU
 from src.word import Word
+from src.byte import Byte
 
 
 class MMUTests(unittest.TestCase):
@@ -14,11 +15,9 @@ class MMUTests(unittest.TestCase):
         address = random.randint(0, 2**Word.WIDTH) - Word.WIDTH_BYTES
         address = Word(address)
 
-        # TODO: Test MMU with negative numbers
-
         # Reading / Writing bytes
         # random_byte = byte.Byte(random.randint(0, 2 ** 8))
-        random_byte = Word(241)
+        random_byte = Byte(-20)
         mmu.write_byte(address, random_byte)
         returned_byte = mmu.read_byte(address)
         self.assertEqual(returned_byte.value.value, random_byte.value)
