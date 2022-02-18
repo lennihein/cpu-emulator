@@ -46,5 +46,3 @@ class MMUTests(unittest.TestCase):
         # But if we flush it again, it shouldn't
         mmu.flush_line(address + Word(1))
         self.assertIs(mmu.is_addr_cached(address + Word(1)), False)
-
-

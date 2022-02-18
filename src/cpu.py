@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .bpu import SimpleBPU
+from .bpu import BPU
 from .mmu import MMU
 from .frontend import Frontend
 from .parser import Parser
@@ -31,7 +31,7 @@ class CPU:
 
         self._mmu = MMU()
 
-        self._bpu = SimpleBPU()
+        self._bpu = BPU()
 
         # cannot initialize frontend without list of instructions
         # to execute
@@ -87,7 +87,10 @@ class CPU:
         # tick execution engine
         if (rollback_pc := self._exec_engine.tick()) is not None:
             # TODO
+            # check if fault is due to branch instruction. if so, tell frontend
+            # to update bpu
             self._frontend.set_pc(rollback_pc)
+            self._frontend.flush_instruction_queue()
 
         # create snapshot
         self._take_snapshot()
