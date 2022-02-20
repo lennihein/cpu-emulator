@@ -1,8 +1,9 @@
 from dataclasses import dataclass
+from typing import Union
 
-from .cache import CacheFIFO, CacheLRU, CacheRR
-from .word import Word
 from .byte import Byte
+from .cache import Cache, CacheFIFO, CacheLRU, CacheRR
+from .word import Word
 
 
 @dataclass
@@ -10,7 +11,7 @@ class MemResult:
     """Result of a memory operation."""
 
     # Value returned by the memory operation
-    value: Word
+    value: Union[Word, Byte]
     # Whether the operation causes a fault
     fault: bool
     # Number of cycles we wait before returning the value
@@ -38,7 +39,7 @@ class MMU:
 
     memory: list
     mem_size: int
-    cache: CacheLRU
+    cache: Cache
     cache_replacement_policy: str
 
     def __init__(
@@ -151,8 +152,9 @@ class MMU:
         cycles_fault = 0
         for i in range(Word.WIDTH_BYTES):
             byte = self.read_byte(address + Word(i))
+            assert isinstance(byte.value, Byte)
 
-            bytes_read.append(byte.value.value)
+            bytes_read.append(byte.value)
             if byte.fault:
                 fault = True
             cycles_value = max(cycles_value, byte.cycles_value)
@@ -177,7 +179,7 @@ class MMU:
         cycles_value = 0
         cycles_fault = 0
         for i, byte in enumerate(data.as_bytes()):
-            result = self.write_byte(address + Word(i), Byte(byte))
+            result = self.write_byte(address + Word(i), byte)
 
             if result.fault:
                 fault = True

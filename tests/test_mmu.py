@@ -16,12 +16,12 @@ class MMUTests(unittest.TestCase):
         address = Word(address)
 
         # Reading / Writing bytes
-        random_value = random.randint((-1) * 2 ** 7, 2 ** 7)
+        random_value = random.randint(0, 255)
         random_byte = Byte(random_value)
         mmu.write_byte(address, random_byte)
         returned_byte = mmu.read_byte(address)
 
-        self.assertEqual(returned_byte.value.signed_value(), random_value)
+        self.assertEqual(returned_byte.value.value, random_value)
         self.assertEqual(returned_byte.cycles_value, mmu.cache_hit_cycles)
         self.assertEqual(returned_byte.cycles_fault, mmu.num_fault_cycles)
 
@@ -31,7 +31,7 @@ class MMUTests(unittest.TestCase):
         mmu.write_word(address, random_word)
         returned_word = mmu.read_word(address)
 
-        self.assertEqual(returned_word.value.signed_value(), random_value)
+        self.assertEqual(returned_word.value.signed_value, random_value)
         self.assertEqual(returned_word.cycles_value, mmu.cache_hit_cycles)
         self.assertEqual(returned_word.cycles_fault, mmu.num_fault_cycles)
 

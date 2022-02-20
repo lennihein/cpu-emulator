@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import NewType, Optional, TypeVar, Union, cast, final
 
+from .byte import Byte
 from .instructions import (
     InstrBranch,
     InstrFlush,
@@ -255,6 +256,9 @@ class _SlotMem(_SlotFaulting):
             result = self._perform_access()
             if result is None:
                 return None
+            # Zero-extend a byte result to a word
+            if isinstance(result.value, Byte):
+                result.value = result.value.zero_extend()
             self.result = result
 
         # Wait until we want to return the value
@@ -263,6 +267,7 @@ class _SlotMem(_SlotFaulting):
             return None
 
         # Return the value
+        assert not isinstance(self.result.value, Byte)
         return self.result.value
 
     def _accesses_overlap(self, other: "_SlotMem") -> bool:
@@ -368,7 +373,7 @@ class _SlotStore(_SlotMem):
 
         # Perform the store operation
         if self.instr_ty.width_byte:
-            return self.mmu.write_byte(self.address, value)
+            return self.mmu.write_byte(self.address, Byte(value.value))
         else:
             return self.mmu.write_word(self.address, value)
 
