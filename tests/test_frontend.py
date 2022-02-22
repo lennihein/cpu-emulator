@@ -211,6 +211,11 @@ class FrontendTest(unittest.TestCase):
 
         # check adding instructions after branch and pop_refill function
         front.flush_instruction_queue()
+
+        with self.assertRaises(Exception) as context:
+            front.add_instructions_after_branch(True, 1)
+        self.assertTrue('index 1 does not point to a branch instruction' in str(context.exception))
+
         front.add_instructions_after_branch(True, 2)
 
         next_instr_four = front.pop_refill()
