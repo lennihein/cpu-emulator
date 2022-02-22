@@ -1,5 +1,5 @@
 import unittest
-from src.frontend import Frontend, InstrFrontendInfo
+from src.frontend import Frontend
 import logging
 import sys
 

@@ -59,7 +59,6 @@ Error: end of program reached by instruction queue
 """
 
 
-from ctypes.wintypes import PCHAR
 from . import bpu
 from . import instructions
 from collections import deque

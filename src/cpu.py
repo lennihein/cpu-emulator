@@ -1,10 +1,10 @@
 from __future__ import annotations
 from .bpu import BPU
 from .mmu import MMU
-from .frontend import Frontend
+from .frontend import Frontend, InstrFrontendInfo
 from .parser import Parser
 from .execution import ExecutionEngine
-# from .instructions import InstrBranch
+from .instructions import InstrBranch
 import copy
 
 
@@ -79,8 +79,8 @@ class CPU:
 
         # fill execution units
         while self._frontend.get_instr_queue_size() > 0:
-            instr, instr_index = self._frontend.fetch_instruction_from_queue()
-            if self._exec_engine.try_issue(instr, instr_index):
+            instr_info: InstrFrontendInfo = self._frontend.fetch_instruction_from_queue()
+            if self._exec_engine.try_issue(instr_info.instr, instr_info.instr_index):
                 self._frontend.pop_instruction_from_queue()
             else:
                 break
@@ -93,9 +93,11 @@ class CPU:
             # If the instruction that caused the rollback is a branch
             # instruction, we notify the front end which makes sure
             # the correct path is taken next time.
-            # if isinstance()
-            # if isinstance(fault_info.kind, InstrBranch):
-            # TODO: awaiting frontend changes
+            if isinstance(fault_info.kind, InstrBranch):
+                self._frontend.add_instructions_after_branch(
+                    not fault_info.prediction,
+                    fault_info.pc
+                )
 
         # create snapshot
         self._take_snapshot()
