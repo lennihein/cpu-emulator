@@ -1,3 +1,4 @@
+from logging import raiseExceptions
 import os
 from src.mmu import MMU
 from src.execution import ExecutionEngine
@@ -110,6 +111,18 @@ def print_cache(mmu: MMU) -> None:
         print('')
 
 
+def print_queue(SOMETHING: None):
+    raiseExceptions(NotImplementedError)
+
+
+def print_prog(SOMETHING: None):
+    raiseExceptions(NotImplementedError)
+
+
+def print_rs(SOMETHING: None):
+    raiseExceptions(NotImplementedError)
+
+
 def header_memory(mmu: MMU):
     print_header("Memory", BOLD + YELLOW + ENDC)
     print()
@@ -124,6 +137,22 @@ def header_regs(engine: ExecutionEngine):
     print("\n")
 
 
+def header_prog(SOMETHING: None):
+    raiseExceptions(NotImplementedError)
+
+
+def header_update(SOMETHING: None):
+    '''displays what/how many things have updated in the last step'''
+    raiseExceptions(NotImplementedError)
+
+
+def header_rs(SOMETHING: None):
+    '''not sure if this is something we'd want'''
+    raiseExceptions(NotImplementedError)
+
+
 def all_headers(engine: ExecutionEngine):
+    header_update(None)
     header_regs(engine)
     header_memory(engine._mmu)
+    header_prog(None)

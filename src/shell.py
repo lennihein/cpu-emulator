@@ -1,6 +1,7 @@
 from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from logging import raiseExceptions
 from os import system
 
 from src import ui
@@ -24,23 +25,46 @@ completions = {}
 def func(f):
     if len(f.__name__[2:]) > 0:
         completions[f.__name__[2:]] = None
-    return funcs.setdefault(f.__name__, f)
+        if f.__doc__ is not None:
+            completions[f.__name__[2:]] = eval(f.__doc__.strip())
+    funcs[f.__name__] = f
 
 
 @func
-def __example(input):
-    print(input)
+def __show(input):
+    '''
+    {"mem": None, "cache": None, "regs": None, "queue": None, "rs": None, "prog": None}
+    '''
+    raiseExceptions(NotImplementedError)
 
 
 @func
-def __exit(input):
-    exit()
+def __continue(input):
+    raiseExceptions(NotImplementedError)
+
+
+@func
+def __step(input):
+    raiseExceptions(NotImplementedError)
+
+
+@func
+def __break(input):
+    '''
+    {"add": None, "delete": None, "delete": None, "toogle": None, "list": None}
+    '''
+    raiseExceptions(NotImplementedError)
 
 
 @func
 def __clear(input):
     system('clear')
     return
+
+
+@func
+def __exit(input):
+    exit()
 
 
 @func
@@ -52,7 +76,7 @@ def __not_found(input):
     print('Your input did not match any known command')
 
 
-completer = NestedCompleter(completions)
+completer = NestedCompleter.from_nested_dict(completions)
 
 engine = ExecutionEngine(MMU())
 
