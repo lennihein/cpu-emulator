@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Union
 
+from .word import Word
 from .byte import Byte
 from .cache import Cache, CacheFIFO, CacheLRU, CacheRR
-from .word import Word
 
 
 @dataclass
