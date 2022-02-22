@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import NewType, Optional, TypeVar, Union, cast, final
 
+from .byte import Byte
 from .instructions import (
     InstrBranch,
     InstrFlush,
@@ -26,11 +27,25 @@ _WordOrSlot = Union[Word, _SlotID]
 
 
 @dataclass
+class FaultInfo:
+    """Information about a fault that occurred, passed back to the CPU class."""
+
+    # PC of the faulting instruction
+    pc: int
+    # Kind of the faulting instruction
+    kind: InstructionKind
+    # Predicted branch condition if the instruction is a branch
+    prediction: Optional[bool] = None
+    # Faulting address if applicable to the instruction kind
+    address: Optional[Word] = None
+
+
+@dataclass
 class _FaultState:
-    """Architectural state at the time a fault occurs."""
+    """Architectural state at the time a fault occurs, and additional information about it."""
 
     registers: list[Word]
-    pc: int
+    info: FaultInfo
 
 
 @dataclass
@@ -51,7 +66,6 @@ def _update_waiting_list(slot: _SlotID, result: Word, values: list[_WordOrSlot])
             values[i] = result
 
 
-@dataclass
 class _Slot:
     """
     An occupied slot in the Reservation Station, storing an instruction in flight.
@@ -113,7 +127,6 @@ class _Slot:
         raise NotImplementedError("Must be overwritten by a concrete slot type")
 
 
-@dataclass
 class _SlotFaulting(_Slot):
     """An occupied slot in the Reservation Station, storing a potentially-faulting instruction."""
 
@@ -158,15 +171,19 @@ class _SlotFaulting(_Slot):
                 return None
 
         # We are done waiting and allowed to cause a fault
-        fault = _FaultState(cast(list[Word], self.registers), self.pc)
+        info = FaultInfo(self.pc, self.instr_ty)
+        self.populate_fault_info(info)
+        fault = _FaultState(cast(list[Word], self.registers), info)
         return (fault,)
 
     def is_faulting(self) -> bool:
         """Check if this instruction causes a fault."""
         raise NotImplementedError("Must be overwritten by a concrete slot type")
 
+    def populate_fault_info(self, info: FaultInfo):
+        """Populate information about the fault."""
 
-@dataclass
+
 class _SlotMem(_SlotFaulting):
     """An occupied slot in the Reservation Station, storing a memory instruction."""
 
@@ -239,6 +256,9 @@ class _SlotMem(_SlotFaulting):
             result = self._perform_access()
             if result is None:
                 return None
+            # Zero-extend a byte result to a word
+            if isinstance(result.value, Byte):
+                result.value = result.value.zero_extend()
             self.result = result
 
         # Wait until we want to return the value
@@ -247,6 +267,7 @@ class _SlotMem(_SlotFaulting):
             return None
 
         # Return the value
+        assert not isinstance(self.result.value, Byte)
         return self.result.value
 
     def _accesses_overlap(self, other: "_SlotMem") -> bool:
@@ -278,8 +299,11 @@ class _SlotMem(_SlotFaulting):
         assert self.result is not None
         return self.result.fault
 
+    def populate_fault_info(self, info: FaultInfo):
+        assert self.address is not None
+        info.address = self.address
 
-@dataclass
+
 class _SlotALU(_Slot):
     """An occupied slot in the Reservation Station, storing an ALU instruction."""
 
@@ -314,14 +338,10 @@ class _SlotALU(_Slot):
         return (None,)
 
 
-@dataclass
 class _SlotLoad(_SlotMem):
     """An occupied slot in the Reservation Station, storing a load instruction."""
 
     instr_ty: InstrLoad
-
-    def __init__(self, args: _ArgsSlot):
-        super().__init__(args)
 
     def _perform_access(self) -> Optional[MemResult]:
         assert self.address is not None
@@ -333,14 +353,10 @@ class _SlotLoad(_SlotMem):
             return self.mmu.read_word(self.address)
 
 
-@dataclass
 class _SlotStore(_SlotMem):
     """An occupied slot in the Reservation Station, storing a store instruction."""
 
     instr_ty: InstrStore
-
-    def __init__(self, args: _ArgsSlot):
-        super().__init__(args)
 
     def _perform_access(self) -> Optional[MemResult]:
         assert self.address is not None
@@ -357,19 +373,15 @@ class _SlotStore(_SlotMem):
 
         # Perform the store operation
         if self.instr_ty.width_byte:
-            return self.mmu.write_byte(self.address, value)
+            return self.mmu.write_byte(self.address, Byte(value.value))
         else:
             return self.mmu.write_word(self.address, value)
 
 
-@dataclass
 class _SlotFlush(_SlotMem):
     """An occupied slot in the Reservation Station, storing a flush instruction."""
 
     instr_ty: InstrFlush
-
-    def __init__(self, args: _ArgsSlot):
-        super().__init__(args)
 
     def _perform_access(self) -> Optional[MemResult]:
         assert self.address is not None
@@ -378,7 +390,6 @@ class _SlotFlush(_SlotMem):
         return self.mmu.flush_line(self.address)
 
 
-@dataclass
 class _SlotBranch(_SlotFaulting):
     """An occupied slot in the Reservation Station, storing a branch instruction."""
 
@@ -419,6 +430,9 @@ class _SlotBranch(_SlotFaulting):
 
     def is_faulting(self) -> bool:
         return self.condition != self.prediction
+
+    def populate_fault_info(self, info: FaultInfo):
+        info.prediction = self.prediction
 
 
 def _get_slot_type(kind: InstructionKind) -> type:
@@ -522,11 +536,11 @@ class ExecutionEngine:
             sources.append(val)
         return sources
 
-    def tick(self) -> Optional[int]:
+    def tick(self) -> Optional[FaultInfo]:
         """
         Execute instructions that are ready.
 
-        If a fault occurs, return the address of the faulting instruction.
+        If a fault occurs, return information about the fault.
         """
         for i, slot in enumerate(self._slots):
             # Skip free slots
@@ -554,7 +568,7 @@ class ExecutionEngine:
                     else:
                         # Fault occurred, roll back to given architectural state and notify frontend
                         self._rollback(state)
-                        return state.pc
+                        return state.info
 
         # No fault occurred
         return None

@@ -142,7 +142,7 @@ class Cache:
         self.num_lines = num_lines
         self.line_size = line_size
 
-    def _parse_addr(self, addr: int) -> tuple[int, int, int]:
+    def parse_addr(self, addr: int) -> tuple[int, int, int]:
         """
         Parses the given address and returns a 3-tuple consisting of
         tag, index, and offset to access the cache.
@@ -166,11 +166,13 @@ class Cache:
         index = 0
         if num_index_bits > 0:
             index = int(
-                addr_bits[num_tag_bits:num_tag_bits + num_index_bits], base=2)
+                addr_bits[num_tag_bits:num_tag_bits + num_index_bits], base=2
+            )
 
         offset = 0
         if num_offset_bits != 0:
-            offset = int(addr_bits[num_tag_bits + num_index_bits:], base=2)
+            offset = int(addr_bits[num_tag_bits + num_index_bits:], base=2
+                         )
 
         return tag, index, offset
 
@@ -203,7 +205,7 @@ class Cache:
             Returns 'None' if 'addr' is not cached.
         """
 
-        tag, index, offset = self._parse_addr(addr)
+        tag, index, offset = self.parse_addr(addr)
 
         for i in range(self.num_lines):
             if self.sets[index][i].check_tag(tag):
@@ -223,7 +225,7 @@ class Cache:
         Returns:
             This function does not have a return value.
         """
-        tag, index, offset = self._parse_addr(addr)
+        tag, index, offset = self.parse_addr(addr)
 
         # check if all cache lines of the corresponding cache
         # set are already in use.
@@ -248,7 +250,7 @@ class Cache:
             This function does not have a return value.
         """
 
-        tag, index, offset = self._parse_addr(addr)
+        tag, index, offset = self.parse_addr(addr)
 
         for i in range(self.num_lines):
             if self.sets[index][i].check_tag(tag):
@@ -317,7 +319,7 @@ class CacheRR(Cache):
         super().__init__(num_sets, num_lines, line_size)
 
     def _apply_replacement_policy(self, addr: int, data: int) -> None:
-        tag, index, offset = self._parse_addr(addr)
+        tag, index, offset = self.parse_addr(addr)
 
         replaceIndex = random.randrange(self.num_lines)
         self.sets[index][replaceIndex].clear_data()
@@ -372,7 +374,7 @@ class CacheLRU(Cache):
         from CacheLineLRU.
         """
 
-        tag, index, offset = self._parse_addr(addr)
+        tag, index, offset = self.parse_addr(addr)
 
         lru_index = 0
         lru_time = self.sets[index][0].get_lru_time()
@@ -429,7 +431,7 @@ class CacheFIFO(Cache):
         from CacheLineFIFO.
         """
 
-        tag, index, offset = self._parse_addr(addr)
+        tag, index, offset = self.parse_addr(addr)
 
         fifo_index = 0
         fifo_time = self.sets[index][0].get_fifo_time()

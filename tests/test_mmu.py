@@ -2,6 +2,7 @@ import unittest
 
 from src.mmu import MMU
 from src.word import Word
+from src.byte import Byte
 
 
 class MMUTests(unittest.TestCase):
@@ -10,26 +11,27 @@ class MMUTests(unittest.TestCase):
         import random
 
         # Make sure we do not pick the highest address and try to write a Word (> 1 byte) to this
-        # address. TODO: Remove this, we wrap around the address space.
-        address = random.randint(0, 2**Word.WIDTH) - Word.WIDTH_BYTES
+        # address.
+        address = max(0, random.randint(0, 2**Word.WIDTH) - Word.WIDTH_BYTES)
         address = Word(address)
 
-        # TODO: Test MMU with negative numbers
-
         # Reading / Writing bytes
-        # random_byte = byte.Byte(random.randint(0, 2 ** 8))
-        random_byte = Word(241)
+        random_value = random.randint(0, 255)
+        random_byte = Byte(random_value)
         mmu.write_byte(address, random_byte)
         returned_byte = mmu.read_byte(address)
-        self.assertEqual(returned_byte.value.value, random_byte.value)
+
+        self.assertEqual(returned_byte.value.value, random_value)
         self.assertEqual(returned_byte.cycles_value, mmu.cache_hit_cycles)
         self.assertEqual(returned_byte.cycles_fault, mmu.num_fault_cycles)
 
         # Reading / Writing words
-        random_word = Word(random.randint(2**8 + 1, 2**Word.WIDTH))
+        random_value = random.randint((-1) * 2 ** (Word.WIDTH - 1), 2 ** (Word.WIDTH - 1))
+        random_word = Word(random_value)
         mmu.write_word(address, random_word)
         returned_word = mmu.read_word(address)
-        self.assertEqual(returned_word.value.value, random_word.value)
+
+        self.assertEqual(returned_word.value.signed_value, random_value)
         self.assertEqual(returned_word.cycles_value, mmu.cache_hit_cycles)
         self.assertEqual(returned_word.cycles_fault, mmu.num_fault_cycles)
 
@@ -38,7 +40,7 @@ class MMUTests(unittest.TestCase):
         mmu.flush_line(address + Word(1))
         self.assertEqual(mmu.read_word(address + Word(1)).cycles_value, mmu.cache_miss_cycles)
 
-        # Now, (address + 1) should not be cached again (because we read from it)
+        # Now, (address + 1) should be cached again (because we read from it)
         self.assertIs(mmu.is_addr_cached(address + Word(1)), True)
 
         # But if we flush it again, it shouldn't
