@@ -1,6 +1,8 @@
 from dataclasses import dataclass
+from typing import Union
 
-from .cache import CacheFIFO, CacheLRU, CacheRR
+from .byte import Byte
+from .cache import Cache, CacheFIFO, CacheLRU, CacheRR
 from .word import Word
 
 
@@ -9,7 +11,7 @@ class MemResult:
     """Result of a memory operation."""
 
     # Value returned by the memory operation
-    value: Word
+    value: Union[Word, Byte]
     # Whether the operation causes a fault
     fault: bool
     # Number of cycles we wait before returning the value
@@ -37,7 +39,7 @@ class MMU:
 
     memory: list
     mem_size: int
-    cache: CacheLRU
+    cache: Cache
     cache_replacement_policy: str
 
     def __init__(
@@ -105,11 +107,11 @@ class MMU:
         if data is None:
             data = self.memory[address.value]
             cycles = self.cache_miss_cycles
-            self.cache.write(address.value, data)
+            self._load_line(address)
 
-        return MemResult(Word(data), False, cycles, self.num_fault_cycles)
+        return MemResult(Byte(data), False, cycles, self.num_fault_cycles)
 
-    def write_byte(self, address: Word, data: Word) -> MemResult:
+    def write_byte(self, address: Word, data: Byte) -> MemResult:
         """
         Writes a byte to memory.
 
@@ -121,11 +123,13 @@ class MMU:
             This function does not have a return value.
         """
 
-        value = data.value % 256
+        # value = data.value % 256
+        value = data.value
         self.memory[address.value] = value
-        self.cache.write(address.value, value)
 
-        return MemResult(Word(0), False, self.num_write_cycles, self.num_fault_cycles)
+        self._load_line(address)
+
+        return MemResult(Byte(0), False, self.num_write_cycles, self.num_fault_cycles)
 
     def read_word(self, address: Word) -> MemResult:
         """
@@ -148,8 +152,9 @@ class MMU:
         cycles_fault = 0
         for i in range(Word.WIDTH_BYTES):
             byte = self.read_byte(address + Word(i))
+            assert isinstance(byte.value, Byte)
 
-            bytes_read.append(byte.value.value)
+            bytes_read.append(byte.value)
             if byte.fault:
                 fault = True
             cycles_value = max(cycles_value, byte.cycles_value)
@@ -174,7 +179,7 @@ class MMU:
         cycles_value = 0
         cycles_fault = 0
         for i, byte in enumerate(data.as_bytes()):
-            result = self.write_byte(address + Word(i), Word(byte))
+            result = self.write_byte(address + Word(i), byte)
 
             if result.fault:
                 fault = True
@@ -182,6 +187,27 @@ class MMU:
             cycles_fault = max(cycles_fault, result.cycles_fault)
 
         return MemResult(Word(0), fault, cycles_value, cycles_fault)
+
+    def _load_line(self, address: Word) -> None:
+        """
+        Loads the entire cache line corresponding to 'addr'
+        into the cache. Note that 'addr' needs to be any
+        address within the cache line, it does not need
+        to be the first one with offset = 0.
+
+        Parameters:
+            addr (int) -- the address to be loaded
+
+        Returns:
+            This function does not have a return value.
+        """
+        addr = address.value
+        tag, index, offset = self.cache.parse_addr(addr)
+        base_addr = addr - offset
+
+        for i in range(self.cache.line_size):
+            current_addr = base_addr + i
+            self.cache.write(current_addr, self.memory[current_addr])
 
     def flush_line(self, address: Word) -> MemResult:
         """

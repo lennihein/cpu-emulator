@@ -1,9 +1,10 @@
 from __future__ import annotations
-from .bpu import SimpleBPU
+from .bpu import BPU
 from .mmu import MMU
 from .frontend import Frontend
 from .parser import Parser
 from .execution import ExecutionEngine
+# from .instructions import InstrBranch
 import copy
 
 
@@ -13,7 +14,7 @@ class CPU:
 
     _frontend: Frontend
 
-    _bpu: SimpleBPU
+    _bpu: BPU
 
     _mmu: MMU
 
@@ -31,7 +32,7 @@ class CPU:
 
         self._mmu = MMU()
 
-        self._bpu = SimpleBPU()
+        self._bpu = BPU()
 
         # cannot initialize frontend without list of instructions
         # to execute
@@ -60,7 +61,7 @@ class CPU:
         self._frontend = Frontend(self._bpu, instructions)
 
         # reset reservation stations?
-        # self._exec_engine = ExecutionEngine(self.mmu)
+        self._exec_engine = ExecutionEngine(self.mmu)
 
         # take snapshot
         self._take_snapshot()
@@ -85,9 +86,16 @@ class CPU:
                 break
 
         # tick execution engine
-        if (rollback_pc := self._exec_engine.tick()) is not None:
-            # TODO
-            self._frontend.set_pc(rollback_pc)
+        if (fault_info := self._exec_engine.tick()) is not None:
+            self._frontend.set_pc(fault_info.pc)
+            self._frontend.flush_instruction_queue()
+
+            # If the instruction that caused the rollback is a branch
+            # instruction, we notify the front end which makes sure
+            # the correct path is taken next time.
+            # if isinstance()
+            # if isinstance(fault_info.kind, InstrBranch):
+            # TODO: awaiting frontend changes
 
         # create snapshot
         self._take_snapshot()
