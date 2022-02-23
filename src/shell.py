@@ -39,21 +39,20 @@ def __show(input: list[str], cpu: CPU):
         __not_found(input, cpu)
         return
     subcmd = input[0]
-    match subcmd:
-        case 'mem':
-            ui.print_memory(cpu.get_mmu())
-        case 'cache':
-            ui.print_cache(cpu.get_mmu())
-        case 'regs':
-            ui.print_regs(cpu._exec_engine)
-        case 'queue':
-            ui.print_queue(cpu.get_frontend())
-        case 'rs':
-            ui.print_rs(cpu.get_frontend())
-        case 'prog':
-            ui.print_prog(cpu.get_frontend())
-        case _:
-            __not_found(input, cpu)
+    if subcmd == 'mem':
+        ui.print_memory(cpu.get_mmu())
+    elif subcmd == 'cache':
+        ui.print_cache(cpu.get_mmu())
+    elif subcmd == 'regs':
+        ui.print_regs(cpu._exec_engine)
+    elif subcmd == 'queue':
+        ui.print_queue(cpu.get_frontend())
+    elif subcmd == 'rs':
+        ui.print_rs(cpu.get_frontend())
+    elif subcmd == 'prog':
+        ui.print_prog(cpu.get_frontend())
+    else:
+        __not_found(input, cpu)
 
 
 @func
