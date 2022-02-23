@@ -133,7 +133,9 @@ class Frontend:
 
             if self.pc >= len(self.instr_list):
 
-                raise IndexError("end of program reached by instruction queue")
+                # TODO: Handle end-of-program properly
+                # raise IndexError("end of program reached by instruction queue")
+                return
 
             # sanity check, should never happen since the set_pc function
             # checks for this too and jump goals are set by the parser from

@@ -75,7 +75,9 @@ class CPU:
         # fill execution units
         while self._frontend.get_instr_queue_size() > 0:
             instr_info: InstrFrontendInfo = self._frontend.fetch_instruction_from_queue()
-            if self._exec_engine.try_issue(instr_info.instr, instr_info.instr_index):
+            if self._exec_engine.try_issue(
+                instr_info.instr, instr_info.instr_index, instr_info.prediction
+            ):
                 self._frontend.pop_instruction_from_queue()
             else:
                 break

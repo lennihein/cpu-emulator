@@ -92,11 +92,11 @@ class CPUTests(unittest.TestCase):
             // Execute fence and query cycle counter
             fence
             cyclecount r10
-//          // Set r7 to 3 and count it down to 1
-//          addi r7, r0, 3
-//      loop:
-//          subi r7, r7, 1
-//          bne r7, r1, loop
+            // Set r7 to 3 and count it down to 1
+            addi r7, r0, 3
+        loop:
+            subi r7, r7, 1
+            bne r7, r1, loop
             // Flush address 0
             flush r0, 0
         """
@@ -115,6 +115,12 @@ class CPUTests(unittest.TestCase):
         try:
             while True:
                 cpu.tick()
+                # TODO: CPU should detect when its done on its own
+                if (
+                    all(slot is None for slot in cpu._exec_engine._slots)
+                    and cpu._frontend.get_instr_queue_size() == 0
+                ):
+                    break
         except Exception as e:
             if str(e) != "end of program reached by instruction queue":
                 raise
