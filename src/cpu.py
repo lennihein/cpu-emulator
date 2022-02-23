@@ -119,6 +119,14 @@ class CPU:
         """
         return self._frontend
 
+    def get_bpu(self) -> BPU:
+        """Returns an instance of the BPU class."""
+        return self._bpu
+
+    def get_exec_engine(self) -> ExecutionEngine:
+        '''Returns an instance of the ExecutionEngine class.'''
+        return self._exec_engine
+
     def deepcopy(self):
         """
         This function returns a deepcopy of a CPU instance, with the
