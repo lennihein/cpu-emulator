@@ -30,7 +30,7 @@ class CPU:
 
     def __init__(self):
 
-        self._parser = Parser()
+        self._parser = Parser.from_default()
 
         self._mmu = MMU()
 
@@ -53,7 +53,7 @@ class CPU:
         try:
 
             with open(file_path, "r") as file:
-                file_contents = file.readlines()
+                file_contents = file.read()
 
         except IOError:
             return False
@@ -63,7 +63,7 @@ class CPU:
         self._frontend = Frontend(self._bpu, instructions)
 
         # reset reservation stations?
-        self._exec_engine = ExecutionEngine(self.mmu)
+        self._exec_engine = ExecutionEngine(self._mmu)
 
         # take snapshot
         self._take_snapshot()
