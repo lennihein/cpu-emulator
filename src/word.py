@@ -1,10 +1,34 @@
-"""A 16-bit value, used for register values and addresses."""
+"""`Byte` and `Word` classes to represent 8- and 16-bit values."""
 
 from typing import Iterable, Sequence
 
-# Import whole module instead of just `Bord` to prevent circular import, because `byte` imports
-# `word`
-from . import byte
+
+class Byte:
+    """
+    A byte in the range from 0 to 255.
+
+    The memory contents are made up of individual bytes. Instructions always operate one whole
+    `Word`s instead.
+    """
+
+    # Width in bits
+    WIDTH: int = 8
+
+    # Always in range [0, 255]
+    _value: int
+
+    def __init__(self, value: int):
+        """Create a new byte from the given unsigned or two's complement signed value."""
+        self._value = value % (1 << self.WIDTH)
+
+    @property
+    def value(self) -> int:
+        """Return this value as an unsigned integer."""
+        return self._value
+
+    def zero_extend(self) -> "Word":
+        """Zero-extend this byte to the width of a word."""
+        return Word(self.value)
 
 
 class Word:
@@ -18,7 +42,7 @@ class Word:
     # Width in bits
     WIDTH: int = 16
     # Width in bytes, rounded upwards
-    WIDTH_BYTES: int = (WIDTH + byte.Byte.WIDTH - 1) // byte.Byte.WIDTH
+    WIDTH_BYTES: int = (WIDTH + Byte.WIDTH - 1) // Byte.WIDTH
     # Whether we represent a word as little or big endian in memory
     _BIG_ENDIAN: bool = False
 
@@ -30,13 +54,13 @@ class Word:
         self._value = value % (1 << self.WIDTH)
 
     @classmethod
-    def from_bytes(cls, bs: Sequence[byte.Byte]) -> "Word":
+    def from_bytes(cls, bs: Sequence[Byte]) -> "Word":
         """Create a new word from the given representation in memory."""
         if len(bs) != cls.WIDTH_BYTES:
             raise ValueError(f"Invalid number of bytes: {bs:r}")
 
         # Reverse memory representation if we use little endian
-        bs_order: Iterable[byte.Byte]
+        bs_order: Iterable[Byte]
         if cls._BIG_ENDIAN:
             bs_order = bs
         else:
@@ -45,7 +69,7 @@ class Word:
         # Build up the value from the individual bytes
         value = 0
         for b in bs_order:
-            value <<= byte.Byte.WIDTH
+            value <<= Byte.WIDTH
             value |= b.value
         return cls(value)
 
@@ -61,7 +85,7 @@ class Word:
             return self.value
         return self.value - (1 << self.WIDTH)
 
-    def as_bytes(self) -> Iterable[byte.Byte]:
+    def as_bytes(self) -> Iterable[Byte]:
         """Return the bytes used to represent this value in memory."""
         # Range of byte indices
         r = list(range(self.WIDTH_BYTES))
@@ -71,9 +95,9 @@ class Word:
 
         for b in r:
             # Convert from byte index to bit index
-            bit = b * byte.Byte.WIDTH
+            bit = b * Byte.WIDTH
             # Yield the byte starting at the current bit index
-            yield byte.Byte(self.value >> bit)
+            yield Byte(self.value >> bit)
 
     def __eq__(self, rhs: object) -> bool:
         if not isinstance(rhs, Word):
