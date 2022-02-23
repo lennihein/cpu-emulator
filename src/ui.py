@@ -92,6 +92,7 @@ def print_regs(engine: ExecutionEngine):
             print_hex(regs[i].value, p_end="", base_style=ENDC + FAINT)
             print(" |" if j != fits - 1 else "\n", end="")
             i += 1
+    print()
 
 
 def print_cache(mmu: MMU) -> None:
@@ -134,7 +135,7 @@ def header_regs(engine: ExecutionEngine):
     print_header("Registers", BOLD + CYAN + ENDC)
     print()
     print_regs(engine)
-    print("\n")
+    print()
 
 
 def header_prog(SOMETHING: None):
