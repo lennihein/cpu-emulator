@@ -4,7 +4,7 @@ from .mmu import MMU
 from .frontend import Frontend, InstrFrontendInfo
 from .parser import Parser
 from .execution import ExecutionEngine
-from .instructions import InstrBranch
+from .instructions import InstrBranch, InstrLoad, InstrStore
 import copy
 
 
@@ -87,7 +87,15 @@ class CPU:
 
         # tick execution engine
         if (fault_info := self._exec_engine.tick()) is not None:
-            self._frontend.set_pc(fault_info.pc)
+            resume_at_pc = fault_info.pc
+
+            # For faulting memory instructions, we simply skip the instruction.
+            # Normally, one would have to register an exception handler. We skip this
+            # step for the sake of simplicity.
+            if isinstance(fault_info.kind, InstrLoad) or isinstance(fault_info.kind, InstrStore):
+                resume_at_pc += 1
+
+            self._frontend.set_pc(resume_at_pc)
             self._frontend.flush_instruction_queue()
 
             # If the instruction that caused the rollback is a branch
