@@ -153,7 +153,7 @@ class Frontend:
                 current_prediction = self.bpu.predict(self.pc)
 
                 if current_prediction:
-                    self.pc = current_instr.ops[0]
+                    self.pc = current_instr.ops[-1]
 
                 else:
                     self.pc = self.pc + 1

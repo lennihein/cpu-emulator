@@ -47,30 +47,23 @@ class CPU:
         self._snapshot_index = 0
         self._snapshots = [copy.deepcopy(self)]
 
-    def load_program(self, file_path: str) -> bool:
+    def load_program_from_file(self, path: str):
+        with open(path, "r") as f:
+            source = f.read()
+        self.load_program(source)
 
-        file_contents = None
-        try:
+    def load_program(self, source: str):
+        instructions = self._parser.parse(source)
 
-            with open(file_path, "r") as file:
-                file_contents = file.read()
-
-        except IOError:
-            return False
-
-        instructions = self._parser.parse((file_contents))
-
+        # Initialize frontend
         self._frontend = Frontend(self._bpu, instructions)
-
-        # reset reservation stations?
+        # Reset reservation stations?
         self._exec_engine = ExecutionEngine(self._mmu)
 
         # take snapshot
         self._take_snapshot()
 
-        return True
-
-    def tick(self) -> None:
+    def tick(self):
 
         # check if any program is being executed
         if self._frontend is None:
