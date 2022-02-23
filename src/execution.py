@@ -6,6 +6,8 @@ from typing import NewType, Optional, TypeVar, Union, cast, final
 from .byte import Byte
 from .instructions import (
     InstrBranch,
+    InstrCyclecount,
+    InstrFence,
     InstrFlush,
     InstrImm,
     InstrLoad,
@@ -435,6 +437,61 @@ class _SlotBranch(_SlotFaulting):
         info.prediction = self.prediction
 
 
+class _SlotCyclecount(_Slot):
+    """An occupied slot in the Reservation Station, storing a cyclecount instruction."""
+
+    instr_ty: InstrCyclecount
+
+    # Reference to execution engine, so we can query the cycle counter
+    exe: "ExecutionEngine"
+
+    def __init__(self, args: _ArgsSlot):
+        super().__init__(args)
+
+        self.exe = args.exe
+
+    def _tick_execute(self) -> Optional[Word]:
+        # Return the current value of the cycle counter immediately
+        return Word(self.exe._cyclecount)
+
+    def _tick_retire(self) -> Optional[tuple[Optional[_FaultState]]]:
+        # Retire immediately without a fault
+        return (None,)
+
+
+class _SlotFence(_Slot):
+    """An occupied slot in the Reservation Station, storing a fence instruction."""
+
+    instr_ty: InstrFence
+
+    # Slots of instructions that precede this instruction in program order
+    preceding: set[_SlotID]
+
+    def __init__(self, args: _ArgsSlot):
+        super().__init__(args)
+
+        # IDs of all slots that are not empty
+        self.preceding = {_SlotID(i) for i, slot in enumerate(args.exe._slots) if slot is not None}
+
+    def notify_retired(self, slot: _SlotID):
+        super().notify_retired(slot)
+
+        if slot in self.preceding:
+            self.preceding.remove(slot)
+
+    def _tick_execute(self) -> Optional[Word]:
+        # Wait for preceding instructions to retire
+        if self.preceding:
+            return None
+
+        # Return dummy value
+        return Word(0)
+
+    def _tick_retire(self) -> Optional[tuple[Optional[_FaultState]]]:
+        # Retire immediately without a fault
+        return (None,)
+
+
 def _get_slot_type(kind: InstructionKind) -> type:
     if isinstance(kind, (InstrReg, InstrImm)):
         return _SlotALU
@@ -446,6 +503,10 @@ def _get_slot_type(kind: InstructionKind) -> type:
         return _SlotFlush
     if isinstance(kind, InstrBranch):
         return _SlotBranch
+    if isinstance(kind, InstrCyclecount):
+        return _SlotCyclecount
+    if isinstance(kind, InstrFence):
+        return _SlotFence
 
     raise ValueError(f"Unsupported instruction kind {kind!r}")
 
@@ -478,6 +539,8 @@ class ExecutionEngine:
     _slots: list[Optional[_Slot]]
     # Potentially faulting instructions in flight
     _faulting_inflight: set[_SlotID]
+    # Cycle counter, incremented on each tick
+    _cyclecount: int
 
     def __init__(self, mmu, regs=32, slots=8):
         """Create a new Reservation Station, with empty slots and zeroed registers."""
@@ -492,8 +555,15 @@ class ExecutionEngine:
         # No instructions in flight
         self._faulting_inflight = set()
 
+        # Initialize cycle counter
+        self._cyclecount = 0
+
     def try_issue(self, instr: Instruction, pc: int, prediction: Optional[bool] = None) -> bool:
         """Try to issue the instruction by putting it in a free slot, return `True` on success."""
+        # Don't issue any instructions while a fence instruction is in flight
+        if any(isinstance(slot, _SlotFence) for slot in self._slots):
+            return False
+
         # Get source operands
         source_operands = self._source_operands(instr)
 
@@ -542,6 +612,10 @@ class ExecutionEngine:
 
         If a fault occurs, return information about the fault.
         """
+        # Increment cycle counter
+        self._cyclecount += 1
+
+        # Iterate over all slots
         for i, slot in enumerate(self._slots):
             # Skip free slots
             if slot is None:

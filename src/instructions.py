@@ -19,7 +19,6 @@ class InstructionKind(ABC):
     operand_types: list[OperandKind]
     name: str
 
-    @abstractmethod
     def __init__(self, name: str):
         self.name = name
 
@@ -173,6 +172,30 @@ class InstrBranch(InstructionKind):
         return None
 
 
+class InstrCyclecount(InstructionKind):
+    """A cyclecount instruction, reading the cycle counter."""
+
+    operand_types = ["reg"]
+
+    def sources(self) -> Iterable[int]:
+        return []
+
+    def destination(self) -> Optional[int]:
+        return 0
+
+
+class InstrFence(InstructionKind):
+    """A fence instruction, ordering execution of other instructions."""
+
+    operand_types: list[OperandKind] = []
+
+    def sources(self) -> Iterable[int]:
+        return []
+
+    def destination(self) -> Optional[int]:
+        return None
+
+
 @dataclass
 class Instruction:
     """A concrete instruction in program code."""
@@ -233,6 +256,11 @@ def _all_instructions() -> Iterable[InstructionKind]:
         ("bges", Word.signed_ge),
     ]:
         yield InstrBranch(name, op)
+
+    # Cyclecount instruction
+    yield InstrCyclecount("cyclecount")
+    # Fence instruction
+    yield InstrFence("fence")
 
 
 all_instructions = dict((instr.name, instr) for instr in _all_instructions())
