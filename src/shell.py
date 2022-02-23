@@ -5,10 +5,10 @@ from logging import raiseExceptions
 from os import system
 
 from src import ui
-# from src.cpu import CPU
-from src.execution import ExecutionEngine
+from src.cpu import CPU
+# from src.execution import ExecutionEngine
 # from src.bpu import BPU
-from src.mmu import MMU
+# from src.mmu import MMU
 # from src.frontend import Frontend
 # from src.cache import Cache
 # from src.parser import Parser
@@ -31,25 +31,43 @@ def func(f):
 
 
 @func
-def __show(input):
+def __show(input: list[str], cpu: CPU):
     '''
     {"mem": None, "cache": None, "regs": None, "queue": None, "rs": None, "prog": None}
     '''
+    if len(input) < 1:
+        __not_found(input, cpu)
+        return
+    subcmd = input[0]
+    match subcmd:
+        case 'mem':
+            ui.print_memory(cpu.get_mmu())
+        case 'cache':
+            ui.print_cache(cpu.get_mmu())
+        case 'regs':
+            ui.print_regs(cpu._exec_engine)
+        case 'queue':
+            ui.print_queue(cpu.get_frontend())
+        case 'rs':
+            ui.print_rs(cpu.get_frontend())
+        case 'prog':
+            ui.print_prog(cpu.get_frontend())
+        case _:
+            __not_found(input, cpu)
+
+
+@func
+def __continue(input: list[str], cpu: CPU):
     raiseExceptions(NotImplementedError)
 
 
 @func
-def __continue(input):
+def __step(input: list[str], cpu: CPU):
     raiseExceptions(NotImplementedError)
 
 
 @func
-def __step(input):
-    raiseExceptions(NotImplementedError)
-
-
-@func
-def __break(input):
+def __break(input: list[str], cpu: CPU):
     '''
     {"add": None, "delete": None, "delete": None, "toogle": None, "list": None}
     '''
@@ -57,28 +75,32 @@ def __break(input):
 
 
 @func
-def __clear(input):
+def __clear(input: list[str], cpu: CPU):
     system('clear')
     return
 
 
 @func
-def __exit(input):
+def __quit(input: list[str], cpu: CPU):
     exit()
 
 
+# 'q' is a substitute for 'quit'
+funcs['__q'] = funcs['__quit']
+
+
 @func
-def __(input):
-    ui.all_headers(engine)
+def __(input: list[str], cpu: CPU):
+    ui.all_headers(cpu)
 
 
-def __not_found(input):
+def __not_found(input: list[str], cpu: CPU):
     print('Your input did not match any known command')
 
 
 completer = NestedCompleter.from_nested_dict(completions)
 
-engine = ExecutionEngine(MMU())
+cpu = CPU()
 
 while True:
     try:
@@ -90,4 +112,7 @@ while True:
         break
     else:
         text = '__' + text
-        funcs.get(text.split()[0], __not_found)(text.split()[1:])
+        cmd = text.split()[0]
+        params = text.split()[1:]
+        fn = funcs.get(cmd, __not_found)
+        fn(params, cpu)

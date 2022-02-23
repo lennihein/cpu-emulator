@@ -1,9 +1,11 @@
 from logging import raiseExceptions
 import os
+from src.bpu import BPU
 from src.mmu import MMU
 from src.execution import ExecutionEngine
 from math import ceil
 from src.word import Word
+from src.cpu import CPU
 
 HEADER = '\033[95m'
 BLUE = '\033[94m'
@@ -124,6 +126,10 @@ def print_rs(SOMETHING: None):
     raiseExceptions(NotImplementedError)
 
 
+def print_bpu(bpu: BPU) -> None:
+    return raiseExceptions(NotImplementedError)
+
+
 def header_memory(mmu: MMU):
     print_header("Memory", BOLD + YELLOW + ENDC)
     print()
@@ -152,8 +158,10 @@ def header_rs(SOMETHING: None):
     raiseExceptions(NotImplementedError)
 
 
-def all_headers(engine: ExecutionEngine):
-    header_update(None)
-    header_regs(engine)
-    header_memory(engine._mmu)
-    header_prog(None)
+def all_headers(cpu: CPU):
+    # TODO: implement update header
+    # header_update(None)
+    header_regs(cpu._exec_engine)
+    header_memory(cpu.get_mmu())
+    # TODO: implement program header
+    # header_prog(None)
