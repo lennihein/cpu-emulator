@@ -33,6 +33,9 @@ class ExecutionTest(TestCase):
             lw r6, r0, 0
             // Store 4 to address 0
             sw r4, r5, -5
+            // Execute fence and query cycle counter
+            fence
+            cyclecount r10
 //          // Set r7 to 3 and count it down to 1
 //          addi r7, r0, 3
 //      loop:
