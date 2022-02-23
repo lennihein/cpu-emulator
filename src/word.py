@@ -2,7 +2,9 @@
 
 from typing import Iterable, Sequence
 
-from .byte import Byte
+# Import whole module instead of just `Bord` to prevent circular import, because `byte` imports
+# `word`
+from . import byte
 
 
 class Word:
@@ -16,7 +18,7 @@ class Word:
     # Width in bits
     WIDTH: int = 16
     # Width in bytes, rounded upwards
-    WIDTH_BYTES: int = (WIDTH + Byte.WIDTH - 1) // Byte.WIDTH
+    WIDTH_BYTES: int = (WIDTH + byte.Byte.WIDTH - 1) // byte.Byte.WIDTH
     # Whether we represent a word as little or big endian in memory
     _BIG_ENDIAN: bool = False
 
@@ -28,23 +30,23 @@ class Word:
         self._value = value % (1 << self.WIDTH)
 
     @classmethod
-    def from_bytes(cls, b: Sequence[Byte]) -> "Word":
+    def from_bytes(cls, bs: Sequence[byte.Byte]) -> "Word":
         """Create a new word from the given representation in memory."""
-        if len(b) != cls.WIDTH_BYTES:
-            raise ValueError(f"Invalid number of bytes: {b:r}")
+        if len(bs) != cls.WIDTH_BYTES:
+            raise ValueError(f"Invalid number of bytes: {bs:r}")
 
         # Reverse memory representation if we use little endian
-        bs: Iterable[Byte]
+        bs_order: Iterable[byte.Byte]
         if cls._BIG_ENDIAN:
-            bs = b
+            bs_order = bs
         else:
-            bs = reversed(b)
+            bs_order = reversed(bs)
 
         # Build up the value from the individual bytes
         value = 0
-        for byte in bs:
-            value <<= Byte.WIDTH
-            value |= byte.value
+        for b in bs_order:
+            value <<= byte.Byte.WIDTH
+            value |= b.value
         return cls(value)
 
     @property
@@ -59,7 +61,7 @@ class Word:
             return self.value
         return self.value - (1 << self.WIDTH)
 
-    def as_bytes(self) -> Iterable[Byte]:
+    def as_bytes(self) -> Iterable[byte.Byte]:
         """Return the bytes used to represent this value in memory."""
         # Range of byte indices
         r = list(range(self.WIDTH_BYTES))
@@ -67,11 +69,11 @@ class Word:
         if self._BIG_ENDIAN:
             r.reverse()
 
-        for byte in r:
+        for b in r:
             # Convert from byte index to bit index
-            bit = byte * Byte.WIDTH
+            bit = b * byte.Byte.WIDTH
             # Yield the byte starting at the current bit index
-            yield Byte(self.value >> bit)
+            yield byte.Byte(self.value >> bit)
 
     def __eq__(self, rhs: object) -> bool:
         if not isinstance(rhs, Word):
