@@ -68,9 +68,16 @@ class Parser:
     def _parse_instruction(self, instr: str, labels: dict[str, int]) -> Instruction:
         """Parse a single instruction."""
         # Split into mnemonic and operands
-        name, op = instr.split(maxsplit=1)
-        # Split operands
-        ops = [x.strip() for x in op.split(",")]
+        split = instr.split(maxsplit=1)
+        name = split[0]
+
+        # Check if we have any operands
+        if len(split) > 1:
+            # Split operands
+            ops = [x.strip() for x in split[1].split(",")]
+        else:
+            # We have no operands
+            ops = []
 
         # Get instruction type
         if name not in self._instr_types:
