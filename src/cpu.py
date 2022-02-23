@@ -1,11 +1,13 @@
 from __future__ import annotations
-from .bpu import BPU
-from .mmu import MMU
-from .frontend import Frontend, InstrFrontendInfo
-from .parser import Parser
-from .execution import ExecutionEngine
-from .instructions import InstrBranch, InstrLoad, InstrStore
+
 import copy
+
+from .bpu import BPU
+from .execution import ExecutionEngine
+from .frontend import Frontend, InstrFrontendInfo
+from .instructions import InstrBranch, InstrFlush, InstrLoad, InstrStore
+from .mmu import MMU
+from .parser import Parser
 
 
 class CPU:
@@ -50,7 +52,7 @@ class CPU:
         file_contents = None
         try:
 
-            with open(file_path, 'r') as file:
+            with open(file_path, "r") as file:
                 file_contents = file.readlines()
 
         except IOError:
@@ -92,7 +94,7 @@ class CPU:
             # For faulting memory instructions, we simply skip the instruction.
             # Normally, one would have to register an exception handler. We skip this
             # step for the sake of simplicity.
-            if isinstance(fault_info.kind, InstrLoad) or isinstance(fault_info.kind, InstrStore):
+            if isinstance(fault_info.kind, (InstrLoad, InstrStore, InstrFlush)):
                 resume_at_pc += 1
 
             self._frontend.set_pc(resume_at_pc)
@@ -103,8 +105,7 @@ class CPU:
             # the correct path is taken next time.
             if isinstance(fault_info.kind, InstrBranch):
                 self._frontend.add_instructions_after_branch(
-                    not fault_info.prediction,
-                    fault_info.pc
+                    not fault_info.prediction, fault_info.pc
                 )
 
         # create snapshot
@@ -164,7 +165,7 @@ class CPU:
             current_cpu = self._snapshots[self._snapshot_index].deepcopy()
 
             # Now we strip the snapshot list of all more recent invalid snapshots.
-            self._snapshots = self._snapshots[:self._snapshot_index]
+            self._snapshots = self._snapshots[: self._snapshot_index]
             self._snapshots.append(current_cpu)
 
             # Finally, we can add the potentially modified version of this instance
@@ -180,8 +181,7 @@ class CPU:
 
     @staticmethod
     def restore_snapshot(cpu: CPU, steps: int) -> CPU:
-        if cpu._snapshot_index + steps < 0 or cpu._snapshot_index + \
-                steps >= len(cpu._snapshots):
+        if cpu._snapshot_index + steps < 0 or cpu._snapshot_index + steps >= len(cpu._snapshots):
             return False
 
         # Returning copies are is important, as otherwise a manipulation
