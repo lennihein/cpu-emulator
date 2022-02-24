@@ -10,6 +10,13 @@ class BPU:
     def predict(self, pc) -> bool:
         return self.counter[pc % (1 << self.indexing_bits)] >= 2
 
+    def __str__(self) -> str:
+        res = "Index | Counter\n"
+        res += "------|--------\n"
+        for i in range(len(self.counter)):
+            res += " 0x{:02x} | {:01x}\n".format(i, self.counter[i])
+        return res
+
 
 class SimpleBPU:
     def __init__(self, counter=2) -> None:
@@ -20,6 +27,9 @@ class SimpleBPU:
 
     def predict(self) -> bool:
         return self.counter >= 2
+
+    def __str__(self) -> str:
+        return str(self.counter)
 
 # this is a 2bit counter, not a 2bit saturating counter!
 

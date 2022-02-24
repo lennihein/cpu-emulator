@@ -16,6 +16,7 @@ class BPUTests(unittest.TestCase):
         self.assertIs(predictor.predict(), False)
         predictor.update(True)
         self.assertIs(predictor.predict(), True)
+        print(predictor)
 
     def test_bpu(self):
         advanced_predictor = bpu.BPU()
@@ -24,6 +25,7 @@ class BPUTests(unittest.TestCase):
         advanced_predictor.update(1, False)
         self.assertIs(advanced_predictor.predict(1), False)
         self.assertIs(advanced_predictor.predict(17), False)
+        print(advanced_predictor)
 
 
 if __name__ == '__main__':

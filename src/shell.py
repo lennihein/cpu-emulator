@@ -33,24 +33,27 @@ def func(f):
 @func
 def __show(input: list[str], cpu: CPU):
     '''
-    {"mem": None, "cache": None, "regs": None, "queue": None, "rs": None, "prog": None}
+    {"mem": None, "cache": None, "regs": None, "queue": None, "rs": None, "prog": None, "bpu": None}
     '''
     if len(input) < 1:
         __not_found(input, cpu)
         return
     subcmd = input[0]
     if subcmd == 'mem':
+        # TODO: pass optionally a range of memory to show
         ui.print_memory(cpu.get_mmu())
     elif subcmd == 'cache':
         ui.print_cache(cpu.get_mmu())
     elif subcmd == 'regs':
-        ui.print_regs(cpu._exec_engine)
+        ui.print_regs(cpu.get_exec_engine())
     elif subcmd == 'queue':
         ui.print_queue(cpu.get_frontend())
     elif subcmd == 'rs':
         ui.print_rs(cpu.get_frontend())
     elif subcmd == 'prog':
         ui.print_prog(cpu.get_frontend())
+    elif subcmd == 'bpu':
+        ui.print_bpu(cpu.get_bpu())
     else:
         __not_found(input, cpu)
 

@@ -127,7 +127,7 @@ def print_rs(SOMETHING: None):
 
 
 def print_bpu(bpu: BPU) -> None:
-    return raiseExceptions(NotImplementedError)
+    print(bpu, end="")
 
 
 def header_memory(mmu: MMU):
@@ -161,7 +161,7 @@ def header_rs(SOMETHING: None):
 def all_headers(cpu: CPU):
     # TODO: implement update header
     # header_update(None)
-    header_regs(cpu._exec_engine)
+    header_regs(cpu.get_exec_engine())
     header_memory(cpu.get_mmu())
     # TODO: implement program header
     # header_prog(None)
