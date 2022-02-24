@@ -6,6 +6,7 @@ from src.word import Word
 
 
 class CPUTests(unittest.TestCase):
+
     def test_cpu(self):
 
         # As testing the CPU class as a whole is only possible once the project is complete, the

@@ -4,6 +4,8 @@ from time import time
 # from word import Word
 from .word import Word
 
+import copy
+
 
 class CacheLine:
     """
@@ -118,6 +120,17 @@ class CacheLine:
 
         self.set_tag(None)
 
+    def deepcopy(self):
+        """
+        Returns a deepcopy of this cache line.
+        """
+        line_copy = self.__class__(self.line_size)
+        line_copy.data = copy.copy(self.data)
+        line_copy.tag = self.tag
+        line_copy.tag = self.line_size
+
+        return line_copy
+
 
 class Cache:
     """
@@ -129,7 +142,15 @@ class Cache:
 
     num_sets: int
     num_lines: int
+    line_size: int
     sets: list[list[CacheLine]]
+
+    def deepcopy(self):
+        cache_copy = self.__class__(self.num_sets, self.num_lines, self.line_size)
+        cache_copy.sets = [[self.sets[b][a].deepcopy() for a in range(self.num_lines)]
+                           for b in range(self.num_sets)]
+
+        return cache_copy
 
     def __init__(self, num_sets: int, num_lines: int, line_size: int):
         self.sets = [[CacheLine(line_size) for a in range(num_lines)]
@@ -355,9 +376,18 @@ class CacheLineLRU(CacheLine):
 
     # Should flushing count as an access to a cache line?
     # If not, remove the following method:
-    def flush(self, offset: int) -> None:
+    def flush(self) -> None:
         super().flush()
         self.lru_timestamp = time()
+
+    def deepcopy(self):
+        """
+        Returns a deepcopy of this cache line.
+        """
+        line_copy = super().deepcopy()
+        line_copy.lru_timestamp = self.lru_timestamp
+
+        return line_copy
 
 
 class CacheLRU(Cache):
@@ -416,6 +446,15 @@ class CacheLineFIFO(CacheLine):
     def get_fifo_time(self):
         return self.first_write
 
+    def deepcopy(self):
+        """
+        Returns a deepcopy of this cache line.
+        """
+        line_copy = super().deepcopy()
+        line_copy.first_write = self.first_write
+
+        return line_copy
+
 
 class CacheFIFO(Cache):
     """A Cache implementing the first-in-first-out replacement policy."""
@@ -443,23 +482,3 @@ class CacheFIFO(Cache):
         self.sets[index][fifo_index].clear_data()
         self.sets[index][fifo_index].set_tag(tag)
         self.sets[index][fifo_index].write(offset, data)
-
-
-"""
-c = CacheLRU(4, 2, 2)
-c.write(0, 0)
-c.write(1, 1)
-
-cache_dump = c.get_cache_dump()
-num_sets = cache_dump["num_sets"]
-num_lines = cache_dump["num_lines"]
-line_size = cache_dump["line_size"]
-for i in range(num_sets):
-    print("Set", i)
-    for j in range(num_lines):
-        line = cache_dump["sets"][i][j]
-        if line["tag"] is None:
-            print("\tLine not in use")
-        else:
-            print("\tLine with Tag", line["tag"], ":", line["data"])
-"""

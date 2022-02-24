@@ -5,6 +5,8 @@ from .word import Word
 from .byte import Byte
 from .cache import Cache, CacheFIFO, CacheLRU, CacheRR
 
+import copy
+
 
 @dataclass
 class MemResult:
@@ -50,7 +52,7 @@ class MMU:
         num_write_cycles: int = 5,
         num_fault_cycles: int = 8,
         cache_config: tuple = (4, 4, 4),
-        replacement_policy="RR",
+        replacement_policy="LRU",
     ):
         """
         A class representing the memory management unit of a CPU.
@@ -80,6 +82,8 @@ class MMU:
 
         self.num_write_cycles = num_write_cycles
         self.num_fault_cycles = num_fault_cycles
+
+        self.cache_replacement_policy = replacement_policy
 
         if replacement_policy == "RR":
             self.cache = CacheRR(*cache_config)
@@ -239,3 +243,22 @@ class MMU:
         Returns the number of cycles needed to write to memory.
         """
         return self.num_write_cycles
+
+    def deepcopy(self):
+        """
+        Returns a deepcopy of the MMU.
+        """
+        mmu_copy = MMU(
+            self.mem_size,
+            self.cache_hit_cycles,
+            self.cache_miss_cycles,
+            self.num_write_cycles,
+            self.num_fault_cycles,
+            (self.cache.num_sets, self.cache.num_lines, self.cache.line_size),
+            self.cache_replacement_policy
+        )
+
+        mmu_copy.memory = copy.copy(self.memory)
+        mmu_copy.cache = self.cache.deepcopy()
+
+        return mmu_copy

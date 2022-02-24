@@ -128,18 +128,23 @@ class CPU:
         and restoring snapshots, as each snapshot having a list
         of snapshots is inefficent.
         """
-        # Deepcopy already is insanely slow, this way we prevent
-        # the snapshot list from being copied as well.
+        # Deepcopy already is insanely slow. Some classes
+        # implement their own deepcoyp functions.
         cpu_copy = CPU()
 
+        # For the following classes, we use the default
+        # deepcopy function.
         cpu_copy._parser = copy.deepcopy(self._parser)
         cpu_copy._frontend = copy.deepcopy(self._frontend)
         cpu_copy._bpu = copy.deepcopy(self._bpu)
-        cpu_copy._mmu = copy.deepcopy(self._mmu)
-        cpu_copy._exec_engine = copy.deepcopy(self._exec_engine)
+
+        # Here, we use our own deepcopy functions.
+        cpu_copy._mmu = self._mmu.deepcopy()
+        cpu_copy._exec_engine = self._exec_engine.deepcopy(self._mmu)
 
         cpu_copy._snapshots = self._snapshots
-        cpu_copy._snapshot_index = copy.deepcopy(self._snapshot_index)
+        # cpu_copy._snapshot_index = copy.deepcopy(self._snapshot_index)
+        cpu_copy._snapshot_index = self._snapshot_index
 
         return cpu_copy
 

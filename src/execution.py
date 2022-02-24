@@ -19,6 +19,8 @@ from .instructions import (
 from .mmu import MMU, MemResult
 from .word import Word
 
+import copy
+
 _T = TypeVar("_T")
 
 # ID of a slot of the Reservation Station, also used as an index into the list of slots
@@ -557,6 +559,21 @@ class ExecutionEngine:
 
         # Initialize cycle counter
         self._cyclecount = 0
+
+    def deepcopy(self, mmu: MMU = None):
+        """
+        Returns a deepcopy of the execution engine. Note that the MMU reference
+        is set to none to prevent it from being copied, too.
+        """
+        exec_copy = ExecutionEngine(mmu)
+
+        exec_copy._registers = copy.deepcopy(self._registers)
+        exec_copy._slots = copy.deepcopy(self._slots)
+        exec_copy._faulting_inflight = copy.deepcopy(self._faulting_inflight)
+
+        exec_copy._cyclecount = self._cyclecount
+
+        return exec_copy
 
     def try_issue(self, instr: Instruction, pc: int, prediction: Optional[bool] = None) -> bool:
         """Try to issue the instruction by putting it in a free slot, return `True` on success."""
