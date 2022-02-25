@@ -3,6 +3,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from logging import raiseExceptions
 from os import system
+from math import ceil
 
 from src import ui
 from src.cpu import CPU
@@ -39,17 +40,19 @@ def __show(input: list[str], cpu: CPU):
                 start = max(start, 0)
                 ui.print_memory(cpu.get_mmu(), base=start)
             except ValueError:
-                print("Usage: show mem <start in hex> <lines>")
+                print("Usage: show mem <start in hex> <words in hex>")
                 return
         elif len(input) == 3:
             # check if both inputs are ints
             try:
                 start = int(input[1], base=16)
                 start = max(start, 0)
-                lines = int(input[2])
+                words = int(input[2], base=16)
+                fits_per_line = (ui.columns - 8) // 7
+                lines = ceil(words / fits_per_line)
                 ui.print_memory(cpu.get_mmu(), base=start, lines=lines)
             except ValueError:
-                print("Usage: show mem <start in hex> <lines>")
+                print("Usage: show mem <start in hex> <words in hex>")
                 return
         else:
             ui.print_memory(cpu.get_mmu())
