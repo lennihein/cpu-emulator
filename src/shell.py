@@ -6,14 +6,6 @@ from os import system
 
 from src import ui
 from src.cpu import CPU
-# from src.execution import ExecutionEngine
-# from src.bpu import BPU
-# from src.mmu import MMU
-# from src.frontend import Frontend
-# from src.cache import Cache
-# from src.parser import Parser
-# from src.byte import Byte
-# from src.word import Word
 
 session = PromptSession()
 
@@ -40,8 +32,27 @@ def __show(input: list[str], cpu: CPU):
         return
     subcmd = input[0]
     if subcmd == 'mem':
-        # TODO: pass optionally a range of memory to show
-        ui.print_memory(cpu.get_mmu())
+        if len(input) == 2:
+            # check if the input is an int
+            try:
+                start = int(input[1], base=16)
+                start = max(start, 0)
+                ui.print_memory(cpu.get_mmu(), base=start)
+            except ValueError:
+                print("Usage: show mem <start in hex> <lines>")
+                return
+        elif len(input) == 3:
+            # check if both inputs are ints
+            try:
+                start = int(input[1], base=16)
+                start = max(start, 0)
+                lines = int(input[2])
+                ui.print_memory(cpu.get_mmu(), base=start, lines=lines)
+            except ValueError:
+                print("Usage: show mem <start in hex> <lines>")
+                return
+        else:
+            ui.print_memory(cpu.get_mmu())
     elif subcmd == 'cache':
         ui.print_cache(cpu.get_mmu())
     elif subcmd == 'regs':
