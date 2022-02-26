@@ -1,7 +1,6 @@
 from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-from logging import raiseExceptions
 from os import system
 from math import ceil
 import sys
@@ -25,6 +24,10 @@ def func(f):
         if f.__doc__ is not None:
             completions[f.__name__[2:]] = eval(f.__doc__.strip())
     funcs[f.__name__] = f
+
+
+def __not_found(input: list[str], cpu: CPU):
+    print('Your input did not match any known command')
 
 
 @func
@@ -78,12 +81,27 @@ def __show(input: list[str], cpu: CPU):
 
 @func
 def __continue(input: list[str], cpu: CPU):
-    raiseExceptions(NotImplementedError)
+    while cpu.get_frontend().get_pc() not in breakpoints:
+        cpu.tick()
+        if (all(slot is None for slot in cpu._exec_engine._slots) and cpu._frontend.get_instr_queue_size() == 0):
+            print("Program finished")
+            return
 
 
 @func
 def __step(input: list[str], cpu: CPU):
-    raiseExceptions(NotImplementedError)
+    steps = 1
+    if len(input) == 1:
+        try:
+            steps = int(input[0])
+        except ValueError:
+            print("Usage: step <steps>")
+            return
+    for _ in range(steps):
+        cpu.tick()
+        if (all(slot is None for slot in cpu._exec_engine._slots) and cpu._frontend.get_instr_queue_size() == 0):
+            print("Program finished")
+            return
 
 
 @func
@@ -160,10 +178,6 @@ funcs['__q'] = funcs['__quit']
 @func
 def __(input: list[str], cpu: CPU):
     ui.all_headers(cpu)
-
-
-def __not_found(input: list[str], cpu: CPU):
-    print('Your input did not match any known command')
 
 
 completer = NestedCompleter.from_nested_dict(completions)

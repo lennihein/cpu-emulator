@@ -92,7 +92,11 @@ def print_regs(engine: ExecutionEngine):
             print(" " if j != 0 else "", end="")
             print(BOLD + GREEN + "R" + str(i)
                   + (" : " if i < 10 else ": "), end="")
-            print_hex(regs[i].value, p_end="", base_style=ENDC + FAINT)
+            # TODO: fix this
+            try:
+                print_hex(regs[i].value, p_end="", base_style=ENDC + FAINT)
+            except AttributeError:
+                print_hex(regs[i], p_end="", base_style=ENDC + FAINT)
             print(" |" if j != fits - 1 else "\n", end="")
             i += 1
     print()
@@ -132,6 +136,10 @@ def print_bpu(bpu: BPU) -> None:
     print(bpu, end="")
 
 
+def print_info(cpu: CPU) -> None:
+    print("PC: ", cpu.get_frontend().get_pc(), end="")
+
+
 def header_memory(mmu: MMU):
     print_header("Memory", BOLD + YELLOW + ENDC)
     print()
@@ -153,9 +161,11 @@ def header_prog(cpu: CPU):
     print()
 
 
-def header_update(SOMETHING: None):
-    '''displays what/how many things have updated in the last step'''
-    print("", end="")
+def header_info(cpu: CPU):
+    print_header("Info", BOLD + CYAN + ENDC)
+    print()
+    print_info(cpu)
+    print()
 
 
 def header_rs(engine: ExecutionEngine):
@@ -166,7 +176,7 @@ def header_rs(engine: ExecutionEngine):
 
 
 def all_headers(cpu: CPU):
-    header_update(None)
+    header_info(cpu)
     header_regs(cpu.get_exec_engine())
     header_memory(cpu.get_mmu())
     # TODO: implement program header
