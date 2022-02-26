@@ -120,7 +120,8 @@ def print_cache(mmu: MMU) -> None:
 
 
 def print_queue(queue: Frontend):
-    for instr in queue.instr_list:
+    for item in queue.instr_queue:
+        instr = item.instr
         print(instr.ty.name, instr.ops)
 
 
