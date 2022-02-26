@@ -1,6 +1,7 @@
 from logging import raiseExceptions
 import os
 from src.bpu import BPU
+from src.frontend import Frontend
 from src.mmu import MMU
 from src.execution import ExecutionEngine
 from math import ceil
@@ -114,8 +115,9 @@ def print_cache(mmu: MMU) -> None:
         print('')
 
 
-def print_queue(SOMETHING: None):
-    raiseExceptions(NotImplementedError)
+def print_queue(queue: Frontend):
+    for instr in queue.instr_list:
+        print(instr.ty.name, instr.ops)
 
 
 def print_prog(SOMETHING: None):
