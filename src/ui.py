@@ -120,7 +120,7 @@ def print_queue(queue: Frontend):
         print(instr.ty.name, instr.ops)
 
 
-def print_prog(SOMETHING: None):
+def print_prog(SOMETHING: None, start=0, end=-1):
     raiseExceptions(NotImplementedError)
 
 
@@ -146,23 +146,27 @@ def header_regs(engine: ExecutionEngine):
     print()
 
 
-def header_prog(SOMETHING: None):
-    raiseExceptions(NotImplementedError)
+def header_prog(cpu: CPU):
+    print_header("Programme", BOLD + CYAN + ENDC)
+    print()
+    print_prog(cpu, start=cpu.pc - 4, end=cpu.pc + 4)
+    print()
 
 
 def header_update(SOMETHING: None):
     '''displays what/how many things have updated in the last step'''
-    raiseExceptions(NotImplementedError)
+    print("", end="")
 
 
-def header_rs(SOMETHING: None):
-    '''not sure if this is something we'd want'''
-    raiseExceptions(NotImplementedError)
+def header_rs(engine: ExecutionEngine):
+    print_header("Reservation Stations", BOLD + CYAN + ENDC)
+    print()
+    print_rs(engine)
+    print()
 
 
 def all_headers(cpu: CPU):
-    # TODO: implement update header
-    # header_update(None)
+    header_update(None)
     header_regs(cpu.get_exec_engine())
     header_memory(cpu.get_mmu())
     # TODO: implement program header

@@ -4,6 +4,7 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from logging import raiseExceptions
 from os import system
 from math import ceil
+import sys
 
 from src.instructions import InstrReg
 from src.word import Word
@@ -15,6 +16,7 @@ session = PromptSession()
 
 funcs = {}
 completions = {}
+breakpoints = {}
 
 
 def func(f):
@@ -118,62 +120,31 @@ def __not_found(input: list[str], cpu: CPU):
 
 completer = NestedCompleter.from_nested_dict(completions)
 
-cpu = CPU()
+if __name__ == "__main__":
+    # grab arguments
+    args = sys.argv[1:]
+    # Create CPU
+    cpu = CPU()
 
-code = """
-    // Set r1 to 1
-    addi r1, r0, 1
-    // Set r2 to 2
-    add r2, r1, r1
-    // Set r3 to 3
-    addi r3, r2, 1
-    // Set r4 to 4
-    mul r4, r2, r2
-    // Set r5 to 5
-    add r5, r2, r3
-    // Store 4 to address 0
-    sw r4, r0, 0
-    // Store 5 to address 0
-    sw r5, r2, -2
-    // Overwrite to 0x0105
-    sb r1, r3, -2
-    // Load 0x105 into r6
-    lw r6, r0, 0
-    // Store 4 to address 0
-    sw r4, r5, -5
-    // Execute fence and query cycle counter
-    fence
-    cyclecount r10
-    // Set r7 to 3 and count it down to 1
-    addi r7, r0, 3
-loop:
-    subi r7, r7, 1
-    bne r7, r1, loop
-    // Flush address 0
-    flush r0, 0
-"""
+    # Add `mul` instruction
+    mul = InstrReg("mul", lambda a, b: Word(a.value * b.value), cycles=10)
+    cpu._parser.add_instruction(mul)
 
-# Create CPU
-cpu = CPU()
+    # Load program
+    cpu.load_program_from_file(args[0])
 
-# Add `mul` instruction
-mul = InstrReg("mul", lambda a, b: Word(a.value * b.value), cycles=10)
-cpu._parser.add_instruction(mul)
-
-# Load program
-cpu.load_program(code)
-
-while True:
-    try:
-        text = session.prompt(
-            '-> ', auto_suggest=AutoSuggestFromHistory(), completer=completer, complete_while_typing=True)
-    except KeyboardInterrupt:
-        break
-    except EOFError:
-        break
-    else:
-        text = '__' + text
-        cmd = text.split()[0]
-        params = text.split()[1:]
-        fn = funcs.get(cmd, __not_found)
-        fn(params, cpu)
+    # enter main loop for shell
+    while True:
+        try:
+            text = session.prompt(
+                '-> ', auto_suggest=AutoSuggestFromHistory(), completer=completer, complete_while_typing=True)
+        except KeyboardInterrupt:
+            break
+        except EOFError:
+            break
+        else:
+            text = '__' + text
+            cmd = text.split()[0]
+            params = text.split()[1:]
+            fn = funcs.get(cmd, __not_found)
+            fn(params, cpu)
