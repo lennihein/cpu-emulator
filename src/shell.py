@@ -89,9 +89,57 @@ def __step(input: list[str], cpu: CPU):
 @func
 def __break(input: list[str], cpu: CPU):
     '''
-    {"add": None, "delete": None, "delete": None, "toogle": None, "list": None}
+    {"add": None, "delete": None, "delete": None, "toggle": None, "list": None}
     '''
-    raiseExceptions(NotImplementedError)
+    if len(input) < 1:
+        __not_found(input, cpu)
+        return
+    subcmd = input[0]
+    if subcmd == 'add':
+        if len(input) < 2:
+            print("Usage: break add <address in hex>")
+            return
+        try:
+            addr = int(input[1], base=16)
+            if addr in breakpoints:
+                print("Breakpoint already exists")
+                return
+            breakpoints[addr] = True
+            print("Breakpoint added")
+        except ValueError:
+            print("Usage: break add <address in hex>")
+    elif subcmd == 'delete':
+        if len(input) < 2:
+            print("Usage: break delete <address in hex>")
+            return
+        try:
+            addr = int(input[1], base=16)
+            if addr not in breakpoints:
+                print("Breakpoint does not exist")
+                return
+            breakpoints.pop(addr)
+            print("Breakpoint deleted")
+        except ValueError:
+            print("Usage: break delete <address in hex>")
+    elif subcmd == 'list':
+        print("Breakpoints:")
+        for addr in breakpoints:
+            print("\t0x{:04x} {}".format(addr, "(disabled)" if not breakpoints[addr] else ""))
+    elif subcmd == 'toggle':
+        if len(input) < 2:
+            print("Usage: break toogle <address in hex>")
+            return
+        try:
+            addr = int(input[1], base=16)
+            if addr not in breakpoints:
+                print("Breakpoint does not exist")
+                return
+            breakpoints[addr] = not breakpoints[addr]
+            print("Breakpoint toogled")
+        except ValueError:
+            print("Usage: break toogle <address in hex>")
+    else:
+        __not_found(input, cpu)
 
 
 @func
