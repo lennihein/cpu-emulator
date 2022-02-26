@@ -1,5 +1,6 @@
 """Execution Engine that executes instructions out-of-order."""
 
+import copy
 from dataclasses import dataclass
 from typing import NewType, Optional, TypeVar, Union, cast, final
 
@@ -18,8 +19,6 @@ from .instructions import (
 )
 from .mmu import MMU, MemResult
 from .word import Word
-
-import copy
 
 _T = TypeVar("_T")
 
@@ -81,6 +80,8 @@ class _Slot:
 
     # Kind of this instruction
     instr_ty: InstructionKind
+    # Address of this instruction
+    pc: int
     # Whether we are executing or retiring
     executing: bool
     # Whether we are retired
@@ -90,6 +91,7 @@ class _Slot:
 
     def __init__(self, args: _ArgsSlot):
         self.instr_ty = args.instr.ty
+        self.pc = args.pc
         self.executing = True
         self.retired = False
         self.operands = args.source_operands
@@ -138,15 +140,12 @@ class _SlotFaulting(_Slot):
     faulting_preceding: set[_SlotID]
     # Architectural register state when this instruction was issued
     registers: list[_WordOrSlot]
-    # Address of this instruction
-    pc: int
 
     def __init__(self, args: _ArgsSlot):
         super().__init__(args)
 
         self.faulting_preceding = args.exe._faulting_inflight.copy()
         self.registers = args.exe._registers.copy()
-        self.pc = args.pc
 
     def notify_result(self, slot: _SlotID, result: Word):
         super().notify_result(slot, result)
@@ -574,6 +573,10 @@ class ExecutionEngine:
         exec_copy._cyclecount = self._cyclecount
 
         return exec_copy
+
+    def inflight_pcs(self) -> set[int]:
+        """Return the program counters of all instructions in flight."""
+        return {slot.pc for slot in self._slots if slot is not None}
 
     def try_issue(self, instr: Instruction, pc: int, prediction: Optional[bool] = None) -> bool:
         """Try to issue the instruction by putting it in a free slot, return `True` on success."""
