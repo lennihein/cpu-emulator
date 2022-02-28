@@ -43,6 +43,8 @@ class FrontendTest(unittest.TestCase):
             front.fetch_instruction_from_queue()
         self.assertTrue('instruction queue is empty' in str(context.exception))
 
+        self.assertFalse(front.is_done())
+
         # check that the queue is filled but not overfilled
         # check function get_instr_queue_size
         front.add_instructions_to_queue()
@@ -214,7 +216,9 @@ class FrontendTest(unittest.TestCase):
 
         with self.assertRaises(Exception) as context:
             front.add_instructions_after_branch(True, 1)
-        self.assertTrue('index 1 does not point to a branch instruction' in str(context.exception))
+        self.assertTrue(
+            'index 1 does not point to a branch instruction' in str(
+                context.exception))
 
         front.add_instructions_after_branch(True, 2)
 
@@ -250,13 +254,13 @@ class FrontendTest(unittest.TestCase):
         front.set_pc(4)
         self.assertEqual(front.get_pc(), 4)
 
-        # TODO: Test the new behavior once it's implemented
-        # # check handling of the end of the program
-        # with self.assertRaises(Exception) as context:
-        #     front.add_instructions_to_queue()
-        # self.assertTrue(
-        #     'end of program reached by instruction queue' in str(
-        #         context.exception))
+        # check is_done function
+        self.assertFalse(front.is_done())
+        front.add_instructions_to_queue()
+        self.assertFalse(front.is_done())
+
+        front.flush_instruction_queue()
+        self.assertTrue(front.is_done())
 
 
 if __name__ == '__main__':

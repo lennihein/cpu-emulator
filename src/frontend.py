@@ -2,60 +2,10 @@
 Frontend for the CPU instruction management.
 
 Holds and manages a queue of instructions.
-Instructions are taken from a list provided by the parser and added to the queue with respect to branch management (bpu).
+Instructions are taken from a list provided by the parser
+and added to the queue with respect to branch management (bpu).
 Instructions can be fetched from the queue, e.g. by reservation stations.
 Supports flushing the queue and adding a micro program directly to the queue.
-
-# Example
-
->>> import bpu
->>> import parser
-
->>> cpu_bpu = bpu.BPU()
->>> addi = instructions.InstructionType("addi", ["reg", "reg", "imm"])
->>> j = instructions.InstrBranch("j", ["label"], "condition needed")
->>> p = parser.Parser()
->>> p.add_instruction(addi)
->>> p.add_instruction(j)
->>> instrs = p.parse('''
-...     a:
-...     addi r1, r0, 100
-...     addi r1, r0, 99
-...     j a
-...     addi r1, r0, 98
-... ''')
-
->>> front = Frontend(cpu_bpu, instrs, 3)
->>> cpu_bpu.update(2, True)
-
->>> front.add_instructions_to_queue()
->>> print(front.instr_queue)
-deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0])])
->>> print(front.get_pc())
-0
-
->>> next_instr = front.fetch_instruction_from_queue()
->>> print(next_instr)
-Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100])
->>> print(front.instr_queue)
-deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0])])
-
->>> front.add_instructions_to_queue()
->>> print(front.instr_queue)
-deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100])])
-
->>> micro_program=list([instructions.Instruction(addi, [1, 1, 2]), instructions.Instruction(j, [1])])
->>> front.add_micro_program(micro_program)
->>> print(front.instr_queue)
-deque([Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 99]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[0]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 0, 100]), Instruction(ty=InstructionType(name='addi', operands=['reg', 'reg', 'imm']), ops=[1, 1, 2]), Instruction(ty=InstrBranch(name='j', operands=['label'], condition='condition needed'), ops=[1])])
-
->>> front.flush_instruction_queue()
->>> print(front.instr_queue)
-deque([])
-
->>> front.set_pc(4)
->>> front.add_instructions_to_queue()
-Error: end of program reached by instruction queue
 """
 
 
@@ -91,8 +41,8 @@ class Frontend:
     Expects an already initialised bpu (e.g. shallow copy of the bpu from a surrounding cpu class)
     and a list of instructions (e.g. as provided by the Parser in paser.py) upon initilisation.
     Max_length can be initialised, too, otherwise a default of 5 is used.
-    Uses a program counter pc to keep track of the next instruction from the provided instruction list
-    that should be added to the queue.
+    Uses a program counter pc to keep track of
+    the next instruction from the provided instruction list that should be added to the queue.
     '''
 
     max_length: int
@@ -110,15 +60,14 @@ class Frontend:
 
     def add_instructions_to_queue(self) -> None:
         '''
-        Fills the queue with the InstrFrontendInfo objects for th next instructions from the instruction list,
-        as indicated by the pc.
+        Fills the queue with the InstrFrontendInfo objects
+        for th next instructions from the instruction list, as indicated by the pc.
 
-        Only adds an instruction, if max_langth is not yet reached.
+        Only adds an instruction, if max_langth is not yet reached
+        and the pc does not exceed the number of instructions in the instr_list.
         If the queue is full, the function returns without further effect.
-        Notifies the user if the end of the program is reached,
-        i.e. the pc exceeds the number of instructions in the instr_list.
 
-        If the intruction currently added to the list is of the type InstrBranch,
+        If the instruction currently added to the list is of the type InstrBranch,
         the pc for the next instruction is set according to the label/ number
         provided by the instruction and the bpu prediction for the branch instruction.
         Important: jump and branching instructions need to be explicitly registered as InstrBranch,
@@ -129,13 +78,8 @@ class Frontend:
         This has to be modified if a branch order buffer should be used.
         '''
 
-        while (len(self.instr_queue) < self.max_length):
-
-            if self.pc >= len(self.instr_list):
-
-                # TODO: Handle end-of-program properly
-                # raise IndexError("end of program reached by instruction queue")
-                return
+        while ((len(self.instr_queue) < self.max_length)
+               and (self.pc < len(self.instr_list))):
 
             # sanity check, should never happen since the set_pc function
             # checks for this too and jump goals are set by the parser from
@@ -206,29 +150,35 @@ class Frontend:
         Does not automatically flush the queue beforehand.
         '''
 
-        current_instr: instructions.Instruction = self.instr_list[instr_index]
-
         # sanity check, should always be the case
-        # this needs to be modified if further jump instruction types are
-        # implemented
-        if isinstance(current_instr.ty, instructions.InstrBranch):
+        if (instr_index >= 0 and instr_index < len(self.instr_list)):
 
-            if taken:
-                self.pc = current_instr.ops[0]
+            current_instr: instructions.Instruction = self.instr_list[instr_index]
+
+            # sanity check, should always be the case
+            # this needs to be modified if further jump instruction types are
+            # implemented
+            if isinstance(current_instr.ty, instructions.InstrBranch):
+
+                if taken:
+                    self.pc = current_instr.ops[0]
+
+                else:
+                    self.pc = instr_index + 1
 
             else:
-                self.pc = instr_index + 1
+
+                raise TypeError(
+                    f"index {instr_index!r} does not point to a branch instruction")
+
+            current_instr_info = InstrFrontendInfo(
+                current_instr, instr_index, taken)
+            self.instr_queue.append(current_instr_info)
+
+            self.add_instructions_to_queue()
 
         else:
-
-            raise TypeError(
-                f"index {instr_index!r} does not point to a branch instruction")
-
-        current_instr_info = InstrFrontendInfo(
-            current_instr, instr_index, taken)
-        self.instr_queue.append(current_instr_info)
-
-        self.add_instructions_to_queue()
+            raise IndexError("instruction index out of range")
 
         return
 
@@ -310,3 +260,21 @@ class Frontend:
         '''
 
         return self.pc
+
+    def is_done(self) -> bool:
+        '''
+        Returns true if the frontend has fully handled the program,
+        i.e. has reached the end of the instr_list
+        and all instructions and their info have been removed from the queue.
+        This status can reverse from True to False, e.g. if
+        µ-programs are added, instructions are added after a branch
+        or the pc is adjusted via set_pc.
+        '''
+
+        if (self.pc >= len(self.instr_list)) and (len(self.instr_queue) == 0):
+
+            return True
+
+        else:
+
+            return False
