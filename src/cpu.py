@@ -83,12 +83,12 @@ class CPU:
 
         # check if any program is being executed
         if self._frontend is None:
-            return None
+            return CPUStatus(False, None, [])
 
         # fill up instruction queue / reorder buffer
         self._frontend.add_instructions_to_queue()
 
-        cpu_status: CPUStatus = CPUStatus(False, None, [])
+        cpu_status: CPUStatus = CPUStatus(True, None, [])
 
         # fill execution units
         while self._frontend.get_instr_queue_size() > 0:
@@ -110,7 +110,7 @@ class CPU:
             # For faulting memory instructions, we simply skip the instruction.
             # Normally, one would have to register an exception handler. We skip this
             # step for the sake of simplicity.
-            if isinstance(fault_info.kind, (InstrLoad, InstrStore, InstrFlush)):
+            if isinstance(fault_info.instr, (InstrLoad, InstrStore, InstrFlush)):
                 resume_at_pc += 1
 
             self._frontend.set_pc(resume_at_pc)
@@ -119,7 +119,7 @@ class CPU:
             # If the instruction that caused the rollback is a branch
             # instruction, we notify the front end which makes sure
             # the correct path is taken next time.
-            if isinstance(fault_info.kind, InstrBranch):
+            if isinstance(fault_info.instr, InstrBranch):
                 self._frontend.add_instructions_after_branch(
                     not fault_info.prediction, fault_info.pc
                 )
@@ -168,10 +168,12 @@ class CPU:
         cpu_copy._parser = copy.deepcopy(self._parser)
         cpu_copy._frontend = copy.deepcopy(self._frontend)
         cpu_copy._bpu = copy.deepcopy(self._bpu)
+        cpu_copy._exec_engine = copy.deepcopy(self._exec_engine)
+        cpu_copy._exec_engine._mmu = cpu_copy._mmu
 
         # Here, we use our own deepcopy functions.
         cpu_copy._mmu = self._mmu.deepcopy()
-        cpu_copy._exec_engine = self._exec_engine.deepcopy(self._mmu)
+        # cpu_copy._exec_engine = self._exec_engine.deepcopy(self._mmu)
 
         cpu_copy._snapshots = self._snapshots
         # cpu_copy._snapshot_index = copy.deepcopy(self._snapshot_index)
