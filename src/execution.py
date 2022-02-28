@@ -1,6 +1,5 @@
 """Execution Engine that executes instructions out-of-order."""
 
-import copy
 from dataclasses import dataclass
 from typing import NewType, Optional, TypeVar, Union, cast, final
 
@@ -531,6 +530,8 @@ class ExecutionEngine:
     time, with yet-unknown register values present as slot references.
     """
 
+    # TODO: The MMU object should only be copied once when using `copy.deepcopy`, check that this is
+    # actually the case. If not, the Slot classes above also need changing
     _mmu: MMU
 
     # Register file, containing the architectural register state if all in-flight instructions were
@@ -558,21 +559,6 @@ class ExecutionEngine:
 
         # Initialize cycle counter
         self._cyclecount = 0
-
-    def deepcopy(self, mmu: MMU = None):
-        """
-        Returns a deepcopy of the execution engine. Note that the MMU reference
-        is set to none to prevent it from being copied, too.
-        """
-        exec_copy = ExecutionEngine(mmu)
-
-        exec_copy._registers = copy.deepcopy(self._registers)
-        exec_copy._slots = copy.deepcopy(self._slots)
-        exec_copy._faulting_inflight = copy.deepcopy(self._faulting_inflight)
-
-        exec_copy._cyclecount = self._cyclecount
-
-        return exec_copy
 
     def inflight_pcs(self) -> set[int]:
         """Return the program counters of all instructions in flight."""
