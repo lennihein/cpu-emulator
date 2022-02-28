@@ -34,12 +34,28 @@ class FaultInfo:
 
     # PC of the faulting instruction
     pc: int
-    # Kind of the faulting instruction
-    kind: InstructionKind
+    # The faulting instruction
+    instr: Instruction
     # Predicted branch condition if the instruction is a branch
     prediction: Optional[bool] = None
     # Faulting address if applicable to the instruction kind
     address: Optional[Word] = None
+
+
+@dataclass
+class InflightInfo:
+    """Information about an instruction in flight."""
+
+    # PC of the instruction
+    pc: int
+    # The instruction
+    instr: Instruction
+    # Whether the instruction is executing or retiring
+    executing: bool
+
+    @classmethod
+    def from_slot(cls, slot: "_Slot"):
+        return cls(slot.pc, slot.instr, slot.executing)
 
 
 @dataclass
@@ -77,6 +93,8 @@ class _Slot:
     result, but have not yet determined if they cause a fault.
     """
 
+    # The instruction in flight
+    instr: Instruction
     # Kind of this instruction
     instr_ty: InstructionKind
     # Address of this instruction
@@ -89,6 +107,7 @@ class _Slot:
     operands: list[_WordOrSlot]
 
     def __init__(self, args: _ArgsSlot):
+        self.instr = args.instr
         self.instr_ty = args.instr.ty
         self.pc = args.pc
         self.executing = True
@@ -560,9 +579,13 @@ class ExecutionEngine:
         # Initialize cycle counter
         self._cyclecount = 0
 
-    def inflight_pcs(self) -> set[int]:
-        """Return the program counters of all instructions in flight."""
-        return {slot.pc for slot in self._slots if slot is not None}
+    def slots(self) -> list[Optional[InflightInfo]]:
+        """Return information about the slots of the Reservation Station."""
+        return [(None if slot is None else InflightInfo.from_slot(slot)) for slot in self._slots]
+
+    def is_done(self) -> bool:
+        """Return whether all slots of the Reservation Station are empty."""
+        return all(slot is None for slot in self._slots)
 
     def try_issue(self, instr: Instruction, pc: int, prediction: Optional[bool] = None) -> bool:
         """Try to issue the instruction by putting it in a free slot, return `True` on success."""
