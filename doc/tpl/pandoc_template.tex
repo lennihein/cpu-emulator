@@ -1,0 +1,198 @@
+\documentclass[10pt,a4paper,chapterprefix=false,openright,bibliography=totoc,headinclude,cleardoublepage=plain]{scrreprt}
+
+\usepackage{ifthen}
+
+% -------------------------------------------- Set Config from Pandoc Variables
+
+% Simple substitution
+\newcommand{\thesistype}{$thesis-type$}
+\newcommand{\thesiscustomtype}{$thesis-type-custom$}
+\newcommand{\thesisauthor}{$author$}
+\newcommand{\thesismatrikel}{$thesis-matrikel$}
+\newcommand{\thesistitle}{$title$}
+\newcommand{\thesissubtitle}{$subtitle$}
+\newcommand{\thesisdegreecourse}{$thesis-degree-course$}
+\newcommand{\thesisubmission}{$thesis-submission$}
+\newcommand{\thesismonochrome}{$thesis-monochrome$}
+\newcommand{\thesisaffiliation}{$thesis-affiliation$}
+\newcommand{\thesisprintingstyle}{$if(thesis-twosided)$twoside$endif$}
+\newcommand{\thesistableposition}{$thesis-table-position$}
+\newcommand{\thesisprintdeclaration}{$thesis-print-declaration$}
+\newcommand{\thesisreferencestyle}{$thesis-reference-style$}
+
+% Supervisors and sponsor: name+affiliation or only name
+$if(thesis-supervisor-one.name)$
+\newcommand{\thesissupervisorone}{$thesis-supervisor-one.name$}
+\newcommand{\thesissupervisoroneaffiliation}{$thesis-supervisor-one.affiliation$}
+$else$
+\newcommand{\thesissupervisorone}{$thesis-supervisor-one$}
+\newcommand{\thesissupervisoroneaffiliation}{}
+$endif$
+$if(thesis-supervisor-two.name)$
+\newcommand{\thesissupervisortwo}{$thesis-supervisor-two.name$}
+\newcommand{\thesissupervisortwoaffiliation}{$thesis-supervisor-two.affiliation$}
+$else$
+\newcommand{\thesissupervisortwo}{$thesis-supervisor-two$}
+\newcommand{\thesissupervisortwoaffiliation}{}
+$endif$
+$if(thesis-sponsor.name)$
+\newcommand{\thesissponsor}{$thesis-sponsor.name$}
+\newcommand{\thesissponsoraffiliation}{$thesis-sponsor.affiliation$}
+$else$
+\newcommand{\thesissponsor}{$thesis-sponsor$}
+\newcommand{\thesissponsoraffiliation}{}
+$endif$
+
+% Language: de -> german
+\ifthenelse{\equal{$lang$}{de}}{
+\newcommand{\thesislanguage}{german}
+}{
+\newcommand{\thesislanguage}{english}
+}
+
+% Thanks and abstract: include if not empty
+$if(thanks)$
+\newcommand{\thesisthankyou}{true}
+$else$
+\newcommand{\thesisthankyou}{}
+$endif$
+$if(abstract)$
+\newcommand{\thesisabstract}{true}
+$else$
+\newcommand{\thesisabstract}{}
+$endif$
+
+% ------------------------------------------------ Definitions Needed by Pandoc
+
+\usepackage{longtable,booktabs,array}
+\providecommand{\tightlist}{%
+    \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\newcommand{\passthrough}[1]{#1}
+
+% ------------------------------------------------------------ Include Packages
+
+\input{tpl/pkg.tex}
+
+% -------------------------------------------------- Include bibliography files
+$for(bibliography)$
+\addbibresource{$it$}
+$endfor$
+
+% ------------------------------------------ Pandoc: Header Includes (DISABLED)
+
+% ------------------------------------------------------------------------- Init
+\begin{document}
+\hypersetup{pageanchor=false}
+\sloppy
+\KOMAoptions{twoside = false}
+\input{tpl/titlepage.tex}
+\ifthenelse{\equal{\thesisprintingstyle}{twoside}}{
+    \KOMAoptions{twoside = true}
+    \cleardoublepage
+}{}
+\pagestyle{scrheadings}
+\setcounter{page}{7}
+\pagenumbering{gobble}
+\pagenumbering{roman}
+
+% ------------------------------------------------ Pandoc: Includes Before Body
+$for(include-before)$
+$include-before$
+$endfor$
+
+% ----------------------------------------------------------------------- Thanks
+\ifthenelse{\equal{\thesisthankyou}{true}}{
+    \cleardoublepage
+    \chapter*{\ifthenelse{\equal{\thesislanguage}{german}}%
+        {Danksagung}%
+        {Acknowledgement}}
+    $thanks$}
+    \cleardoublepage
+{}%
+
+% --------------------------------------------------------------------- Abstract
+\ifthenelse{\equal{\thesisabstract}{true}}{
+    \cleardoublepage
+    \chapter*{\ifthenelse{\equal{\thesislanguage}{german}}%
+        {Kurzfassung}%
+        {Abstract}}
+    $abstract$
+    %\vspace*{\fill}
+    %\thispagestyle{empty}
+}{}
+\clearpage
+
+% ----------------------------------------------------------------------- Tables
+\addtocontents{toc}{\vskip -2em}
+\addtocontents{lof}{\vskip -2em}
+\addtocontents{lot}{\vskip -2em}
+\begingroup
+\let\clearpage\relax
+\tableofcontents
+\clearpage
+\ifthenelse{\equal{\thesistableposition}{beginning}}{%
+    \iftotalfigures%
+        \phantomsection%
+        \addcontentsline{toc}{chapter}{\listfigurename}%
+        \listoffigures%
+        \clearpage
+    \fi%
+    \iftotaltables%
+        \phantomsection%
+        \addcontentsline{toc}{chapter}{\listtablename}%
+        \listoftables%
+        \clearpage
+    \fi%
+    \iftotallstlistings%
+        \phantomsection%
+        \addcontentsline{toc}{chapter}{\lstlistlistingname}%
+        \lstlistoflistings%
+        \clearpage
+    \fi%
+}{}
+\endgroup
+\cleardoublepage
+\pagenumbering{arabic}
+\hypersetup{pageanchor=true}
+
+% -------------------------------------------------------------------- Add body
+$body$
+
+\printbibliography[heading=bibintoc,title=\reftitle]
+
+
+%------------------------------------------------------------ Table of Figures and Tables if Position is 'end'
+\clearpage
+\ifthenelse{\equal{\thesistableposition}{end}}{%
+    \iftotalfigures%
+        \phantomsection%
+        \addcontentsline{toc}{chapter}{\listfigurename}%
+        \listoffigures%
+        \clearpage
+    \fi%
+    \iftotaltables%
+        \phantomsection%
+        \addcontentsline{toc}{chapter}{\listtablename}%
+        \listoftables%
+        \clearpage
+    \fi%
+    \iftotallstlistings%
+        \phantomsection%
+        \addcontentsline{toc}{chapter}{\lstlistlistingname}%
+        \lstlistoflistings%
+        \clearpage
+    \fi%
+}{}
+
+% ------------------------------------------------------------------ Declaration
+\ifthenelse{\equal{\thesisprintdeclaration}{true}}{%
+\input{tpl/declaration.tex}
+\cleardoublepage
+}{}%
+
+% ------------------------------------------------- Pandoc: Includes After Body
+$for(include-after)$
+$include-after$
+$endfor$
+
+\end{document}

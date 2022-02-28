@@ -1,0 +1,40 @@
+%\vspace*{20em}
+
+\ifthenelse{\equal{\thesislanguage}{german}}{%
+	% german
+	\chapter*{Selbstständigkeitserklärung}
+	Hiermit versichere ich, 
+	\ifthenelse{\equal{\thesistype}{master}}{die vorliegende Masterarbeit}{}%
+	\ifthenelse{\equal{\thesistype}{bachelor}}{die vorliegende Bachelorarbeit}{}%
+	\ifthenelse{\equal{\thesistype}{seminar}}{die vorliegende Seminarausarbeitung}{}%
+	\ifthenelse{\equal{\thesistype}{report}}{das vorliegende Laborprotokoll}{}%
+	\ifthenelse{\equal{\thesistype}{custom}}{die vorliegende Arbeit}{}%
+	~ohne Hilfe Dritter nur mit den angegebenen Quellen und Hilfsmitteln 
+	angefertigt zu haben. Alle Stellen, die aus Quellen entnommen wurden, 
+	sind als solche kenntlich gemacht. Diese Arbeit hat in gleicher oder
+	ähnlicher Form noch keiner Prüfungsbehörde vorgelegen.
+}{% english
+	\chapter*{Statement of Authorship}
+	I hereby confirm that the work presented in this 
+	\ifthenelse{\equal{\thesistype}{master}}{master thesis}{}%
+	\ifthenelse{\equal{\thesistype}{bachelor}}{bachelor thesis}{}%
+	\ifthenelse{\equal{\thesistype}{seminar}}{seminar paper}{}%
+	\ifthenelse{\equal{\thesistype}{report}}{lab report}{}%
+	\ifthenelse{\equal{\thesistype}{custom}}{thesis}{}%
+	~has been performed and interpreted solely by myself except where explicitly 
+	identified to the contrary. I declare that I have used no other sources and 
+	aids other than those indicated. This work has not been submitted elsewhere 
+	in any other form for the fulfilment of any other degree or qualification.
+}%
+
+
+\noindent
+\begin{minipage}{\textwidth}
+\vspace*{3cm}
+\begin{tabular}{lr}
+	\thesisubmission \hspace*{3cm} & \underline{\hspace{6cm}}\\
+	~ & \thesisauthor
+\end{tabular}
+\end{minipage}
+\vspace*{\fill}
+

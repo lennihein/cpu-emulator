@@ -1,0 +1,104 @@
+\begin{titlepage}
+	\vspace*{-5em}
+	\begin{flushright}
+				\ifthenelse{\equal{\thesismonochrome}{true}}%
+					{\includegraphics[width=0.5\textwidth]{tpl/unilogosw.pdf}}%
+					{\includegraphics[width=0.5\textwidth]{tpl/unilogo.pdf}}
+    \end{flushright}
+    \begin{center}
+		~\\
+		\vspace*{2em}
+		\begin{minipage}{.8\textwidth}
+			\centering
+			\hrule
+			\vspace*{1em}
+			\begin{spacing}{2.0}
+				{\huge\bfseries\scshape\color{uboBlue}\thesistitle}
+			\end{spacing}
+			\vspace*{1em}
+			\hrule
+		\end{minipage}
+		~\\
+		\vspace*{1em}
+		\begin{minipage}{.6\textwidth}
+			\centering
+			{\Large\scshape\thesissubtitle}
+		\end{minipage}
+		~\\
+		\vspace*{3em}
+		\huge\scshape
+		\ifthenelse{\equal{\thesislanguage}{german}}{%
+            \ifthenelse{\equal{\thesistype}{dissertation}}{Dissertation}{}%
+            \ifthenelse{\equal{\thesistype}{master}}{Masterarbeit}{}%
+            \ifthenelse{\equal{\thesistype}{bachelor}}{Bachelorarbeit}{}%
+			\ifthenelse{\equal{\thesistype}{seminar}}{Seminarausarbeitung}{}%
+			\ifthenelse{\equal{\thesistype}{report}}{Bericht zur Projektgruppe}{}%
+        }{% english
+            \ifthenelse{\equal{\thesistype}{dissertation}}{Dissertation}{}%
+            \ifthenelse{\equal{\thesistype}{master}}{Master Thesis}{}%
+            \ifthenelse{\equal{\thesistype}{bachelor}}{Bachelor Thesis}{}%
+            \ifthenelse{\equal{\thesistype}{seminar}}{Seminar Paper}{}%
+            \ifthenelse{\equal{\thesistype}{report}}{Lab Report}{}%
+        }%
+          \ifthenelse{\equal{\thesistype}{custom}}{\thesiscustomtype}{}%
+
+        \vspace*{0.1em}
+        \normalsize\normalfont
+        \ifthenelse{\equal{\thesislanguage}{german}}{ausgearbeitet von}{by}
+        \\[.1em]
+        \Large\scshape
+        {\Large\scshape\bfseries\color{uboBlue}\thesisauthor}\\
+        \ifthenelse{\equal{\thesistype}{project}}{}{\normalsize\thesismatrikel}
+
+        \ifthenelse{\equal{\thesistype}{project}}{\vspace{1em}}{}
+        \normalsize\normalfont
+        \ifthenelse{\equal{\thesislanguage}{german}}{%
+            \ifthenelse{\equal{\thesistype}{dissertation}}{zur Erlangung des akademischen Grades\\\large\scshape Doctor Rerum Naturalium (Dr. rer. nat.)\\}{}%
+			\ifthenelse{\equal{\thesistype}{master}}{zur Erlangung des akademischen Grades\\\large\scshape Master of Science (M.Sc.)\\}{}%
+			\ifthenelse{\equal{\thesistype}{bachelor}}{zur Erlangung des akademischen Grades\\\large\scshape Bachelor of Science (B.Sc.)\\}{}%
+            \ifthenelse{\equal{\thesistype}{seminar}}{\vspace*{2em}}{}%
+            \ifthenelse{\equal{\thesistype}{report}}{\vspace*{2em}}{}%
+        }{% english
+            \ifthenelse{\equal{\thesistype}{dissertation}}{in fulfillment of requirements for degree\\\large\scshape Doctor Rerum Naturalium (Dr. rer. nat.)\\}{}%
+            \ifthenelse{\equal{\thesistype}{master}}{in fulfillment of requirements for degree\\\large\scshape Master of Science (M.Sc.)\\}{}%
+            \ifthenelse{\equal{\thesistype}{bachelor}}{in fulfillment of requirements for degree\\\large\scshape Bachelor of Science (B.Sc.)\\}{}%
+            \ifthenelse{\equal{\thesistype}{seminar}}{\vspace*{2em}}{}%
+            \ifthenelse{\equal{\thesistype}{report}}{\vspace*{2em}}{}%
+        }
+        \vspace*{.5em}
+        \normalfont\normalsize
+				\ifthenelse{\equal{\thesistype}{project}}{}{
+        	\ifthenelse{\equal{\thesislanguage}{german}}{vorgelegt an der}{submitted to}~\\[-.1em]
+				}
+        \large\scshape
+        \thesisaffiliation
+        \vspace*{.5em}
+         \normalfont\normalsize
+         \ifthenelse{\equal{\thesistype}{project}}{}{%
+          	\ifthenelse{\equal{\thesislanguage}{german}}{im Studiengang}{in degree course}}~\\[-.1em]
+        \large\scshape
+        \ifthenelse{\equal{\thesistype}{project}}{}{\thesisdegreecourse\\}
+
+        \normalsize\normalfont
+        \ifthenelse{\equal{\thesistype}{project}}{}{%
+        \vspace*{2em}
+        \begin{tabular}{rl}
+            \ifthenelse{\equal{\thesislanguage}{german}}{Erstprüfer:}{First Supervisor:}
+            &  \thesissupervisorone\\[-.3em]
+            &  \small \ifthenelse{\equal{\thesissupervisoroneaffiliation}{}}{\ifthenelse{\equal{\thesislanguage}{german}}{Universität Bonn}{University of Bonn}}{\thesissupervisoroneaffiliation} \\[.3em]
+
+            \ifthenelse{\equal{\thesislanguage}{german}}{Zweitprüfer:}{Second Supervisor:}
+            &  \thesissupervisortwo\\[-.3em]
+            &  \small \ifthenelse{\equal{\thesissupervisortwoaffiliation}{}}{\ifthenelse{\equal{\thesislanguage}{german}}{Universität Bonn}{University of Bonn}}{\thesissupervisortwoaffiliation} \\[.3em]
+
+            \ifthenelse{\equal{\thesissponsor}{}}{}{
+                \ifthenelse{\equal{\thesislanguage}{german}}{Betreuer:}{Sponsor:}
+                &  \thesissponsor\\[-.3em]
+                &  \small \ifthenelse{\equal{\thesissponsoraffiliation}{}}{\ifthenelse{\equal{\thesislanguage}{german}}{Universität Bonn}{University of Bonn}}{\thesissponsoraffiliation} \\[.3em]
+            }
+        \end{tabular}
+    }
+        \vfill
+        \thesisubmission
+	\end{center}
+\end{titlepage}
