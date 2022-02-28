@@ -8,7 +8,7 @@ import sys
 from src.instructions import InstrReg
 from src.word import Word
 from src import ui
-from src.cpu import CPU
+from src.cpu import CPU, CPUStatus
 
 session = PromptSession()
 
@@ -81,12 +81,15 @@ def __show(input: list[str], cpu: CPU):
 
 @func
 def __continue(input: list[str], cpu: CPU):
-    while cpu.get_frontend().get_pc() not in breakpoints:
-        cpu.tick()
-        # TODO: this will have a more elegant solution once some interface is implemented
-        if (all(slot is None for slot in cpu._exec_engine._slots) and cpu._frontend.get_instr_queue_size() == 0):
+    while True:
+        info: CPUStatus = cpu.tick()
+        active_breakpoints = [i for i in breakpoints if breakpoints[i] is True]
+        if set(active_breakpoints) & set(info.issued_instructions):
+            ui.print_color(ui.RED, 'BREAKPOINT')
+            break
+        if not info.executing_program:
             print("Program finished")
-            return
+            break
 
 
 @func
@@ -99,10 +102,10 @@ def __step(input: list[str], cpu: CPU):
             print("Usage: step <steps>")
             return
     for _ in range(steps):
-        cpu.tick()
-        if (all(slot is None for slot in cpu._exec_engine._slots) and cpu._frontend.get_instr_queue_size() == 0):
+        info: CPUStatus = cpu.tick()
+        if not info.executing_program:
             print("Program finished")
-            return
+            break
 
 
 @func

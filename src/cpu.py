@@ -87,6 +87,9 @@ class CPU:
         if self._frontend is None:
             return CPUStatus(False, None, [])
 
+        if self._frontend.is_done() and self._exec_engine.is_done():
+            return CPUStatus(False, None, [])
+
         # fill up instruction queue / reorder buffer
         self._frontend.add_instructions_to_queue()
 
