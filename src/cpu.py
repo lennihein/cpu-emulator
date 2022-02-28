@@ -5,11 +5,12 @@ import copy
 from .bpu import BPU
 from .execution import ExecutionEngine, FaultInfo
 from .frontend import Frontend, InstrFrontendInfo
-from .instructions import InstrBranch, InstrFlush, InstrLoad, InstrStore, Instruction
+from .instructions import InstrBranch, InstrFlush, InstrLoad, InstrStore
 from .mmu import MMU
 from .parser import Parser
 
 from dataclasses import dataclass
+
 
 @dataclass
 class CPUStatus:
@@ -25,6 +26,7 @@ class CPUStatus:
     # List of program counters of instructions that have
     # been issued this tick.
     issued_instructions: list[int]
+
 
 class CPU:
 
