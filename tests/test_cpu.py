@@ -92,7 +92,7 @@ class CPUTests(unittest.TestCase):
             sw r4, r5, -5
             // Execute fence and query cycle counter
             fence
-            cyclecount r10
+            rdtsc r10
             // Set r7 to 3 and count it down to 1
             addi r7, r0, 3
         loop:

@@ -83,6 +83,7 @@ def __show(input: list[str], cpu: CPU):
 def __continue(input: list[str], cpu: CPU):
     while cpu.get_frontend().get_pc() not in breakpoints:
         cpu.tick()
+        # TODO: this will have a more elegant solution once some interface is implemented
         if (all(slot is None for slot in cpu._exec_engine._slots) and cpu._frontend.get_instr_queue_size() == 0):
             print("Program finished")
             return

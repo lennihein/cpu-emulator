@@ -258,7 +258,7 @@ def _all_instructions() -> Iterable[InstructionKind]:
         yield InstrBranch(name, op)
 
     # Cyclecount instruction
-    yield InstrCyclecount("cyclecount")
+    yield InstrCyclecount("rdtsc")
     # Fence instruction
     yield InstrFence("fence")
 

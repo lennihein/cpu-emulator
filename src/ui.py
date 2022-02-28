@@ -7,6 +7,7 @@ from src.execution import ExecutionEngine
 from math import ceil
 from src.word import Word
 from src.cpu import CPU
+from src.instructions import Instruction
 
 HEADER = '\033[95m'
 BLUE = '\033[94m'
@@ -28,15 +29,13 @@ try:
 except OSError:
     columns, rows = 120, 30
 
+
 # print colored text using ANSI escape sequences
-
-
 def print_color(c, str, newline=False):
     print(c + str + ENDC, end="\n" if newline else "")
 
+
 # print a simple divider
-
-
 def print_div(c=None, length=columns, newline=True):
     str = "-" * length
     if c is None:
@@ -44,9 +43,8 @@ def print_div(c=None, length=columns, newline=True):
     else:
         print_color(c, str, newline)
 
+
 # print a divider with a header
-
-
 def print_header(str, c=ENDC):
     inlay = "[ " + str + " ]"
     length = (columns - len(inlay)) // 2
@@ -119,14 +117,28 @@ def print_cache(mmu: MMU) -> None:
         print('')
 
 
+def print_instruction(instr: Instruction, pc=None, current=False, breakpoint=False):
+    current_tag = "{}".format(BOLD + GREEN + "►" + ENDC) if current else " "
+    breakpoint_tag = "{}".format(BOLD + RED + "⬤" + ENDC) if breakpoint else " "
+    # fixed width for line number
+    line_tag = "{} ".format(BOLD + FAINT + str(pc) + ENDC) if pc is not None else ""
+    print(breakpoint_tag + current_tag + line_tag + YELLOW + instr.ty.name + ENDC, end=" " + '\t')
+    print(", ".join([str(op) for op in instr.ops]), end="")
+
+
 def print_queue(queue: Frontend):
     for item in queue.instr_queue:
         instr = item.instr
-        print(instr.ty.name, instr.ops)
+        print_instruction(instr)
+        print()
 
 
-def print_prog(SOMETHING: None, start=0, end=-1):
-    raiseExceptions(NotImplementedError)
+def print_prog(front: Frontend, start=0, end=-1):
+    i = 0
+    for instr in front.instr_list:
+        print_instruction(instr, pc=i)
+        print()
+        i += 1
 
 
 def print_rs(SOMETHING: None):
@@ -155,10 +167,10 @@ def header_regs(engine: ExecutionEngine):
     print()
 
 
-def header_prog(cpu: CPU):
+def header_prog(front: Frontend):
     print_header("Programme", BOLD + CYAN + ENDC)
     print()
-    print_prog(cpu, start=cpu.pc - 4, end=cpu.pc + 4)
+    print_prog(front, start=front.pc - 4, end=front.pc + 4)
     print()
 
 
