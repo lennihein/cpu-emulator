@@ -1,4 +1,3 @@
-from logging import raiseExceptions
 import os
 from src.bpu import BPU
 from src.frontend import Frontend
@@ -117,12 +116,10 @@ def print_cache(mmu: MMU) -> None:
         print('')
 
 
-def print_instruction(instr: Instruction, pc=None, current=False, breakpoint=False):
-    current_tag = "{}".format(BOLD + GREEN + "►" + ENDC) if current else " "
-    breakpoint_tag = "{}".format(BOLD + RED + "⬤" + ENDC) if breakpoint else " "
-    # fixed width for line number
-    line_tag = "{} ".format(BOLD + FAINT + str(pc) + ENDC) if pc is not None else ""
-    print(breakpoint_tag + current_tag + line_tag + YELLOW + instr.ty.name + ENDC, end=" " + '\t')
+def print_instruction(instr: Instruction):
+    instr_str = YELLOW + instr.ty.name + ENDC
+    instr_str += " " * (6 - len(instr.ty.name))
+    print(instr_str, end="")
     print(", ".join([str(op) for op in instr.ops]), end="")
 
 
@@ -133,16 +130,58 @@ def print_queue(queue: Frontend):
         print()
 
 
-def print_prog(front: Frontend, start=0, end=-1):
-    i = 0
-    for instr in front.instr_list:
-        print_instruction(instr, pc=i)
+def print_prog(front: Frontend, engine: ExecutionEngine,
+               breakpoints: dict, start=0, end=-1):
+
+    start = 0 if start < 0 else start
+    end = len(front.instr_list) if end == -1 else end
+    end = min(end, len(front.instr_list))
+
+    inflights = [slot.pc for slot in engine.slots() if slot is not None]
+    active_breakpoints = [pt for pt in breakpoints if breakpoints[pt]]
+    disabled_breakpoints = [pt for pt in breakpoints if not breakpoints[pt]]
+
+    for i in range(start, end):
+
+        # print status tag
+        if i in inflights and i in active_breakpoints:
+            print_color(BOLD + RED, "► ", False)
+        elif i in inflights:
+            print_color(BOLD + GREEN, "► ", False)
+        elif i in active_breakpoints:
+            print_color(BOLD + RED, "◉ ", False)
+        elif i in disabled_breakpoints:
+            print_color(BOLD + RED, "○ ", False)
+        else:
+            print("  ", end="")
+
+        # print line tag
+        line_str = str(i)
+        line_str = " " * (2 - len(line_str)) + line_str + " "
+        print(FAINT + line_str + ENDC, end="")
+
+        try:
+            # print instruction
+            instr = front.instr_list[i]
+            print_instruction(instr)
+        except IndexError:
+            print("\n")
+            print(f"i: {i}")
+            print(f"len: {len(front.instr_list)}")
+            print(f"start: {start}")
+            print(f"end: {end}")
+
+        # newline
         print()
-        i += 1
 
 
-def print_rs(SOMETHING: None):
-    raiseExceptions(NotImplementedError)
+def print_rs(cpu: CPU):
+    for slot in cpu.get_exec_engine().slots():
+        if slot is None:
+            continue
+        print(slot.pc, end=" ")
+        print_instruction(slot.instr)
+        print(f"  \t{' RUNNING' if slot.executing else 'NOT RUNNING'}")
 
 
 def print_bpu(bpu: BPU) -> None:
@@ -167,10 +206,10 @@ def header_regs(engine: ExecutionEngine):
     print()
 
 
-def header_prog(front: Frontend):
+def header_prog(front: Frontend, engine: ExecutionEngine, breakpoints: dict):
     print_header("Programme", BOLD + CYAN + ENDC)
     print()
-    print_prog(front, start=front.pc - 4, end=front.pc + 4)
+    print_prog(front, engine, breakpoints, start=front.pc - 4, end=front.pc + 4)
     print()
 
 
@@ -188,9 +227,8 @@ def header_rs(engine: ExecutionEngine):
     print()
 
 
-def all_headers(cpu: CPU):
+def all_headers(cpu: CPU, breakpoints: dict):
     header_info(cpu)
     header_regs(cpu.get_exec_engine())
     header_memory(cpu.get_mmu())
-    # TODO: implement program header
-    # header_prog(None)
+    header_prog(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints)

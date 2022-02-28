@@ -70,9 +70,9 @@ def __show(input: list[str], cpu: CPU):
     elif subcmd == 'queue':
         ui.print_queue(cpu.get_frontend())
     elif subcmd == 'rs':
-        ui.print_rs(cpu.get_frontend())
+        ui.print_rs(cpu)
     elif subcmd == 'prog':
-        ui.print_prog(cpu.get_frontend())
+        ui.print_prog(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints)
     elif subcmd == 'bpu':
         ui.print_bpu(cpu.get_bpu())
     else:
@@ -85,11 +85,11 @@ def __continue(input: list[str], cpu: CPU):
         info: CPUStatus = cpu.tick()
         active_breakpoints = [i for i in breakpoints if breakpoints[i] is True]
         if set(active_breakpoints) & set(info.issued_instructions):
-            ui.print_color(ui.RED, 'BREAKPOINT')
-            break
+            ui.print_color(ui.RED, 'BREAKPOINT', newline=True)
+            return
         if not info.executing_program:
             print("Program finished")
-            break
+            return
 
 
 @func
@@ -122,7 +122,7 @@ def __break(input: list[str], cpu: CPU):
             print("Usage: break add <address in hex>")
             return
         try:
-            addr = int(input[1], base=16)
+            addr = int(input[1], base=10)
             if addr in breakpoints:
                 print("Breakpoint already exists")
                 return
@@ -135,7 +135,7 @@ def __break(input: list[str], cpu: CPU):
             print("Usage: break delete <address in hex>")
             return
         try:
-            addr = int(input[1], base=16)
+            addr = int(input[1], base=10)
             if addr not in breakpoints:
                 print("Breakpoint does not exist")
                 return
@@ -146,13 +146,16 @@ def __break(input: list[str], cpu: CPU):
     elif subcmd == 'list':
         print("Breakpoints:")
         for addr in breakpoints:
-            print("\t0x{:04x} {}".format(addr, "(disabled)" if not breakpoints[addr] else ""))
+            print(
+                "\t0x{:04x} {}".format(
+                    addr,
+                    "(disabled)" if not breakpoints[addr] else ""))
     elif subcmd == 'toggle':
         if len(input) < 2:
             print("Usage: break toogle <address in hex>")
             return
         try:
-            addr = int(input[1], base=16)
+            addr = int(input[1], base=10)
             if addr not in breakpoints:
                 print("Breakpoint does not exist")
                 return
@@ -181,7 +184,7 @@ funcs['__q'] = funcs['__quit']
 
 @func
 def __(input: list[str], cpu: CPU):
-    ui.all_headers(cpu)
+    ui.all_headers(cpu, breakpoints)
 
 
 completer = NestedCompleter.from_nested_dict(completions)
@@ -192,7 +195,7 @@ if __name__ == "__main__":
     # Create CPU
     cpu = CPU()
 
-    # Add `mul` instruction
+    # Add `mul` instruction for test programme
     mul = InstrReg("mul", lambda a, b: Word(a.value * b.value), cycles=10)
     cpu._parser.add_instruction(mul)
 
