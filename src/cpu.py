@@ -3,12 +3,28 @@ from __future__ import annotations
 import copy
 
 from .bpu import BPU
-from .execution import ExecutionEngine
+from .execution import ExecutionEngine, FaultInfo
 from .frontend import Frontend, InstrFrontendInfo
-from .instructions import InstrBranch, InstrFlush, InstrLoad, InstrStore
+from .instructions import InstrBranch, InstrFlush, InstrLoad, InstrStore, Instruction
 from .mmu import MMU
 from .parser import Parser
 
+from dataclasses import dataclass
+
+@dataclass
+class CPUStatus:
+    """Current status of the CPU."""
+
+    # Whether the CPU is currently still executing a program.
+    executing_program: bool
+
+    # FaultInfo as provided by the execution engine if the
+    # last tick caused an exception.
+    fault_info: FaultInfo
+
+    # List of program counters of instructions that have
+    # been issued this tick.
+    issued_instructions: list[int]
 
 class CPU:
 
@@ -63,14 +79,16 @@ class CPU:
         # take snapshot
         self._take_snapshot()
 
-    def tick(self):
+    def tick(self) -> CPUStatus:
 
         # check if any program is being executed
         if self._frontend is None:
-            return
+            return None
 
         # fill up instruction queue / reorder buffer
         self._frontend.add_instructions_to_queue()
+
+        cpu_status: CPUStatus = CPUStatus(False, None, [])
 
         # fill execution units
         while self._frontend.get_instr_queue_size() > 0:
@@ -79,11 +97,14 @@ class CPU:
                 instr_info.instr, instr_info.instr_index, instr_info.prediction
             ):
                 self._frontend.pop_instruction_from_queue()
+                cpu_status.issued_instructions.append(instr_info.instr_index)
             else:
                 break
 
         # tick execution engine
         if (fault_info := self._exec_engine.tick()) is not None:
+            cpu_status.fault_info = fault_info
+
             resume_at_pc = fault_info.pc
 
             # For faulting memory instructions, we simply skip the instruction.
@@ -105,6 +126,8 @@ class CPU:
 
         # create snapshot
         self._take_snapshot()
+
+        return cpu_status
 
     def get_mmu(self) -> MMU:
         """Returns an instance of the MMU class."""
