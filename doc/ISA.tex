@@ -1,0 +1,76 @@
+% ISA Dokumentation 
+	% Beispiel MIPS https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MD00082-2B-MIPS32INT-AFP-06.01.pdf
+	% alle Instruktionen die eine Schnittstelle zwischen Programmierer und Prozessor bilden
+	% ggf. auf CPU Programming Model eingehen
+		% vllt. erstmal zu viel vorweggegriffen
+		% ggf. Register vorstellen
+		% ggf. auf Memory Alignment eingehen
+		% noch weitere Punkte
+	% divide into functional groups
+		% bei uns vllt. gemäß InstrType
+	% Instruktionen generell beschreiben
+		% vgl. 5.1 CPU Load and Store Instructions
+		% ggf. noch nicht zu ausführlich, falls sich da noch Dinge ändern
+		% vllt. von allen Typen jeweils am 1. Absatz orientieren
+	% Instruktionen auflisten
+		% tabellarisch https://de.overleaf.com/learn/latex/Tables
+		% mit Name, Operanden, Effekt
+		
+\documentclass{article}
+
+\usepackage{multirow}
+\usepackage{amssymb}
+
+\begin{document}
+{
+\centering
+\begin{tabular}{ |p{2cm}||p{2cm}|p{3cm}|p{5cm}|  }
+ \hline
+ \multicolumn{4}{|c|}{Instructions} \\
+ \hline %hier weiter
+ Instr. Kind&Instr. Name&Operators&Description\\
+ \hline
+\multirow{8}{2cm}{ALU Instructions without Immediate} & add &Reg1, Reg2, Reg3&   Reg1 $:=$ Reg2 $+$ Reg3\\
+&sub& Reg1, Reg2, Reg3   & Reg1 $:=$ Reg2 $-$ Reg3\\
+&sll& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 $<<$ Reg3\\
+&srl& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 $>>$ Reg3 logical (fill space with 0)\\
+&sra  & Reg1, Reg2, Reg3& Reg1 $:=$ Reg2 $>>$ Reg3 arithmetical (fill space with sign bit)\\
+&xor& Reg1, Reg2, Reg3 &  Reg1 $:=$ Reg2 xor Reg3\\
+&or& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 or Reg3\\
+&and& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 and Reg3\\
+ \hline
+ \multirow{8}{2cm}{ALU Instructions with Immediate} & addi &Reg1, Reg2, Imm&  Reg1 $:=$ Reg2 $+$ Imm\\
+&subi& Reg1, Reg2, Imm   & Reg1 $:=$ Reg2 $-$ Imm\\
+&slli& Reg1, Reg2, Imm&  Reg1 $:=$ Reg2 $<<$ Imm\\
+&srli& Reg1, Reg2, Imm&  Reg1 $:=$ Reg2 $>>$ Imm logical (fill space with 0)\\
+&srai  & Reg1, Reg2, Imm&Reg1 $:=$ Reg2 $>>$ Imm arithmetical (fill space with sign bit)\\
+&xori& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 xor Imm\\
+&ori& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 or Imm\\
+&andi& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 and Imm\\
+ \hline
+ %sources 1, 2 destination 0
+  \multirow{5}{2cm}{Memory Instructions} & lw &Reg1, Reg2, Imm&addr$:=$Reg2(base)$+$Imm(offset), Reg1$:=$(Mem\_word[addr])\\
+&lb& Reg1, Reg2, Imm   &addr$:=$Reg2(base)$+$Imm(offset), Reg1$:=$(Mem\_byte[addr])\\
+&sw& Reg1, Reg2, Imm  &addr$:=$Reg2(base)$+$Imm(offset), Mem\_word[addr]$:=$Reg1\\
+&sb& Reg1, Reg2, Imm  &addr$:=$Reg2(base)$+$Imm(offset), Mem\_byte[addr]$:=$Reg1\\
+%sources 0,1
+&flush  & Reg, Imm&addr$:=$Reg(base)$+$Imm(offset), flush\_cashline(adr)\\
+ \hline
+ %source 0, 1, 2
+  \multirow{8}{2cm}{Branch Instructions} & beq &Reg1, Reg2, Label& pc$:=$Label if Reg1$==$Reg2, else pc$+=$1\\
+&bne& Reg1, Reg2, Label&pc$:=$Label if Reg1$!=$Reg2\\
+&bltu& Reg1, Reg2, Label&  pc$:=$Label if u(Reg1)$<$u(Reg2)\\
+&bleu& Reg1, Reg2, Label&  pc$:=$Label if u(Reg1)$<=$u(Reg2)\\
+&bgtu  & Reg1, Reg2, Label&pc$:=$Label if u(Reg1)$>$u(Reg2)\\
+&bgeu& Reg1, Reg2, Label&pc$:=$Label if u(Reg1)$>=$u(Reg2)\\
+&blts& Reg1, Reg2, Label&pc$:=$Label if s(Reg1)$<$s(Reg2)\\
+&bles& Reg1, Reg2, Label&pc$:=$Label if s(Reg1)$<=$s(Reg2)\\
+&bgts& Reg1, Reg2, Label&pc$:=$Label if s(Reg1)$>$s(Reg2)\\
+&bges& Reg1, Reg2, Label&pc$:=$Label if s(Reg1)$>=$s(Reg2)\\
+ \hline
+   \multirow{2}{2cm}{Special Instructions} & rdtsc &Reg& Reg$:=$cyclecount(number of executed execution unit ticks)\\
+&fence&none&all instr in the EU unit at the point of issueing the fence are executed before the fence ist executed; no new instructions are issued before the fence is executed\\
+ \hline
+\end{tabular}
+}
+\end{document}
