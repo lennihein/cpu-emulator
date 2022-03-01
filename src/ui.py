@@ -115,11 +115,12 @@ def print_cache(mmu: MMU) -> None:
         print('')
 
 
-def print_instruction(instr: Instruction):
+def print_instruction(instr: Instruction) -> int:
     instr_str = YELLOW + instr.ty.name + ENDC
     instr_str += " " * (6 - len(instr.ty.name))
-    print(instr_str, end="")
-    print(", ".join([str(op) for op in instr.ops]), end="")
+    op_str = ", ".join([str(op) for op in instr.ops])
+    print(instr_str + op_str, end="")
+    return len(instr_str) + len(op_str)
 
 
 def print_queue(queue: Frontend):
@@ -175,12 +176,18 @@ def print_prog(front: Frontend, engine: ExecutionEngine,
 
 
 def print_rs(cpu: CPU):
+    id = 0
     for slot in cpu.get_exec_engine().slots():
         if slot is None:
             continue
-        print(slot.pc, end=" ")
-        print_instruction(slot.instr)
+        # print(slot.pc, end=" ")
+        id_str = str(id)
+        id_str = " " * (2 - len(id_str)) + id_str + " "
+        print(FAINT + id_str + ENDC, end="")
+        i_len = print_instruction(slot.instr)
+        print(" " * (24 - i_len), end="")
         print(f"{' RUNNING' if slot.executing else 'RETIRING'}")
+        id += 1
 
 
 def print_bpu(bpu: BPU) -> None:
