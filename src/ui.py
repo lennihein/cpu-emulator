@@ -180,7 +180,7 @@ def print_rs(cpu: CPU):
             continue
         print(slot.pc, end=" ")
         print_instruction(slot.instr)
-        print(f"  \t{' RUNNING' if slot.executing else 'NOT RUNNING'}")
+        print(f"{' RUNNING' if slot.executing else 'RETIRING'}")
 
 
 def print_bpu(bpu: BPU) -> None:
