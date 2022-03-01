@@ -86,10 +86,11 @@ def __continue(input: list[str], cpu: CPU):
         active_breakpoints = [i for i in breakpoints if breakpoints[i] is True]
         if set(active_breakpoints) & set(info.issued_instructions):
             ui.print_color(ui.RED, 'BREAKPOINT', newline=True)
-            return
+            break
         if not info.executing_program:
             print("Program finished")
-            return
+            break
+    ui.all_headers(cpu, breakpoints)
 
 
 @func
@@ -106,6 +107,7 @@ def __step(input: list[str], cpu: CPU):
         if not info.executing_program:
             print("Program finished")
             break
+    ui.all_headers(cpu, breakpoints)
 
 
 @func
@@ -200,7 +202,12 @@ if __name__ == "__main__":
     cpu._parser.add_instruction(mul)
 
     # Load program
-    cpu.load_program_from_file(args[0])
+    try:
+        # Load program
+        cpu.load_program_from_file(args[0])
+    except IndexError:
+        print("Provide the path to your programm!")
+        exit()
 
     # enter main loop for shell
     while True:

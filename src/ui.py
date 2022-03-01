@@ -229,7 +229,7 @@ def header_rs(engine: ExecutionEngine):
 
 
 def all_headers(cpu: CPU, breakpoints: dict):
-    header_info(cpu)
+    # header_info(cpu)
     header_regs(cpu.get_exec_engine())
     header_memory(cpu.get_mmu())
     header_prog(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints)
