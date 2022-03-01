@@ -89,11 +89,10 @@ def print_regs(engine: ExecutionEngine):
             print(" " if j != 0 else "", end="")
             print(BOLD + GREEN + "R" + str(i)
                   + (" : " if i < 10 else ": "), end="")
-            # TODO: fix this
             try:
                 print_hex(regs[i].value, p_end="", base_style=ENDC + FAINT)
             except AttributeError:
-                print_hex(regs[i], p_end="", base_style=ENDC + FAINT)
+                print(ENDC + FAINT + "RS {:03}".format(regs[i]), end="")
             print(" |" if j != fits - 1 else "\n", end="")
             i += 1
     print()
