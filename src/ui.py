@@ -208,7 +208,9 @@ def header_regs(engine: ExecutionEngine):
 def header_prog(front: Frontend, engine: ExecutionEngine, breakpoints: dict):
     print_header("Programme", BOLD + CYAN + ENDC)
     print()
-    print_prog(front, engine, breakpoints, start=front.pc - 4, end=front.pc + 4)
+    lowest_inflight = min([slot.pc for slot in engine.slots() if slot is not None], default=0)
+    highest_inflight = max([slot.pc for slot in engine.slots() if slot is not None], default=len(front.instr_list))
+    print_prog(front, engine, breakpoints, start=lowest_inflight - 2, end=highest_inflight + 2)
     print()
 
 
