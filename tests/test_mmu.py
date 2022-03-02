@@ -52,3 +52,7 @@ class MMUTests(unittest.TestCase):
         self.assertIs(mem_result.fault, True)
         mem_result = mmu.write_byte(Word(2 ** (Word.WIDTH - 1)), Word(1))
         self.assertEqual(mem_result.fault, True)
+
+        # Accesing non-protected memory should be fine.
+        mem_result = mmu.read_byte(Word(2 ** (Word.WIDTH - 2)))
+        self.assertIs(mem_result.fault, False)
