@@ -44,6 +44,12 @@ class MMU:
     cache: Cache
     cache_replacement_policy: str
 
+    # upper half of address space is inaccessible to programs.
+    protected_mem_addrs: dict = {
+        'lower_bound': 2 ** (Word.WIDTH - 1),
+        'upper_bound': 2 ** Word.WIDTH
+    }
+
     def __init__(
         self,
         mem_size: int = 1 << Word.WIDTH,
@@ -98,7 +104,7 @@ class MMU:
         the number of cycles it takes to load it.
 
         Parameters:
-            address (int) -- the memory address from which to read
+            address (Word) -- the memory address from which to read
 
         Returns:
             MemResult: Class containing the results of the memory
@@ -113,14 +119,20 @@ class MMU:
             cycles = self.cache_miss_cycles
             self._load_line(address)
 
-        return MemResult(Byte(data), False, cycles, self.num_fault_cycles)
+        # Notice this check is done after the data was already read from
+        # memory and written to the cache. Doing so and returning the data
+        # to the execution even though the address should be inaccessible
+        # is precisely what enables the meltdown vulnerability.
+        fault = self.is_illegal_access(address)
+
+        return MemResult(Byte(data), fault, cycles, self.num_fault_cycles)
 
     def write_byte(self, address: Word, data: Byte) -> MemResult:
         """
         Writes a byte to memory.
 
         Parameters:
-            address (int) -- the memory address to which to write
+            address (Word) -- the memory address to which to write
             data (Byte) -- the Byte to write to this address
 
         Returns:
@@ -133,7 +145,10 @@ class MMU:
 
         self._load_line(address)
 
-        return MemResult(Byte(0), False, self.num_write_cycles, self.num_fault_cycles)
+        # See self.read_byte() for comments on this check.
+        fault = self.is_illegal_access(address)
+
+        return MemResult(Byte(0), fault, self.num_write_cycles, self.num_fault_cycles)
 
     def read_word(self, address: Word) -> MemResult:
         """
@@ -142,7 +157,7 @@ class MMU:
         The architecture is assumed to be little-endian.
 
         Parameters:
-            address (int) -- the memory address from which to read
+            address (Word) -- the memory address from which to read
 
         Returns:
             MemResult: Class containing the results of the memory
@@ -171,7 +186,7 @@ class MMU:
         Writes a word to memory. The architecture is assumed to be little-endian.
 
         Parameters:
-            address (int) -- the memory address to which to write
+            address (Word) -- the memory address to which to write
             data (Word) -- the Word to write to this address
 
         Returns:
@@ -200,7 +215,7 @@ class MMU:
         to be the first one with offset = 0.
 
         Parameters:
-            addr (int) -- the address to be loaded
+            addr (Word) -- the address to be loaded
 
         Returns:
             This function does not have a return value.
@@ -218,7 +233,7 @@ class MMU:
         Flushes an address from the cache.
 
         Parameters:
-            address (int) -- the memory address to which to write
+            address (Word) -- the memory address to which to write
 
         Returns:
             This function does not have a return value.
@@ -231,7 +246,7 @@ class MMU:
         Returns whether the data at an address is cached.
 
         Parameters:
-            address (int) -- the memory address of the data
+            address (Word) -- the memory address of the data
 
         Returns:
             bool: True if data at address is cached
@@ -243,6 +258,19 @@ class MMU:
         Returns the number of cycles needed to write to memory.
         """
         return self.num_write_cycles
+
+    def is_illegal_access(self, address: Word) -> bool:
+        """
+        Returns whether an acess to address is illegal.
+
+        Parameters:
+            address (Word) -- the memory address
+
+        Returns:
+            bool: True if access would raise a fault
+        """
+        return address.value >= self.protected_mem_addrs['lower_bound'] \
+            and address.value <= self.protected_mem_addrs['upper_bound']
 
     def deepcopy(self):
         """

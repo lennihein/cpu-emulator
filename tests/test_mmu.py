@@ -46,3 +46,9 @@ class MMUTests(unittest.TestCase):
         # But if we flush it again, it shouldn't
         mmu.flush_line(address + Word(1))
         self.assertIs(mmu.is_addr_cached(address + Word(1)), False)
+
+        # Accessing protected memory should induce a fault.
+        mem_result = mmu.read_byte(Word(2 ** (Word.WIDTH - 1)))
+        self.assertIs(mem_result.fault, True)
+        mem_result = mmu.write_byte(Word(2 ** (Word.WIDTH - 1)), Word(1))
+        self.assertEqual(mem_result.fault, True)
