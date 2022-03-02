@@ -44,12 +44,6 @@ class MMU:
     cache: Cache
     cache_replacement_policy: str
 
-    # upper half of address space is inaccessible to programs.
-    protected_mem_addrs: dict = {
-        'lower_bound': 2 ** (Word.WIDTH - 1),
-        'upper_bound': 2 ** Word.WIDTH
-    }
-
     def __init__(
         self,
         mem_size: int = 1 << Word.WIDTH,
@@ -82,6 +76,10 @@ class MMU:
         """
         self.memory = [0] * mem_size
         self.mem_size = mem_size
+
+        # We assume the upper half of the address space is inaccessible
+        for i in range(self.mem_size // 2, self.mem_size):
+            self.memory[i] = 42
 
         self.cache_hit_cycles = cache_hit_cycles
         self.cache_miss_cycles = cache_miss_cycles
@@ -269,8 +267,7 @@ class MMU:
         Returns:
             bool: True if access would raise a fault
         """
-        return address.value >= self.protected_mem_addrs['lower_bound'] \
-            and address.value <= self.protected_mem_addrs['upper_bound']
+        return address.value >= self.mem_size // 2
 
     def deepcopy(self):
         """

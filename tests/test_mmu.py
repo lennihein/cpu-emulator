@@ -7,7 +7,7 @@ from src.byte import Byte
 
 class MMUTests(unittest.TestCase):
     def test_mmu(self):
-        mmu = MMU(2**Word.WIDTH)
+        mmu = MMU()
         import random
 
         # Make sure we do not pick the highest address and try to write a Word (> 1 byte) to this
