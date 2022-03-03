@@ -225,4 +225,7 @@ class CPU:
         # Returning copies are is important, as otherwise a manipulation
         # of the returned cpu instance (for example, calling tick),
         # changes the class that is stored in the snapshot list.
-        return cpu._snapshots[cpu._snapshot_index + steps].deepcopy()
+        try:
+            return cpu._snapshots[cpu._snapshot_index + steps].deepcopy()
+        except AttributeError:
+            return False

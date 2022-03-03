@@ -129,3 +129,18 @@ class CPUTests(unittest.TestCase):
         # Check that the registers have the correct values
         target = (0, 1, 2, 3, 4, 5, 0x105, 1)
         self.assertEqual(cpu._exec_engine._registers[: len(target)], [Word(x) for x in target])
+
+    def test_immediate_snaprestore(self):
+        """Test immediate snapshot/restore."""
+        cpu = CPU()
+
+        # Create a program that sets r1 to 1
+        code = """
+            // Set r1 to 1
+            addi r1, r0, 1
+        """
+
+        # Load program
+        cpu.load_program(code)
+
+        cpu.restore_snapshot(cpu, -1)

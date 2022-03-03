@@ -90,24 +90,34 @@ def __continue(input: list[str], cpu: CPU):
         if not info.executing_program:
             print("Program finished")
             break
+    print(info.fault_info + "\n" if info.fault_info is not None else "", end="")
     ui.all_headers(cpu, breakpoints)
 
 
 @func
 def __step(input: list[str], cpu: CPU):
     steps = 1
+    info: CPUStatus = None
     if len(input) == 1:
         try:
             steps = int(input[0])
         except ValueError:
             print("Usage: step <steps>")
-            return
+            return None
+        if steps < 0:
+            cpu = cpu.restore_snapshot(cpu, steps)
+            if cpu is False:
+                print("Can't restore snapshot")
+                return None
+            steps = 0
     for _ in range(steps):
         info: CPUStatus = cpu.tick()
         if not info.executing_program:
             print("Program finished")
             break
+    print(info.fault_info + "\n" if info is not None and info.fault_info is not None else "", end="")
     ui.all_headers(cpu, breakpoints)
+    return cpu
 
 
 @func
@@ -154,7 +164,7 @@ def __break(input: list[str], cpu: CPU):
                     "(disabled)" if not breakpoints[addr] else ""))
     elif subcmd == 'toggle':
         if len(input) < 2:
-            print("Usage: break toogle <address in hex>")
+            print("Usage: break toggle <address in hex>")
             return
         try:
             addr = int(input[1], base=10)
@@ -223,4 +233,6 @@ if __name__ == "__main__":
             cmd = text.split()[0]
             params = text.split()[1:]
             fn = funcs.get(cmd, __not_found)
-            fn(params, cpu)
+            n_cpu = fn(params, cpu)
+            if n_cpu is not None:
+                cpu = n_cpu
