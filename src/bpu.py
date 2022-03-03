@@ -14,7 +14,7 @@ class BPU:
         res = "Index | Counter\n"
         res += "------|--------\n"
         for i in range(len(self.counter)):
-            res += " 0x{:02x} | {:01x}\n".format(i, self.counter[i])
+            res += "   {:02} | {:01}\n".format(i, self.counter[i])
         return res
 
 

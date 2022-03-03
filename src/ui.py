@@ -70,10 +70,10 @@ def print_memory(mmu: MMU, lines=8, base=0x0000):
             if i >= mmu.mem_size:
                 return
             if(mmu.is_addr_cached(Word(i))):
-                print_hex(mmu.memory[i], base_style=FAINT + RED, style=RED)
+                print_hex(mmu.memory[i+1] * 256 + mmu.memory[i], base_style=FAINT + RED, style=RED)
             else:
-                print_hex(mmu.memory[i])
-            i += 1
+                print_hex(mmu.memory[i+1] * 256 + mmu.memory[i])
+            i += 2
         print()
 
 
