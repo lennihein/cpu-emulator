@@ -106,7 +106,7 @@ def __step(input: list[str], cpu: CPU):
             return None
         if steps < 0:
             cpu = cpu.restore_snapshot(cpu, steps)
-            if cpu is False:
+            if cpu is None:
                 print("Can't restore snapshot")
                 return None
             steps = 0

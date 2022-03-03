@@ -61,8 +61,8 @@ class CPUTests(unittest.TestCase):
         )
 
         # Stepping forwards / backwards outside of the snapshot list should not be possible
-        self.assertEqual(CPU.restore_snapshot(cpu, -10), False)
-        self.assertEqual(CPU.restore_snapshot(cpu, 10), False)
+        self.assertEqual(CPU.restore_snapshot(cpu, -10), None)
+        self.assertEqual(CPU.restore_snapshot(cpu, 10), None)
 
     def get_vals_at_addresses(self, cpu: CPU, address: Word) -> list[int]:
         return [cpu.get_mmu().read_byte(address + Word(i)).value.value for i in range(10)]
@@ -143,7 +143,6 @@ class CPUTests(unittest.TestCase):
         # Load program
         cpu.load_program(code)
 
-        self.assertIsNotNone(cpu.get_frontend())
         cpu = cpu.restore_snapshot(cpu, -1)
-        if cpu is not False:
-            self.assertIsNotNone(cpu.get_frontend())
+
+        self.assertIsNone(cpu)
