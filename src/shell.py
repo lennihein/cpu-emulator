@@ -7,6 +7,7 @@ import sys
 
 from src.instructions import InstrReg
 from src.word import Word
+from src.byte import Byte
 from src import ui
 from src.cpu import CPU, CPUStatus
 
@@ -77,6 +78,92 @@ def __show(input: list[str], cpu: CPU):
         ui.print_bpu(cpu.get_bpu())
     else:
         __not_found(input, cpu)
+
+
+@func
+def __edit(input: list[str], cpu: CPU) -> CPU:
+    '''
+    {"word": None, "byte": None, "flush": None, "load": None, "reg": None, "bpu": None}
+    '''
+    if len(input) < 1:
+        __not_found(input, cpu)
+        return
+    subcmd = input[0]
+    if subcmd == 'word':
+        if len(input) == 3:
+            try:
+                addr = int(input[1], base=16)
+                val = int(input[2], base=16)
+                cpu.get_mmu().edit_word(Word(addr), Word(val))
+            except ValueError:
+                print("Usage: edit word <address in hex> <value in hex>")
+                return
+        else:
+            print("Usage: edit word <address in hex> <value in hex>")
+    elif subcmd == 'byte':
+        if len(input) == 3:
+            try:
+                addr = int(input[1], base=16)
+                val = int(input[2], base=16)
+                cpu.get_mmu().edit_byte(Word(addr), Byte(val))
+            except ValueError:
+                print("Usage: edit byte <address in hex> <value in hex>")
+                return
+        else:
+            print("Usage: edit word <address in hex> <value in hex>")
+    elif subcmd == 'flush':
+        if len(input) == 1:
+            cpu.get_mmu().flush_all()
+        elif len(input) == 2:
+            try:
+                addr = int(input[1], base=16)
+                cpu.get_mmu().flush_line(Word(addr))
+            except ValueError:
+                print("Usage: edit flush <address in hex>")
+                return
+        else:
+            print("Usage: edit flush <address in hex>")
+    elif subcmd == 'load':
+        if len(input) == 2:
+            try:
+                addr = int(input[1], base=16)
+                cpu.get_mmu()._load_line(Word(addr))
+            except ValueError:
+                print("Usage: edit load <address in hex>")
+                return
+        else:
+            print("Usage: edit load <address in hex>")
+    elif subcmd == 'reg':
+        if len(input) == 3:
+            try:
+                reg = int(input[1])
+                val = int(input[2], base=16)
+                if reg > 31 or reg < 0:
+                    print("No such register!")
+                    return
+                cpu.get_exec_engine()._registers[reg] = Word(val)
+            except ValueError:
+                print("Usage: edit reg <register (0-31)> <value in hex>")
+                return
+        else:
+            print("Usage: edit reg <register in decimal> <value in hex>")
+    elif subcmd == 'bpu':
+        if len(input) == 3:
+            try:
+                pc = int(input[1])
+                val = int(input[2], base=10)
+                if val < 0 or val > 3:
+                    print("Usage: edit bpu <pc in decimal> <value (0-3)>")
+                    return
+                cpu.get_bpu().set_counter(pc, val)
+            except ValueError:
+                print("Usage: edit bpu <pc in dec> <value (0-3)>")
+                return
+        else:
+            print("Usage: edit bpu <register in decimal> <value in hex>")
+    else:
+        __not_found(input, cpu)
+    return cpu
 
 
 @func

@@ -179,6 +179,39 @@ class MMU:
 
         return MemResult(Word.from_bytes(bytes_read), fault, cycles_value, cycles_fault)
 
+    def edit_word(self, address: Word, data: Word) -> None:
+        """
+        Edits a word in memory WITHOUT affecting the cache.
+        The architecture is assumed to be little-endian.
+
+        Parameters:
+            address (Word) -- the memory address to which to edit
+            data (Word) -- the Word the address shall be overwritten with
+
+        Returns:
+            This function does not have a return value.
+        """
+
+        # Write individual bytes
+        for i, byte in enumerate(data.as_bytes()):
+            self.edit_byte(address + Word(i), byte)
+
+    def edit_byte(self, address: Word, data: Byte) -> None:
+        """
+        Edits a byte in memory WITHOUT affecting the cache.
+
+        Parameters:
+            address (Word) -- the memory address to which to edit
+            data (Byte) -- the Byte the address shall be overwritten with
+
+        Returns:
+            This function does not have a return value.
+        """
+
+        # value = data.value % 256
+        value = data.value
+        self.memory[address.value] = value
+
     def write_word(self, address: Word, data: Word) -> MemResult:
         """
         Writes a word to memory. The architecture is assumed to be little-endian.
@@ -238,6 +271,18 @@ class MMU:
         """
         self.cache.flush(address.value)
         return MemResult(Word(0), False, self.num_write_cycles, self.num_fault_cycles)
+
+    def flush_all(self) -> None:
+        """
+        Flushes the entire cache.
+
+        Returns:
+            This function does not have a return value.
+        """
+        i = 0
+        while i < self.mem_size:
+            self.flush_line(Word(i))
+            i += self.cache.line_size
 
     def is_addr_cached(self, address: Word) -> bool:
         """
