@@ -63,7 +63,8 @@ class CPU:
 
         # Snapshots
         self._snapshot_index = 0
-        self._snapshots = [copy.deepcopy(self)]
+        self._snapshots = []
+        self._snapshots.append(copy.deepcopy(self))
 
     def load_program_from_file(self, path: str):
         with open(path, "r") as f:
@@ -181,7 +182,6 @@ class CPU:
         # cpu_copy._exec_engine = self._exec_engine.deepcopy(self._mmu)
 
         cpu_copy._snapshots = self._snapshots
-        # cpu_copy._snapshot_index = copy.deepcopy(self._snapshot_index)
         cpu_copy._snapshot_index = self._snapshot_index
 
         return cpu_copy
