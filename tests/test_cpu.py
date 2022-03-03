@@ -143,4 +143,7 @@ class CPUTests(unittest.TestCase):
         # Load program
         cpu.load_program(code)
 
-        cpu.restore_snapshot(cpu, -1)
+        self.assertIsNotNone(cpu.get_frontend())
+        cpu = cpu.restore_snapshot(cpu, -1)
+        if cpu is not False:
+            self.assertIsNotNone(cpu.get_frontend())
