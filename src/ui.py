@@ -1,9 +1,10 @@
 import os
+import queue
 from src.bpu import BPU
 from src.frontend import Frontend
 from src.mmu import MMU
 from src.execution import ExecutionEngine
-from math import ceil
+from math import ceil, floor
 from src.word import Word
 from src.cpu import CPU
 from src.instructions import Instruction
@@ -143,11 +144,12 @@ def print_cache(mmu: MMU) -> None:
         print('')
 
 
-def instruction_str(instr: Instruction) -> str:
+def instruction_str(instr: Instruction) -> tuple[str, int]:
     instr_str = YELLOW + instr.ty.name + ENDC
     instr_str += " " * (6 - len(instr.ty.name))
     op_str = ", ".join([hex_str((Word(op).value), p_end="", fixed_width=False) for op in instr.ops])
-    return instr_str + op_str
+    length = 6 + sum([len(hex(Word(op).value)) for op in instr.ops]) + len(instr.ops) * 2 - 2 if len(instr.ops) > 0 else 6
+    return instr_str + op_str, length
 
 
 def print_queue(queue: Frontend):
@@ -156,26 +158,28 @@ def print_queue(queue: Frontend):
         print(line)
 
 
-def queue_str(queue: Frontend) -> list[str]:
+def queue_str(queue: Frontend) -> tuple[list[str], list[int]]:
     q_str: list[str] = [""] * len(queue.instr_queue)
+    q_lengths: list[int] = [0] * len(queue.instr_queue)
     for index, item in enumerate(queue.instr_queue):
         instr = item.instr
-        q_str[index] = instruction_str(instr)
-    return q_str
+        q_str[index], q_lengths[index] = instruction_str(instr)
+    return q_str, q_lengths
 
 
 def print_prog(front: Frontend, engine: ExecutionEngine,
                breakpoints: dict, start=0, end=-1):
-    prog = prog_str(front, engine, breakpoints, start, end)
+    prog, _ = prog_str(front, engine, breakpoints, start, end)
     for line in prog:
         print(line)
 
 
-def prog_str(front: Frontend, engine: ExecutionEngine, breakpoints: dict, start=0, end=-1) -> list[str]:
+def prog_str(front: Frontend, engine: ExecutionEngine, breakpoints: dict, start=0, end=-1) -> tuple[list[str], list[int]]:
     start = 0 if start < 0 else start
     end = len(front.instr_list) if end == -1 else end
     end = min(end, len(front.instr_list))
     prog_str: list[str] = [""] * (end - start)
+    line_lengths: list[int] = [0] * (end - start)
 
     inflights = [slot.pc for slot in engine.slots() if slot is not None]
     active_breakpoints = [pt for pt in breakpoints if breakpoints[pt]]
@@ -196,45 +200,43 @@ def prog_str(front: Frontend, engine: ExecutionEngine, breakpoints: dict, start=
 
         # print line tag
         line_str = str(line)
-        line_str = " " * (2 - len(line_str)) + line_str + " "
+        line_str = " " * ((2 if end < 100 else 3) - len(line_str)) + line_str + " "
         prog_str[index] += FAINT + line_str + ENDC
 
-        try:
-            # print instruction
-            instr = front.instr_list[line]
-            prog_str[index] += instruction_str(instr)
-        except IndexError:
-            print("\n")
-            print(f"i: {line}")
-            print(f"len: {len(front.instr_list)}")
-            print(f"start: {start}")
-            print(f"end: {end}")
-    return prog_str
+        line_lengths[index] = 5 if end < 100 else 6
+
+        instr = front.instr_list[line]
+        instr_part, length = instruction_str(instr)
+        prog_str[index] += instr_part
+        line_lengths[index] += length
+    return prog_str, line_lengths
 
 
-def print_rs(cpu: CPU) -> None:
-    strings: list[str] = rs_str(cpu)
+def print_rs(engine: ExecutionEngine) -> None:
+    strings: list[str] = rs_str(engine)
     for line in strings:
         if line != "":
             print(line)
 
 
-def rs_str(cpu: CPU) -> list[str]:
-    rs_str: list[str] = [""] * len(cpu._exec_engine.slots())
+def rs_str(engine: ExecutionEngine) -> tuple[list[str], list[int]]:
+    rs_str: list[str] = [""] * len(engine.slots())
+    rs_lengths: list[int] = [0] * len(engine.slots())
     id = 0
-    for index, slot in enumerate(cpu.get_exec_engine().slots()):
+    for index, slot in enumerate(engine.slots()):
         if slot is None:
             continue
-        id_str = str(id)
+        id_str = str(index)
         id_str = " " * (2 - len(id_str)) + id_str + " "
         rs_str[index] = FAINT + id_str + ENDC
-        instr_str = instruction_str(slot.instr)
+        instr_str, _ = instruction_str(slot.instr)
         i_len = len(instr_str)
         rs_str[index] += instr_str
         rs_str[index] += " " * (24 - i_len)
         rs_str[index] += f"{' ☐' if slot.executing else ' ☑'}"
         id += 1
-    return rs_str
+        rs_lengths[index] = 1
+    return rs_str, rs_lengths
 
 
 def print_bpu(bpu: BPU) -> None:
@@ -259,12 +261,51 @@ def header_regs(engine: ExecutionEngine):
     print()
 
 
-def header_prog(front: Frontend, engine: ExecutionEngine, breakpoints: dict):
-    print_header("Programme", BOLD + CYAN + ENDC)
-    print()
+def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict):
+    # calculate prog start and end
     lowest_inflight = min([slot.pc for slot in engine.slots() if slot is not None], default=0)
     highest_inflight = max([slot.pc for slot in engine.slots() if slot is not None], default=len(front.instr_list))
-    print_prog(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 2)
+
+    prog, prog_lengths = prog_str(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 2)
+    arrow = ["  ╭─► "] + ["  │   "] * (len(prog)-2) + [" ─╯   "]
+    q, q_lengths = queue_str(front)
+    rs, rs_lengths = rs_str(engine)
+
+    lines = max(len(prog), len(q), len(rs)-1)
+    
+    max_prog = max(prog_lengths) if prog_lengths else 16
+    max_arrow = 6
+    max_q = max(q_lengths) if q_lengths else 16
+    max_rs = max([len(line) for line in rs]) if rs else 16
+    max_rs = 24
+
+    prog = [prog[i] + " " * (max_prog - prog_lengths[i]) for i in range(len(prog))] + [" " * max_prog] * (lines - len(prog))
+    arrow = arrow + [" " * max_arrow] * (lines - len(arrow))
+    q = [q[i] + " " * (max_q - q_lengths[i]) for i in range(len(q))] + [" " * max_q] * (lines - len(q))
+    # rs = [line + " " * (max_rs - len(line)) for line in rs] + [" " * max_rs] * (lines - len(rs))
+
+    #TODO: check if line fits
+    header_str = "-" * ceil((max_prog - len("[ Program ]"))/2) + "[ Program ]" + "-" * floor((max_prog - len("[ Program ]"))/2)
+    header_str += "-" * max_arrow
+    header_str += "-" * ceil((max_q - len("[ Queue ]"))/2) + "[ Queue ]" + "-" * floor((max_q - len("[ Queue ]"))/2)
+    header_str += "-" * 3
+    header_str += "-" * ceil((max_rs - len("[ Reservation Stations ]"))/2) + "[ Reservation Stations ]" + "-" * floor((max_rs - len("[ Reservation Stations ]"))/2)
+    print(header_str + "-" * (columns - len(header_str)))
+
+    print(" " * (max_prog + max_arrow + max_q + 3), end="")
+    print(rs[0])
+
+    for i in range(max(len(prog), len(q), len(rs))):
+        line = ""
+        if i < len(prog):
+            print(prog[i], end="")
+            print(arrow[i], end="")
+        if i < len(q):
+            print(q[i], end="")
+        print("   ", end="") if i != lines//2 else print(" 🡆 ", end="")
+        if i < len(rs) - 1:
+            print(rs[i+1], end="")
+        print("")
     print()
 
 
@@ -286,4 +327,4 @@ def all_headers(cpu: CPU, breakpoints: dict):
     # header_info(cpu)
     header_regs(cpu.get_exec_engine())
     header_memory(cpu.get_mmu())
-    header_prog(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints)
+    header_pipeline(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints)

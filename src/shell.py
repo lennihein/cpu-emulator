@@ -73,7 +73,7 @@ def __show(input: list[str], cpu: CPU):
     elif subcmd == 'queue':
         ui.print_queue(cpu.get_frontend())
     elif subcmd == 'rs':
-        ui.print_rs(cpu)
+        ui.print_rs(cpu.get_exec_engine())
     elif subcmd == 'prog':
         ui.print_prog(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints)
     elif subcmd == 'bpu':
