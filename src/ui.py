@@ -1,5 +1,4 @@
 import os
-import queue
 from src.bpu import BPU
 from src.frontend import Frontend
 from src.mmu import MMU
@@ -39,6 +38,7 @@ BOW_TRIANGLE_MINI = '▸'
 BOX_TRIANGLE_FILLED = '▶'
 BOW_TRIANGLE_OUTLINE = '▷'
 BOX_ARROW_BIG_OUTLINE = "⇨"
+BOX_ARROW_PHAT = '🠊'
 
 # get terminal size
 try:
@@ -76,10 +76,18 @@ def print_header(str, c=ENDC):
 
 def print_hex(num: int, p_end=" ", base=True,
               base_style=FAINT, style=ENDC) -> None:
-    print(hex_str(num, p_end=p_end, base=base, base_style=base_style, style=style), end="")
+    print(
+        hex_str(
+            num,
+            p_end=p_end,
+            base=base,
+            base_style=base_style,
+            style=style),
+        end="")
 
 
-def hex_str(num: int, p_end=" ", base=True, fixed_width=True, base_style=FAINT, style=ENDC) -> str:
+def hex_str(num: int, p_end=" ", base=True, fixed_width=True,
+            base_style=FAINT, style=ENDC) -> str:
     if fixed_width:
         num_str = style + '{:04x}'.format(num) + ENDC
     else:
@@ -99,7 +107,8 @@ def print_memory(mmu: MMU, lines=8, base=0x0000):
             if i >= mmu.mem_size:
                 return
             if(mmu.is_addr_cached(Word(i))):
-                print_hex(mmu.memory[i + 1] * 256 + mmu.memory[i], base_style=FAINT + RED, style=RED, base=False)
+                print_hex(mmu.memory[i + 1] * 256 + mmu.memory[i],
+                          base_style=FAINT + RED, style=RED, base=False)
             else:
                 print_hex(mmu.memory[i + 1] * 256 + mmu.memory[i], base=False)
             i += 2
@@ -147,13 +156,15 @@ def print_cache(mmu: MMU) -> None:
 def instruction_str(instr: Instruction) -> tuple[str, int]:
     instr_str = YELLOW + instr.ty.name + ENDC
     instr_str += " " * (6 - len(instr.ty.name))
-    op_str = ", ".join([hex_str((Word(op).value), p_end="", fixed_width=False) for op in instr.ops])
-    length = 6 + sum([len(hex(Word(op).value)) for op in instr.ops]) + len(instr.ops) * 2 - 2 if len(instr.ops) > 0 else 6
+    op_str = ", ".join(
+        [hex_str((Word(op).value), p_end="", fixed_width=False) for op in instr.ops])
+    length = 6 + sum([len(hex(Word(op).value)) for op in instr.ops]) + \
+        len(instr.ops) * 2 - 2 if len(instr.ops) > 0 else 6
     return instr_str + op_str, length
 
 
 def print_queue(queue: Frontend):
-    q_str: list[str] = queue_str(queue)
+    q_str, _ = queue_str(queue)
     for line in q_str:
         print(line)
 
@@ -174,7 +185,8 @@ def print_prog(front: Frontend, engine: ExecutionEngine,
         print(line)
 
 
-def prog_str(front: Frontend, engine: ExecutionEngine, breakpoints: dict, start=0, end=-1) -> tuple[list[str], list[int]]:
+def prog_str(front: Frontend, engine: ExecutionEngine,
+             breakpoints: dict, start=0, end=-1) -> tuple[list[str], list[int]]:
     start = 0 if start < 0 else start
     end = len(front.instr_list) if end == -1 else end
     end = min(end, len(front.instr_list))
@@ -213,30 +225,81 @@ def prog_str(front: Frontend, engine: ExecutionEngine, breakpoints: dict, start=
 
 
 def print_rs(engine: ExecutionEngine) -> None:
-    strings: list[str] = rs_str(engine)
+    strings, _ = rs_str(engine)
     for line in strings:
         if line != "":
             print(line)
 
 
-def rs_str(engine: ExecutionEngine) -> tuple[list[str], list[int]]:
-    rs_str: list[str] = [""] * len(engine.slots())
-    rs_lengths: list[int] = [0] * len(engine.slots())
-    id = 0
-    for index, slot in enumerate(engine.slots()):
+def rs_str(engine: ExecutionEngine, show_empty=False) -> tuple[list[str], int]:
+
+    rs_length: int
+
+    instructions = []
+    pcs = []
+    indices = []
+    status = []
+
+    instr_lengths: list[int] = []
+
+    for i, slot in enumerate(engine.slots()):
         if slot is None:
+            pcs += [""]
+            instructions += [""]
+            indices += [""]
+            status += [""]
+            instr_lengths += [0]
             continue
-        id_str = str(index)
-        id_str = " " * (2 - len(id_str)) + id_str + " "
-        rs_str[index] = FAINT + id_str + ENDC
-        instr_str, _ = instruction_str(slot.instr)
-        i_len = len(instr_str)
-        rs_str[index] += instr_str
-        rs_str[index] += " " * (24 - i_len)
-        rs_str[index] += f"{' ☐' if slot.executing else ' ☑'}"
-        id += 1
-        rs_lengths[index] = 1
-    return rs_str, rs_lengths
+
+        instr_str, instr_length = instruction_str(slot.instr)
+        instructions.append(instr_str)
+
+        pcs.append(str(slot.pc))
+        indices.append(str(i))
+        status.append(f"{'☐' if slot.executing else '☑'}")
+
+        instr_lengths.append(instr_length)
+
+    max_instr_length = max(instr_lengths) if instr_lengths else 0
+    max_pc_length = max([len(pc) for pc in pcs]) if pcs else 0
+    max_index_length = max([len(index) for index in indices]) if indices else 0
+
+    if max_index_length == 0 and max_pc_length == 0 and max_instr_length == 0:
+        return [""], 0
+
+    rs_length = max_instr_length + max_pc_length + 1 + 3 + 3 + 4
+    if not show_empty:
+        rs_length += max_index_length + 3
+
+    rs_str: list[str] = []
+
+    line_top = '╭'
+    if not show_empty:
+        line_top += '─' * (max_index_length + 2) + '┬'
+    line_top += '─' * (max_pc_length + 2) + '┬' + '─' * (max_instr_length + 2) + '┬' + '─' * 3 + '╮'
+    rs_str.append(line_top)
+
+    for i, slot in enumerate(engine.slots()):
+        if slot is None:
+            if show_empty:
+                rs_str.append('│' + ' ' * (max_pc_length + 2) + '│' + ' ' * (max_instr_length + 2) + '│' + ' ' * 3 + '│')
+            continue
+        else:
+            line = '| '
+            if not show_empty:
+                line += ' ' * (max_index_length - len(indices[i])) + indices[i] + ' | '
+            line += ' ' * (max_pc_length - len(pcs[i])) + pcs[i] + ' | '
+            line += instructions[i] + ' ' * (max_instr_length - instr_lengths[i]) + ' |'
+            line += f" {status[i]} |"
+            rs_str.append(line)
+
+    line_bot = '╰'
+    if not show_empty:
+        line_bot += '─' * (max_index_length + 2) + '┴'
+    line_bot += '─' * (max_pc_length + 2) + '┴' + '─' * (max_instr_length + 2) + '┴' + '─' * 3 + '╯'
+    rs_str.append(line_bot)
+
+    return rs_str, rs_length
 
 
 def print_bpu(bpu: BPU) -> None:
@@ -267,44 +330,42 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict)
     highest_inflight = max([slot.pc for slot in engine.slots() if slot is not None], default=len(front.instr_list))
 
     prog, prog_lengths = prog_str(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 2)
-    arrow = ["  ╭─► "] + ["  │   "] * (len(prog)-2) + [" ─╯   "]
+    arrow = ["  ╭─► "] + ["  │   "] * (len(prog) - 2) + [" ─╯   "]
     q, q_lengths = queue_str(front)
-    rs, rs_lengths = rs_str(engine)
+    rs, rs_length = rs_str(engine)
 
-    lines = max(len(prog), len(q), len(rs)-1)
-    
-    max_prog = max(prog_lengths) if prog_lengths else 16
+    lines = max(len(prog), len(q), len(rs) - 1)
+
+    max_prog = max(prog_lengths) if prog_lengths else 25
     max_arrow = 6
-    max_q = max(q_lengths) if q_lengths else 16
-    max_rs = max([len(line) for line in rs]) if rs else 16
-    max_rs = 24
+    max_q = max(q_lengths) if q_lengths else 25
 
-    prog = [prog[i] + " " * (max_prog - prog_lengths[i]) for i in range(len(prog))] + [" " * max_prog] * (lines - len(prog))
+    prog = [prog[i] + " " * (max_prog - prog_lengths[i])
+            for i in range(len(prog))] + [" " * max_prog] * (lines - len(prog))
     arrow = arrow + [" " * max_arrow] * (lines - len(arrow))
-    q = [q[i] + " " * (max_q - q_lengths[i]) for i in range(len(q))] + [" " * max_q] * (lines - len(q))
-    # rs = [line + " " * (max_rs - len(line)) for line in rs] + [" " * max_rs] * (lines - len(rs))
+    q = [q[i] + " " * (max_q - q_lengths[i])
+         for i in range(len(q))] + [" " * max_q] * (lines - len(q))
 
-    #TODO: check if line fits
-    header_str = "-" * ceil((max_prog - len("[ Program ]"))/2) + "[ Program ]" + "-" * floor((max_prog - len("[ Program ]"))/2)
+    # TODO: check if line fits
+    header_str = "-" * ceil((max_prog - len("[ Program ]")) / 2) + "[ Program ]" + "-" * floor((max_prog - len("[ Program ]")) / 2)
     header_str += "-" * max_arrow
-    header_str += "-" * ceil((max_q - len("[ Queue ]"))/2) + "[ Queue ]" + "-" * floor((max_q - len("[ Queue ]"))/2)
-    header_str += "-" * 3
-    header_str += "-" * ceil((max_rs - len("[ Reservation Stations ]"))/2) + "[ Reservation Stations ]" + "-" * floor((max_rs - len("[ Reservation Stations ]"))/2)
+    header_str += "-" * ceil((max_q - len("[ Queue ]")) / 2) + "[ Queue ]" + "-" * floor((max_q - len("[ Queue ]")) / 2)
+    header_str += "-" * 4
+    header_str += "-" * ceil((rs_length - len("[ Reservation Stations ]")) / 2) + "[ Reservation Stations ]" + "-" * floor((rs_length - len("[ Reservation Stations ]")) / 2)
     print(header_str + "-" * (columns - len(header_str)))
 
-    print(" " * (max_prog + max_arrow + max_q + 3), end="")
+    print(" " * (max_prog + max_arrow + max_q + 4), end="")
     print(rs[0])
 
     for i in range(max(len(prog), len(q), len(rs))):
-        line = ""
         if i < len(prog):
             print(prog[i], end="")
             print(arrow[i], end="")
         if i < len(q):
             print(q[i], end="")
-        print("   ", end="") if i != lines//2 else print(" 🡆 ", end="")
+        print("    ", end="") if i != lines // 2 else print(" " + "─►" + " ", end="")
         if i < len(rs) - 1:
-            print(rs[i+1], end="")
+            print(rs[i + 1], end="")
         print("")
     print()
 
