@@ -151,9 +151,17 @@ def instruction_str(instr: Instruction) -> str:
 
 
 def print_queue(queue: Frontend):
-    for item in queue.instr_queue:
+    q_str: list[str] = queue_str(queue)
+    for line in q_str:
+        print(line)
+
+
+def queue_str(queue: Frontend) -> list[str]:
+    q_str: list[str] = [""] * len(queue.instr_queue)
+    for index, item in enumerate(queue.instr_queue):
         instr = item.instr
-        print(instruction_str(instr))
+        q_str[index] = instruction_str(instr)
+    return q_str
 
 
 def print_prog(front: Frontend, engine: ExecutionEngine,
@@ -204,21 +212,29 @@ def prog_str(front: Frontend, engine: ExecutionEngine, breakpoints: dict, start=
     return prog_str
 
 
-def print_rs(cpu: CPU):
+def print_rs(cpu: CPU) -> None:
+    strings: list[str] = rs_str(cpu)
+    for line in strings:
+        if line != "":
+            print(line)
+
+
+def rs_str(cpu: CPU) -> list[str]:
+    rs_str: list[str] = [""] * len(cpu._exec_engine.slots())
     id = 0
-    for slot in cpu.get_exec_engine().slots():
+    for index, slot in enumerate(cpu.get_exec_engine().slots()):
         if slot is None:
             continue
-        # print(slot.pc, end=" ")
         id_str = str(id)
         id_str = " " * (2 - len(id_str)) + id_str + " "
-        print(FAINT + id_str + ENDC, end="")
+        rs_str[index] = FAINT + id_str + ENDC
         instr_str = instruction_str(slot.instr)
         i_len = len(instr_str)
-        print(instr_str, end="")
-        print(" " * (24 - i_len), end="")
-        print(f"{' ☐' if slot.executing else ' ☑'}")
+        rs_str[index] += instr_str
+        rs_str[index] += " " * (24 - i_len)
+        rs_str[index] += f"{' ☐' if slot.executing else ' ☑'}"
         id += 1
+    return rs_str
 
 
 def print_bpu(bpu: BPU) -> None:
