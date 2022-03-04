@@ -27,6 +27,17 @@ BOX_NORTHEAST = '╰'
 BOX_NORTHWEST = '╯'
 BOX_HORIZOZTAL = '─'
 BOX_VERTICAL = '│'
+BOX_CROSS = '┼'
+BOX_NES = '├'
+BOX_NSW = '┤'
+BOX_NEW = '┴'
+BOX_ESW = '┬'
+BOW_ARROW_FILLED = '►'
+BOW_ARROW_OUTLINE = '▻'
+BOW_TRIANGLE_MINI = '▸'
+BOX_TRIANGLE_FILLED = '▶'
+BOW_TRIANGLE_OUTLINE = '▷'
+BOX_ARROW_BIG_OUTLINE = "⇨"
 
 # get terminal size
 try:
@@ -165,9 +176,9 @@ def prog_str(front: Frontend, engine: ExecutionEngine, breakpoints: dict, start=
     for index, line in enumerate(range(start, end)):
         # print status tag
         if line in inflights and line in active_breakpoints:
-            prog_str[index] += fmt_color(BOLD + RED, "► ", False)
+            prog_str[index] += fmt_color(BOLD + RED, BOX_TRIANGLE_FILLED + " ", False)
         elif line in inflights:
-            prog_str[index] += fmt_color(BOLD + GREEN, "► ", False)
+            prog_str[index] += fmt_color(BOLD + GREEN, BOX_TRIANGLE_FILLED + " ", False)
         elif line in active_breakpoints:
             prog_str[index] += fmt_color(BOLD + RED, "◉ ", False)
         elif line in disabled_breakpoints:
@@ -206,7 +217,7 @@ def print_rs(cpu: CPU):
         i_len = len(instr_str)
         print(instr_str, end="")
         print(" " * (24 - i_len), end="")
-        print(f"{' RUNNING' if slot.executing else 'RETIRING'}")
+        print(f"{' ☐' if slot.executing else ' ☑'}")
         id += 1
 
 

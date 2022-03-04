@@ -11,6 +11,8 @@ from src.byte import Byte
 from src import ui
 from src.cpu import CPU, CPUStatus
 
+PROMPT = ui.BOW_ARROW_FILLED + " "
+
 session = PromptSession()
 
 
@@ -310,7 +312,7 @@ if __name__ == "__main__":
     while True:
         try:
             text = session.prompt(
-                '-> ', auto_suggest=AutoSuggestFromHistory(), completer=completer, complete_while_typing=True)
+                PROMPT, auto_suggest=AutoSuggestFromHistory(), completer=completer, complete_while_typing=True)
         except KeyboardInterrupt:
             break
         except EOFError:
