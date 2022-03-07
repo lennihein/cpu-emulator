@@ -231,7 +231,7 @@ def print_rs(engine: ExecutionEngine) -> None:
             print(line)
 
 
-def rs_str(engine: ExecutionEngine, show_empty=False) -> tuple[list[str], int]:
+def rs_str(engine: ExecutionEngine, show_empty=True) -> tuple[list[str], int]:
 
     rs_length: int
 
@@ -360,10 +360,10 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict)
     for i in range(max(len(prog), len(q), len(rs))):
         if i < len(prog):
             print(prog[i], end="")
-            print(arrow[i], end="")
+            print(arrow[i], end="") if len(front.instr_queue) else print(" " * max_arrow, end="")
         if i < len(q):
             print(q[i], end="")
-        print("    ", end="") if i != lines // 2 else print(" " + "─►" + " ", end="")
+        print("    ", end="") if i != lines // 2 or rs_length == 0 else print(" " + "─►" + " ", end="")
         if i < len(rs) - 1:
             print(rs[i + 1], end="")
         print("")
