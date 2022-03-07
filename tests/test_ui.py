@@ -79,6 +79,11 @@ class UITest(TestCase):
         print()
         print_header("END")
 
+    def test_box(self):
+        print()
+        print_header("Box", BOLD + RED + ENDC)
+        print(BLUE + BOX_SOUTHEAST + BOX_HORIZOZTAL + BOX_SOUTHWEST + "\n" + BOX_VERTICAL + " " + BOX_VERTICAL + "\n" + BOX_NORTHEAST + BOX_HORIZOZTAL + BOX_NORTHWEST + ENDC)
+
 # test = UITest()
 # test.test_memory()
 # test.test_registers()

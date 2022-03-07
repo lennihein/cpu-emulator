@@ -10,11 +10,14 @@ class BPU:
     def predict(self, pc) -> bool:
         return self.counter[pc % (1 << self.indexing_bits)] >= 2
 
+    def set_counter(self, pc, val: int) -> None:
+        self.counter[pc % (1 << self.indexing_bits)] = val
+
     def __str__(self) -> str:
         res = "Index | Counter\n"
         res += "------|--------\n"
         for i in range(len(self.counter)):
-            res += " 0x{:02x} | {:01x}\n".format(i, self.counter[i])
+            res += "   {:02} | {:01}\n".format(i, self.counter[i])
         return res
 
 

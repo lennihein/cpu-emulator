@@ -219,13 +219,10 @@ class CPU:
 
     @staticmethod
     def restore_snapshot(cpu: CPU, steps: int) -> CPU:
-        if cpu._snapshot_index + steps < 0 or cpu._snapshot_index + steps >= len(cpu._snapshots):
-            return False
+        if cpu._snapshot_index + steps < 1 or cpu._snapshot_index + steps >= len(cpu._snapshots):
+            return None
 
         # Returning copies are is important, as otherwise a manipulation
         # of the returned cpu instance (for example, calling tick),
         # changes the class that is stored in the snapshot list.
-        try:
-            return cpu._snapshots[cpu._snapshot_index + steps].deepcopy()
-        except AttributeError:
-            return False
+        return cpu._snapshots[cpu._snapshot_index + steps].deepcopy()
