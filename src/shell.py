@@ -179,7 +179,9 @@ def __continue(input: list[str], cpu: CPU):
         if not info.executing_program:
             print("Program finished")
             break
-    print(info.fault_info + "\n" if info.fault_info is not None else "", end="")
+        if info.fault_info is not None:
+            print(ui.BOLD + ui.RED + f"FAULT at {info.fault_info.pc}: " + str(info.fault_info.instr) + ui.ENDC + "\n", end="")
+            break
     ui.all_headers(cpu, breakpoints)
 
 
@@ -204,7 +206,9 @@ def __step(input: list[str], cpu: CPU):
         if not info.executing_program:
             print("Program finished")
             break
-    print(info.fault_info + "\n" if info is not None and info.fault_info is not None else "", end="")
+        if info.fault_info is not None:
+            print(ui.BOLD + ui.RED + f"FAULT at {info.fault_info.pc}: " + str(info.fault_info.instr) + ui.ENDC + "\n", end="")
+            break
     ui.all_headers(cpu, breakpoints)
     return cpu
 

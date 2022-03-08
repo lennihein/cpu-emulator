@@ -146,3 +146,26 @@ class CPUTests(unittest.TestCase):
         cpu = cpu.restore_snapshot(cpu, -1)
 
         self.assertIsNone(cpu)
+
+    def test_fault_on_last(self):
+        code = """
+            // set R0 to 0
+            andi r0, r0, 0
+            // set R0 to 0xFF00
+            addi r0, r0, 0xFF00
+            // load 0xFF00 into R1
+            lw r1, r0, 0
+        """
+
+        # Create CPU
+        cpu = CPU()
+
+        # Load program
+        cpu.load_program(code)
+
+        # Execute program to the end
+        while True:
+            info = cpu.tick()
+            if not info.executing_program:
+                print("Program finished")
+                break
