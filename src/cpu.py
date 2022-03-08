@@ -119,7 +119,11 @@ class CPU:
             if isinstance(fault_info.instr, (InstrLoad, InstrStore, InstrFlush)):
                 resume_at_pc += 1
 
-            self._frontend.set_pc(resume_at_pc)
+            try:
+                self._frontend.set_pc(resume_at_pc)
+            except IndexError:
+                # program has ended
+                return CPUStatus(False, None, [])
             self._frontend.flush_instruction_queue()
 
             # If the instruction that caused the rollback is a branch
