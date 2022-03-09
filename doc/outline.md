@@ -42,6 +42,8 @@
             original Tomasulo paper from 1965
             maybe a more recent/ didactically edited explanation (is this in texbooks?)
         
+        also something about speculative execution
+        
     ### Meltdown and Spectre
     
         brief introduction to Meltdown (and Spectre) in general

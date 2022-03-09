@@ -91,9 +91,6 @@ class CPU:
         if self._frontend.is_done() and self._exec_engine.is_done():
             return CPUStatus(False, None, [])
 
-        # fill up instruction queue / reorder buffer
-        self._frontend.add_instructions_to_queue()
-
         cpu_status: CPUStatus = CPUStatus(True, None, [])
 
         # fill execution units
@@ -116,7 +113,7 @@ class CPU:
             # For faulting memory instructions, we simply skip the instruction.
             # Normally, one would have to register an exception handler. We skip this
             # step for the sake of simplicity.
-            if isinstance(fault_info.instr, (InstrLoad, InstrStore, InstrFlush)):
+            if isinstance(fault_info.instr.ty, (InstrLoad, InstrStore, InstrFlush)):
                 resume_at_pc += 1
 
             try:
@@ -133,6 +130,9 @@ class CPU:
                 self._frontend.add_instructions_after_branch(
                     not fault_info.prediction, fault_info.pc
                 )
+
+        # fill up instruction queue / reorder buffer
+        self._frontend.add_instructions_to_queue()        
 
         # create snapshot
         self._take_snapshot()
