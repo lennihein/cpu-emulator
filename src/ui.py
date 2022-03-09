@@ -131,7 +131,7 @@ def print_regs(engine: ExecutionEngine):
             if isinstance(val, Word):
                 print_hex(val.value, p_end="", base_style=ENDC + FAINT)
             elif isinstance(val, int):
-                print(ENDC + FAINT + "RS {:03}".format(regs[i]) + ENDC, end="")
+                print(ENDC + FAINT + "RS {:03}".format(val) + ENDC, end="")
             else:
                 print(BOLD + RED + "ERR", end="")
                 exit(1)
