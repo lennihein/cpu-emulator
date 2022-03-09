@@ -126,7 +126,7 @@ class CPU:
             # If the instruction that caused the rollback is a branch
             # instruction, we notify the front end which makes sure
             # the correct path is taken next time.
-            if isinstance(fault_info.instr, InstrBranch):
+            if isinstance(fault_info.instr.ty, InstrBranch):
                 self._frontend.add_instructions_after_branch(
                     not fault_info.prediction, fault_info.pc
                 )
