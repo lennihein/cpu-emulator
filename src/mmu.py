@@ -79,7 +79,7 @@ class MMU:
 
         # We assume the upper half of the address space is inaccessible
         for i in range(self.mem_size // 2, self.mem_size):
-            self.memory[i] = 42
+            self.memory[i] = 0x42
 
         self.cache_hit_cycles = cache_hit_cycles
         self.cache_miss_cycles = cache_miss_cycles

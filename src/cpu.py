@@ -178,11 +178,12 @@ class CPU:
         cpu_copy._parser = copy.deepcopy(self._parser)
         cpu_copy._frontend = copy.deepcopy(self._frontend)
         cpu_copy._bpu = copy.deepcopy(self._bpu)
+
         cpu_copy._exec_engine = copy.deepcopy(self._exec_engine)
+        cpu_copy._mmu = self._mmu.deepcopy()
         cpu_copy._exec_engine._mmu = cpu_copy._mmu
 
         # Here, we use our own deepcopy functions.
-        cpu_copy._mmu = self._mmu.deepcopy()
         # cpu_copy._exec_engine = self._exec_engine.deepcopy(self._mmu)
 
         cpu_copy._snapshots = self._snapshots
