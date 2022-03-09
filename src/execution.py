@@ -192,7 +192,7 @@ class _SlotFaulting(_Slot):
                 return None
 
         # We are done waiting and allowed to cause a fault
-        info = FaultInfo(self.pc, self.instr_ty)
+        info = FaultInfo(self.pc, self.instr)
         self.populate_fault_info(info)
         fault = _FaultState(cast(list[Word], self.registers), info)
         return (fault,)
