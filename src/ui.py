@@ -127,10 +127,14 @@ def print_regs(engine: ExecutionEngine):
             print(" " if j != 0 else "", end="")
             print(BOLD + GREEN + "R" + str(i)
                   + (" : " if i < 10 else ": "), end="")
-            try:
-                print_hex(regs[i].value, p_end="", base_style=ENDC + FAINT)
-            except AttributeError:
-                print(ENDC + FAINT + "RS {:03}".format(regs[i]), end="")
+            val = regs[i]
+            if isinstance(val, Word):
+                print_hex(val.value, p_end="", base_style=ENDC + FAINT)
+            elif isinstance(val, int):
+                print(ENDC + FAINT + "RS {:03}".format(regs[i]) + ENDC, end="")
+            else:
+                print(BOLD + RED + "ERR", end="")
+                exit(1)
             print(" |" if j != fits - 1 else "\n", end="")
             i += 1
     print()
