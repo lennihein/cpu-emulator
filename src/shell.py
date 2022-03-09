@@ -13,12 +13,12 @@ from src.cpu import CPU, CPUStatus
 
 PROMPT = ui.BOW_ARROW_FILLED + " "
 
-session = PromptSession()
+session: PromptSession = PromptSession()
 
 
 funcs = {}
 completions = {}
-breakpoints = {}
+breakpoints: dict[int, bool] = {}
 
 
 def func(f):
