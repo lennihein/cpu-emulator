@@ -113,7 +113,7 @@ class CPU:
             # For faulting memory instructions, we simply skip the instruction.
             # Normally, one would have to register an exception handler. We skip this
             # step for the sake of simplicity.
-            if isinstance(fault_info.instr, (InstrLoad, InstrStore, InstrFlush)):
+            if isinstance(fault_info.instr.ty, (InstrLoad, InstrStore, InstrFlush)):
                 resume_at_pc += 1
 
             try:
