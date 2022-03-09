@@ -2,14 +2,15 @@
 
 ## Abstract
 
-## Introduction
+## Introduction (1 page)
 
     general task/ goal
         CPU emulator with actual out of order execution, maybe speculative execution and comprehensible implementation and documentation
+        implement different µ-architectural features like out-of-order exe., speculative exe. b.c. we want to observe and teach µ-arch. attacks
     brief context of the task/ goal (e.g. a sentence on Meltdown and why it is important to understand it)
     structure of the report
 
-## Brief Theoretical Background
+## Brief Theoretical Background (2-3 pages)
 
     premise according to Felix: reader knows SCA lecture -> brief recaps/ reminders to reference back to from the other chapters
     
@@ -49,14 +50,14 @@
         
         highlight the relevant parts of the CPU, maybe mention how they interact in Meltdown (and Spectre)
         
-        maybe briefly mitigations and how successfull they are
+        mitigations and maybe how successfull they are
         
         suggested literature: 
             ggf. Dissertation Gruss if we mention basic cbsca
             Gruss et al. papers on Meltdown and Spectre e.g. https://gruss.cc/files/meltdown.pdf or https://gruss.cc/files/meltdown_cacm.pdf
             Canella, Gruss et al. on mititgations https://gruss.cc/files/transient-attacks.pdf
 
-## maybe Specification of the task
+## maybe Specification of the task (1 page)
 
     emulator to execute and teach Meltdown
         who is the target audience
@@ -68,7 +69,7 @@
         suggested literature:
             todo
             
-## Our Emulator Program/ backend
+## Our Emulator Program/ backend (17-18 pages)
 
     maybe general info e.g. that we wrote it in python, if we used special tools/ libraries
     for everything we implemented:
@@ -81,7 +82,7 @@
             maybe what did we leave out
             challenges?
 
-    ### CPU Components and our equivalents/ models
+    ### CPU Components and our equivalents/ models (10-11 pages)
             
         modular setup based on real life CPUs and nice coding conventions
             
@@ -132,24 +133,8 @@
             Reservation Station/ Slots
             
             unlimited execution units
-        
-    ### Rollbacks/ Exception handling
-        
-            in particular wrt making Meltdown possible
-            
-            general goal/ concept of rolling back after a misprediction or an exception
-            
-            snapshots and interaction of the CPU components
-
-    ### ISA
     
-        overview of ISA
-        
-        maybe µ-instr. vs. ISA
-        
-        reasoning behind the choice of instructions (manageable size and instructions (e.g. no divide by zero) balanced with functionality particularly wrt Meltdown)
-
-    ### Tomasulo
+    ### Tomasulo (2 pages)
         
         our version of out-of-order execution
     
@@ -157,12 +142,33 @@
         
         what did we leave out/ do differently
         
-    ### config files
+    ### Rollbacks/ Exception handling (2-3 pages)
+        
+            in particular wrt making Meltdown possible
+            
+            general goal/ concept of rolling back after a misprediction or an exception
+            
+            snapshots and interaction of the CPU components
+
+    ### ISA (2 pages)
+    
+        overview of ISA
+        
+        µ-instr. vs. ISA
+            mixture of both in one: only µ-code, but more abstract than in real life
+            do not need to think about page faults etc. anyways, do not need overly complex instructions
+        
+        reasoning behind the choice of instructions (manageable size and instructions (e.g. no divide by zero) balanced with functionality particularly wrt Meltdown)
+
+        
+    ### config files (1 page)
     
         what can be configured without changing the source code
             why these variables? relevant for Meltdown?
 
-## Our Visualisation and Usage/ Frontend
+## Our Visualisation and Usage/ Frontend (10 pages)
+
+    ggf. gemäß Anmerkung von Lenni umsortieren: die idee das UI nicht mit in die 'unsere designetnscheidungen' zu nehmen, sondern im prinzip so als Manual abzukapseln finde ich eigentlich ganz gut. Müssen wir aber dann mal in der Praxis schauen. Soll ja keine didaktischen begründungen das manual zu sehr aufblähen, vllt wird das sinnvoll, dann einen teil des UI im "backend" kapitel einzubauen, und dann wirklich ein cleanes manual kapitel zu haben
 
     ### general concept
     
@@ -182,9 +188,10 @@
         
         challenges/ design choices during the implementation
 
-## Demonstration/ evaluation
+## Demonstration/ evaluation (7 pages)
 
     what kind of system do we need/ did we use to run this?
+        which python Version?
 
     ## general demonstration
     
@@ -211,6 +218,11 @@
         #### mitigations
         
             what is possible in our program as is
+                planned:    cache flush: microcode -> config file
+                            mfence im assembler (normally in compiler)
+                            aslr directly in program -> config
+                            flush IQ -> 
+                            disable speculation und out of order (nice to have)-> config
             
             how effective are these
                 in real life
@@ -219,7 +231,7 @@
             what would be the necessary steps/ changes to the program for further mitigations
                 compare to changes in hardware by the manufacturers
 
-## Conclusion
+## Conclusion (1 Page)
 
     recap goals
 
@@ -229,6 +241,11 @@
     
     is Spectre possible?
     
+    mitigations
+        which mitigations did we implement
+        is this a good amount/ sample of real world mitigations or do we miss important ones?
+        how well do they perform (also in comparison to how they perform in the real world)
+        
     value to students:
         how easy to use and convenient do we think our program is? 
         do we think this will be a good tool for teaching?
