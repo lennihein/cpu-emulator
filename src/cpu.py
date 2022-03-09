@@ -180,11 +180,8 @@ class CPU:
         cpu_copy._bpu = copy.deepcopy(self._bpu)
 
         cpu_copy._exec_engine = copy.deepcopy(self._exec_engine)
-        cpu_copy._mmu = self._mmu.deepcopy()
+        cpu_copy._mmu = copy.deepcopy(self._mmu)
         cpu_copy._exec_engine._mmu = cpu_copy._mmu
-
-        # Here, we use our own deepcopy functions.
-        # cpu_copy._exec_engine = self._exec_engine.deepcopy(self._mmu)
 
         cpu_copy._snapshots = self._snapshots
         cpu_copy._snapshot_index = self._snapshot_index
@@ -205,6 +202,7 @@ class CPU:
             # list, rather than using "self.deepcopy()" here. In case this class
             # instance (self) was changed before taking this snapshot, we would
             # be altering the snapshot list at the index pointed to by snapshot_index.
+            # current_cpu = self._snapshots[self._snapshot_index].deepcopy()
             current_cpu = self._snapshots[self._snapshot_index].deepcopy()
 
             # Now we strip the snapshot list of all more recent invalid snapshots.

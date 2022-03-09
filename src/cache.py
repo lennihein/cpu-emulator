@@ -120,18 +120,6 @@ class CacheLine:
 
         self.set_tag(None)
 
-    def deepcopy(self):
-        """
-        Returns a deepcopy of this cache line.
-        """
-        line_copy = self.__class__(self.line_size)
-        line_copy.data = copy.copy(self.data)
-        line_copy.tag = self.tag
-        line_copy.tag = self.line_size
-
-        return line_copy
-
-
 class Cache:
     """
     An abstract class implementing a cache. Using this class directly is not possible, as it
@@ -144,13 +132,6 @@ class Cache:
     num_lines: int
     line_size: int
     sets: list[list[CacheLine]]
-
-    def deepcopy(self):
-        cache_copy = self.__class__(self.num_sets, self.num_lines, self.line_size)
-        cache_copy.sets = [[self.sets[b][a].deepcopy() for a in range(self.num_lines)]
-                           for b in range(self.num_sets)]
-
-        return cache_copy
 
     def __init__(self, num_sets: int, num_lines: int, line_size: int):
         self.sets = [[CacheLine(line_size) for a in range(num_lines)]
@@ -380,16 +361,6 @@ class CacheLineLRU(CacheLine):
         super().flush()
         self.lru_timestamp = time()
 
-    def deepcopy(self):
-        """
-        Returns a deepcopy of this cache line.
-        """
-        line_copy = super().deepcopy()
-        line_copy.lru_timestamp = self.lru_timestamp
-
-        return line_copy
-
-
 class CacheLRU(Cache):
     """A cache implementing the least-recently-used replacement policy."""
 
@@ -445,15 +416,6 @@ class CacheLineFIFO(CacheLine):
 
     def get_fifo_time(self):
         return self.first_write
-
-    def deepcopy(self):
-        """
-        Returns a deepcopy of this cache line.
-        """
-        line_copy = super().deepcopy()
-        line_copy.first_write = self.first_write
-
-        return line_copy
 
 
 class CacheFIFO(Cache):
