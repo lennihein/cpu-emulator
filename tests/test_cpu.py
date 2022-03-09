@@ -113,18 +113,10 @@ class CPUTests(unittest.TestCase):
         cpu.load_program(code)
 
         # Execute program to the end
-        try:
-            while True:
-                cpu.tick()
-                # TODO: CPU should detect when its done on its own
-                if (
-                    all(slot is None for slot in cpu._exec_engine._slots)
-                    and cpu._frontend.get_instr_queue_size() == 0
-                ):
-                    break
-        except Exception as e:
-            if str(e) != "end of program reached by instruction queue":
-                raise
+        while True:
+            info = cpu.tick()
+            if not info.executing_program:
+                break
 
         # Check that the registers have the correct values
         target = (0, 1, 2, 3, 4, 5, 0x105, 1)
