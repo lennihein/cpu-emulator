@@ -13,6 +13,6 @@ linting:
   script:
     - flake8 --ignore=E501,W503,F403,F405
 
-# test:
-#   script:
-#       - python3 -m unittest
+test:
+  script:
+      - python3 -m unittest
