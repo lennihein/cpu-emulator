@@ -656,6 +656,8 @@ class ExecutionEngine:
                 if result is not None:
                     # Execution completed, notify other slots
                     self._notify_result(_SlotID(i), result)
+                    # Only one instruction is allowed to complete execution each tick
+                    return None
 
             else:
                 # Continue retirement
@@ -668,6 +670,8 @@ class ExecutionEngine:
                         self._notify_retired(_SlotID(i))
                         # Free retired slot
                         self._slots[i] = None
+                        # Only one instruction is allowed to retire each tick
+                        return None
                     else:
                         # Fault occurred, roll back to given architectural state and notify frontend
                         self._rollback(state)
