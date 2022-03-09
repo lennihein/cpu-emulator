@@ -4,8 +4,6 @@ from time import time
 # from word import Word
 from .word import Word
 
-import copy
-
 
 class CacheLine:
     """
@@ -119,6 +117,7 @@ class CacheLine:
             self.data[i] = None
 
         self.set_tag(None)
+
 
 class Cache:
     """
@@ -360,6 +359,7 @@ class CacheLineLRU(CacheLine):
     def flush(self) -> None:
         super().flush()
         self.lru_timestamp = time()
+
 
 class CacheLRU(Cache):
     """A cache implementing the least-recently-used replacement policy."""

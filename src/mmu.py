@@ -5,8 +5,6 @@ from .word import Word
 from .byte import Byte
 from .cache import Cache, CacheFIFO, CacheLRU, CacheRR
 
-import copy
-
 
 @dataclass
 class MemResult:

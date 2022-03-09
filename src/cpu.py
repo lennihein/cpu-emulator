@@ -132,7 +132,7 @@ class CPU:
                 )
 
         # fill up instruction queue / reorder buffer
-        self._frontend.add_instructions_to_queue()        
+        self._frontend.add_instructions_to_queue()
 
         # create snapshot
         self._take_snapshot()

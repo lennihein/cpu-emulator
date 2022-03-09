@@ -37,6 +37,9 @@ class CacheTests(unittest.TestCase):
         self.assertIs(c.read(9), 9)
         self.assertIs(c.read(17), 17)
 
+        for i in range(40):
+            c.write(i, i)
+
     def test_fifo(self):
         """
         Using a similar setup as in the LRU test above, we can test the
