@@ -53,7 +53,7 @@ class Parser:
     def _parse_operand(op: str, ty: OperandKind, labels: dict[str, int]) -> int:
         """Parse a single operand of the given type."""
         if ty == "reg":
-            if not op.startswith("r"):
+            if not (op.startswith("r") or op.startswith("R")):
                 raise ValueError(f"Unknown register {op!r}")
             return int(op[1:])
 
