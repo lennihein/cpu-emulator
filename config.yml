@@ -4,13 +4,6 @@ BPU:
     init_counter: 2
 
 Memory:
-    layout:
-    -   start: 0x0000
-        end: 0x7FFF
-        access: True
-    -   start: 0x8000
-        end: 0xFFFF
-        access: False
     num_write_cycles: 5
     num_fault_cycles: 8
 

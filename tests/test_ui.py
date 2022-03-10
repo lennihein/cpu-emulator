@@ -71,7 +71,7 @@ class UITest(TestCase):
                 "num_write_cycles": 5
             }
         }
-        mmu = MMU(conf, mem_size=0x80)
+        mmu = MMU(conf)
         from random import randrange
         for _ in range(5000):
             mmu.write_byte(

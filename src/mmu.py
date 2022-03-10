@@ -42,7 +42,7 @@ class MMU:
     cache: Cache
     cache_replacement_policy: str
 
-    def __init__(self, config: dict, mem_size: int = 1 << Word.WIDTH):
+    def __init__(self, config: dict):
         """
         A class representing the memory management unit of a CPU.
         It holds the memory itself as well as a cache.
@@ -66,8 +66,8 @@ class MMU:
         cache_conf = config["Cache"]
         mem_conf = config["Memory"]
 
-        self.memory = [0] * mem_size
-        self.mem_size = mem_size
+        self.memory = [0] * (1 << Word.WIDTH)
+        self.mem_size = 1 << Word.WIDTH
 
         # We assume the upper half of the address space is inaccessible
         for i in range(self.mem_size // 2, self.mem_size):
