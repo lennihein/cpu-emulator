@@ -583,6 +583,10 @@ class ExecutionEngine:
         """Return information about the slots of the Reservation Station."""
         return [(None if slot is None else InflightInfo.from_slot(slot)) for slot in self._slots]
 
+    def occupied_slots(self) -> int:
+        """Return the number of occupied slots in the Reservation Station."""
+        return sum(1 for slot in self._slots if slot is not None)
+
     def is_done(self) -> bool:
         """Return whether all slots of the Reservation Station are empty."""
         return all(slot is None for slot in self._slots)

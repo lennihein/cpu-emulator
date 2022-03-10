@@ -169,20 +169,8 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
 
 
 @func
-def __continue(input: list[str], cpu: CPU):
-    while True:
-        info: CPUStatus = cpu.tick()
-        active_breakpoints = [i for i in breakpoints if breakpoints[i] is True]
-        if set(active_breakpoints) & set(info.issued_instructions):
-            ui.print_color(ui.RED, 'BREAKPOINT', newline=True)
-            break
-        if not info.executing_program:
-            print("Program finished")
-            break
-        if info.fault_info is not None:
-            print(ui.BOLD + ui.RED + f"FAULT at {info.fault_info.pc}: " + str(info.fault_info.instr) + ui.ENDC + "\n", end="")
-            break
-    ui.all_headers(cpu, breakpoints)
+def __continue(input: list[str], cpu: CPU) -> CPU:
+    return exec(cpu)
 
 
 @func
@@ -201,14 +189,33 @@ def __step(input: list[str], cpu: CPU):
                 print("Can't restore snapshot")
                 return cpu
             steps = 0
-    for _ in range(steps):
-        info = cpu.tick()
+    return exec(cpu, steps)
+
+
+@func
+def __retire(input: list[str], cpu: CPU) -> CPU:
+    return exec(cpu, break_at_retire=True)
+
+
+def exec(cpu: CPU, steps=-1, break_at_retire=False) -> CPU:
+    i: int = 0
+    active_breakpoints = [i for i in breakpoints if breakpoints[i] is True]
+    while i != steps:
+        inflights_before = cpu.get_exec_engine().occupied_slots()
+        info: CPUStatus = cpu.tick()
+        if set(active_breakpoints) & set(info.issued_instructions):
+            ui.print_color(ui.RED, 'BREAKPOINT', newline=True)
+            break
         if not info.executing_program:
             print("Program finished")
             break
         if info.fault_info is not None:
             print(ui.BOLD + ui.RED + f"FAULT at {info.fault_info.pc}: " + str(info.fault_info.instr) + ui.ENDC + "\n", end="")
             break
+        if break_at_retire and len(info.issued_instructions) + cpu.get_exec_engine().occupied_slots() < inflights_before:
+            ui.print_color(ui.RED, 'RETIRE', newline=True)
+            break
+        i += 1
     ui.all_headers(cpu, breakpoints)
     return cpu
 
