@@ -367,7 +367,7 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict,
         print_div(length=columns)
         print_queue(front)
         print_div(length=columns)
-        print_rs(engine, show_empty=show_rs_empty)
+        print_rs(engine, show_rs_empty=show_rs_empty)
         return
     print(header_str + "-" * (columns - len(header_str)))
 

@@ -42,17 +42,7 @@ class MMU:
     cache: Cache
     cache_replacement_policy: str
 
-    def __init__(
-        self,
-        config: dict = None,
-        mem_size: int = 1 << Word.WIDTH,
-        cache_hit_cycles: int = 2,
-        cache_miss_cycles: int = 5,
-        num_write_cycles: int = 5,
-        num_fault_cycles: int = 8,
-        cache_config: tuple = (4, 4, 4),
-        replacement_policy="LRU",
-    ):
+    def __init__(self, config: dict, mem_size: int = 1 << Word.WIDTH):
         """
         A class representing the memory management unit of a CPU.
         It holds the memory itself as well as a cache.
@@ -73,6 +63,9 @@ class MMU:
                 by the cache. Options are: RR (random replacement), LRU (least
                 recently used), and FIFO (first-in-first-out). (default = "RR")
         """
+        cache_conf = config["Cache"]
+        mem_conf = config["Memory"]
+
         self.memory = [0] * mem_size
         self.mem_size = mem_size
 
@@ -80,19 +73,21 @@ class MMU:
         for i in range(self.mem_size // 2, self.mem_size):
             self.memory[i] = 0x42
 
-        self.cache_hit_cycles = cache_hit_cycles
-        self.cache_miss_cycles = cache_miss_cycles
+        self.cache_hit_cycles = cache_conf["cache_hit_cycles"]
+        self.cache_miss_cycles = cache_conf["cache_miss_cycles"]
 
-        self.num_write_cycles = num_write_cycles
-        self.num_fault_cycles = num_fault_cycles
+        self.num_write_cycles = mem_conf["num_write_cycles"]
+        self.num_fault_cycles = mem_conf["num_fault_cycles"]
 
-        self.cache_replacement_policy = replacement_policy
+        self.cache_replacement_policy = cache_conf["replacement_policy"]
 
-        if replacement_policy == "RR":
+        cache_config = (cache_conf["num_sets"], cache_conf["num_lines"], cache_conf["line_size"])
+
+        if self.cache_replacement_policy == "RR":
             self.cache = CacheRR(*cache_config)
-        elif replacement_policy == "LRU":
+        elif self.cache_replacement_policy == "LRU":
             self.cache = CacheLRU(*cache_config)
-        elif replacement_policy == "FIFO":
+        elif self.cache_replacement_policy == "FIFO":
             self.cache = CacheFIFO(*cache_config)
 
     def read_byte(self, address: Word) -> MemResult:

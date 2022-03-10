@@ -7,7 +7,36 @@ from src.byte import Byte
 
 class MMUTests(unittest.TestCase):
     def test_mmu(self):
-        mmu = MMU()
+        conf = {
+            "Cache":
+            {
+                "cache_hit_cycles": 2,
+                "cache_miss_cycles": 5,
+                "line_size": 4,
+                "num_lines": 4,
+                "num_sets": 4,
+                "replacement_policy": "LRU"
+            },
+            "Memory":
+            {
+                "layout":
+                [
+                    {
+                        "access": True,
+                        "end": 32767,
+                        "start": 0
+                    },
+                    {
+                        "access": True,
+                        "end": 65535,
+                        "start": 32768
+                    }
+                ],
+                "num_fault_cycles": 8,
+                "num_write_cycles": 5
+            }
+        }
+        mmu = MMU(conf)
         import random
 
         # Make sure we do not pick the highest address and try to write a Word (> 1 byte) to this

@@ -42,8 +42,36 @@ class UITest(TestCase):
 
     def test_memory(self):
         print()
-        mmu = MMU(mem_size=0x80, cache_config=(
-            4, 4, 1), replacement_policy="LRU")
+        conf = {
+            "Cache":
+            {
+                "cache_hit_cycles": 2,
+                "cache_miss_cycles": 5,
+                "line_size": 4,
+                "num_lines": 4,
+                "num_sets": 4,
+                "replacement_policy": "LRU"
+            },
+            "Memory":
+            {
+                "layout":
+                [
+                    {
+                        "access": True,
+                        "end": 32767,
+                        "start": 0
+                    },
+                    {
+                        "access": True,
+                        "end": 65535,
+                        "start": 32768
+                    }
+                ],
+                "num_fault_cycles": 8,
+                "num_write_cycles": 5
+            }
+        }
+        mmu = MMU(conf, mem_size=0x80)
         from random import randrange
         for _ in range(5000):
             mmu.write_byte(
@@ -62,7 +90,7 @@ class UITest(TestCase):
 
     def test_cache(self):
         print()
-        mmu = MMU(bd.from_yaml('config.yml'), mem_size=columns * 8, cache_config=(4, 4, 4))
+        mmu = MMU(bd.from_yaml('config.yml'))
         from random import randrange
         for _ in range(50000):
             mmu.write_byte(
