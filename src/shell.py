@@ -222,6 +222,13 @@ def exec(cpu: CPU, steps=-1, break_at_retire=False) -> CPU:
 
 
 @func
+def __restart(input: list[str], cpu: CPU) -> CPU:
+    cpu = cpu.restore_snapshot(cpu, cpu._snapshot_index * -1 + 1)
+    ui.all_headers(cpu, breakpoints)
+    return cpu
+
+
+@func
 def __break(input: list[str], cpu: CPU):
     '''
     {"add": None, "delete": None, "delete": None, "toggle": None, "list": None}
@@ -324,6 +331,9 @@ if __name__ == "__main__":
     except IndexError:
         print("Provide the path to your programm!")
         exit()
+
+    ui.get_terminal_size()
+    ui.all_headers(cpu, breakpoints)
 
     # enter main loop for shell
     while True:
