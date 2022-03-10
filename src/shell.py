@@ -203,14 +203,14 @@ def exec(cpu: CPU, steps=-1, break_at_retire=False) -> CPU:
     while i != steps:
         inflights_before = cpu.get_exec_engine().occupied_slots()
         info: CPUStatus = cpu.tick()
+        if info.fault_info is not None:
+            print(ui.BOLD + ui.RED + f"FAULT at {info.fault_info.pc}: " + str(info.fault_info.instr) + ui.ENDC + "\n", end="")
+            break
         if set(active_breakpoints) & set(info.issued_instructions):
             ui.print_color(ui.RED, 'BREAKPOINT', newline=True)
             break
         if not info.executing_program:
             print("Program finished")
-            break
-        if info.fault_info is not None:
-            print(ui.BOLD + ui.RED + f"FAULT at {info.fault_info.pc}: " + str(info.fault_info.instr) + ui.ENDC + "\n", end="")
             break
         if break_at_retire and len(info.issued_instructions) + cpu.get_exec_engine().occupied_slots() < inflights_before:
             ui.print_color(ui.RED, 'RETIRE', newline=True)
@@ -332,6 +332,7 @@ if __name__ == "__main__":
             text = '__' + text
             cmd = text.split()[0]
             params = text.split()[1:]
+            ui.get_terminal_size()
             fn = funcs.get(cmd, __not_found)
             n_cpu = fn(params, cpu)
             if n_cpu is not None:

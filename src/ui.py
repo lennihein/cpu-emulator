@@ -41,10 +41,16 @@ BOX_ARROW_BIG_OUTLINE = "⇨"
 BOX_ARROW_PHAT = '🠊'
 
 # get terminal size
-try:
-    columns, rows = os.get_terminal_size(0)
-except OSError:
-    columns, rows = 120, 30
+columns: int = 120
+rows: int = 30
+
+
+def get_terminal_size():
+    global columns, rows
+    try:
+        columns, rows = os.get_terminal_size(0)
+    except OSError:
+        columns, rows = 120, 30
 
 
 # print colored text using ANSI escape sequences
@@ -350,12 +356,19 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict)
     q = [q[i] + " " * (max_q - q_lengths[i])
          for i in range(len(q))] + [" " * max_q] * (lines - len(q))
 
-    # TODO: check if line fits
     header_str = "-" * ceil((max_prog - len("[ Program ]")) / 2) + "[ Program ]" + "-" * floor((max_prog - len("[ Program ]")) / 2)
     header_str += "-" * max_arrow
     header_str += "-" * ceil((max_q - len("[ Queue ]")) / 2) + "[ Queue ]" + "-" * floor((max_q - len("[ Queue ]")) / 2)
     header_str += "-" * 4
     header_str += "-" * ceil((rs_length - len("[ Reservation Stations ]")) / 2) + "[ Reservation Stations ]" + "-" * floor((rs_length - len("[ Reservation Stations ]")) / 2)
+    if columns < len(header_str):
+        print(BOLD + RED + UNDERLINE + "Please increase the terminal width to at least " + str(len(header_str)) + " characters" + ENDC + "\n")
+        print_prog(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 1)
+        print_div(length=columns)
+        print_queue(front)
+        print_div(length=columns)
+        print_rs(engine)
+        return
     print(header_str + "-" * (columns - len(header_str)))
 
     print(" " * (max_prog + max_arrow + max_q + 4), end="")
