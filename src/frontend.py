@@ -49,9 +49,9 @@ class Frontend:
     pc: int
     bpu: bpu.BPU
 
-    def __init__(self, cpu_bpu: bpu.BPU, cpu_instr_list, maximum=5) -> None:
+    def __init__(self, cpu_bpu: bpu.BPU, cpu_instr_list, config: dict) -> None:
 
-        self.max_length = maximum
+        self.max_length = config["InstrQ"]["size"]
         self.current_length = 0
         self.pc = 0
         self.bpu = cpu_bpu

@@ -3,6 +3,7 @@ import unittest
 from src.cpu import CPU
 from src.instructions import InstrReg
 from src.word import Word
+from benedict import benedict as bd
 
 
 class CPUTests(unittest.TestCase):
@@ -14,7 +15,7 @@ class CPUTests(unittest.TestCase):
         # feature is to allow the user to step forward and backwards during the execution of their
         # program.
 
-        cpu = CPU()
+        cpu = CPU(bd.from_yaml('config.yml'))
 
         address = Word(Word.WIDTH // 2)
 
@@ -103,7 +104,7 @@ class CPUTests(unittest.TestCase):
         """
 
         # Create CPU
-        cpu = CPU()
+        cpu = CPU(bd.from_yaml('config.yml'))
 
         # Add `mul` instruction
         mul = InstrReg("mul", lambda a, b: Word(a.value * b.value), cycles=10)
@@ -113,18 +114,10 @@ class CPUTests(unittest.TestCase):
         cpu.load_program(code)
 
         # Execute program to the end
-        try:
-            while True:
-                cpu.tick()
-                # TODO: CPU should detect when its done on its own
-                if (
-                    all(slot is None for slot in cpu._exec_engine._slots)
-                    and cpu._frontend.get_instr_queue_size() == 0
-                ):
-                    break
-        except Exception as e:
-            if str(e) != "end of program reached by instruction queue":
-                raise
+        while True:
+            info = cpu.tick()
+            if not info.executing_program:
+                break
 
         # Check that the registers have the correct values
         target = (0, 1, 2, 3, 4, 5, 0x105, 1)
@@ -132,7 +125,7 @@ class CPUTests(unittest.TestCase):
 
     def test_immediate_snaprestore(self):
         """Test immediate snapshot/restore."""
-        cpu = CPU()
+        cpu = CPU(bd.from_yaml('config.yml'))
 
         # Create a program that sets r1 to 1
         code = """
@@ -158,7 +151,7 @@ class CPUTests(unittest.TestCase):
         """
 
         # Create CPU
-        cpu = CPU()
+        cpu = CPU(bd.from_yaml('config.yml'))
 
         # Load program
         cpu.load_program(code)

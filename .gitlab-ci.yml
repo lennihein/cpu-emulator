@@ -6,6 +6,7 @@ stages:
 
 before_script:
   - python3 -V  # Print out python version for debugging
+  - pip3 install -r requirements.txt
 
 linting:
   stage: linting
@@ -13,6 +14,6 @@ linting:
   script:
     - flake8 --ignore=E501,W503,F403,F405
 
-# test:
-#   script:
-#       - python3 -m unittest
+test:
+  script:
+      - python3 -m unittest

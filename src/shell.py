@@ -4,6 +4,7 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from os import system
 from math import ceil
 import sys
+from benedict import benedict
 
 from src.instructions import InstrReg
 from src.word import Word
@@ -13,12 +14,12 @@ from src.cpu import CPU, CPUStatus
 
 PROMPT = ui.BOW_ARROW_FILLED + " "
 
-session = PromptSession()
+session: PromptSession = PromptSession()
 
 
 funcs = {}
 completions = {}
-breakpoints = {}
+breakpoints: dict[int, bool] = {}
 
 
 def func(f):
@@ -40,7 +41,7 @@ def __show(input: list[str], cpu: CPU):
     '''
     if len(input) < 1:
         __not_found(input, cpu)
-        return
+        return cpu
     subcmd = input[0]
     if subcmd == 'mem':
         if len(input) == 2:
@@ -51,7 +52,7 @@ def __show(input: list[str], cpu: CPU):
                 ui.print_memory(cpu.get_mmu(), base=start)
             except ValueError:
                 print("Usage: show mem <start in hex> <words in hex>")
-                return
+                return cpu
         elif len(input) == 3:
             # check if both inputs are ints
             try:
@@ -63,7 +64,7 @@ def __show(input: list[str], cpu: CPU):
                 ui.print_memory(cpu.get_mmu(), base=start, lines=lines)
             except ValueError:
                 print("Usage: show mem <start in hex> <words in hex>")
-                return
+                return cpu
         else:
             ui.print_memory(cpu.get_mmu())
     elif subcmd == 'cache':
@@ -73,7 +74,7 @@ def __show(input: list[str], cpu: CPU):
     elif subcmd == 'queue':
         ui.print_queue(cpu.get_frontend())
     elif subcmd == 'rs':
-        ui.print_rs(cpu.get_exec_engine())
+        ui.print_rs(cpu.get_exec_engine(), cpu._config["UX"]["show_empty_slots"])
     elif subcmd == 'prog':
         ui.print_prog(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints)
     elif subcmd == 'bpu':
@@ -89,7 +90,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
     '''
     if len(input) < 1:
         __not_found(input, cpu)
-        return
+        return cpu
     subcmd = input[0]
     if subcmd == 'word':
         if len(input) == 3:
@@ -99,7 +100,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
                 cpu.get_mmu().edit_word(Word(addr), Word(val))
             except ValueError:
                 print("Usage: edit word <address in hex> <value in hex>")
-                return
+                return cpu
         else:
             print("Usage: edit word <address in hex> <value in hex>")
     elif subcmd == 'byte':
@@ -110,7 +111,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
                 cpu.get_mmu().edit_byte(Word(addr), Byte(val))
             except ValueError:
                 print("Usage: edit byte <address in hex> <value in hex>")
-                return
+                return cpu
         else:
             print("Usage: edit word <address in hex> <value in hex>")
     elif subcmd == 'flush':
@@ -122,7 +123,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
                 cpu.get_mmu().flush_line(Word(addr))
             except ValueError:
                 print("Usage: edit flush <address in hex>")
-                return
+                return cpu
         else:
             print("Usage: edit flush <address in hex>")
     elif subcmd == 'load':
@@ -132,7 +133,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
                 cpu.get_mmu()._load_line(Word(addr))
             except ValueError:
                 print("Usage: edit load <address in hex>")
-                return
+                return cpu
         else:
             print("Usage: edit load <address in hex>")
     elif subcmd == 'reg':
@@ -142,11 +143,11 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
                 val = int(input[2], base=16)
                 if reg > 31 or reg < 0:
                     print("No such register!")
-                    return
+                    return cpu
                 cpu.get_exec_engine()._registers[reg] = Word(val)
             except ValueError:
                 print("Usage: edit reg <register (0-31)> <value in hex>")
-                return
+                return cpu
         else:
             print("Usage: edit reg <register in decimal> <value in hex>")
     elif subcmd == 'bpu':
@@ -156,11 +157,11 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
                 val = int(input[2], base=10)
                 if val < 0 or val > 3:
                     print("Usage: edit bpu <pc in decimal> <value (0-3)>")
-                    return
+                    return cpu
                 cpu.get_bpu().set_counter(pc, val)
             except ValueError:
                 print("Usage: edit bpu <pc in dec> <value (0-3)>")
-                return
+                return cpu
         else:
             print("Usage: edit bpu <register in decimal> <value in hex>")
     else:
@@ -169,46 +170,53 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
 
 
 @func
-def __continue(input: list[str], cpu: CPU):
-    while True:
+def __continue(input: list[str], cpu: CPU) -> CPU:
+    return exec(cpu)
+
+
+@func
+def __step(input: list[str], cpu: CPU):
+    steps = 1
+    info: CPUStatus
+    if len(input) == 1:
+        try:
+            steps = int(input[0])
+        except ValueError:
+            print("Usage: step <steps>")
+            return cpu
+        if steps < 0:
+            cpu = cpu.restore_snapshot(cpu, steps)
+            if cpu is None:
+                print("Can't restore snapshot")
+                return cpu
+            steps = 0
+    return exec(cpu, steps)
+
+
+@func
+def __retire(input: list[str], cpu: CPU) -> CPU:
+    return exec(cpu, break_at_retire=True)
+
+
+def exec(cpu: CPU, steps=-1, break_at_retire=False) -> CPU:
+    i: int = 0
+    active_breakpoints = [i for i in breakpoints if breakpoints[i] is True]
+    while i != steps:
+        inflights_before = cpu.get_exec_engine().occupied_slots()
         info: CPUStatus = cpu.tick()
-        active_breakpoints = [i for i in breakpoints if breakpoints[i] is True]
+        if info.fault_info is not None:
+            print(ui.BOLD + ui.RED + f"FAULT at {info.fault_info.pc}: " + str(info.fault_info.instr) + ui.ENDC + "\n", end="")
+            break
         if set(active_breakpoints) & set(info.issued_instructions):
             ui.print_color(ui.RED, 'BREAKPOINT', newline=True)
             break
         if not info.executing_program:
             print("Program finished")
             break
-        if info.fault_info is not None:
-            print(ui.BOLD + ui.RED + f"FAULT at {info.fault_info.pc}: " + str(info.fault_info.instr) + ui.ENDC + "\n", end="")
+        if break_at_retire and len(info.issued_instructions) + cpu.get_exec_engine().occupied_slots() < inflights_before:
+            ui.print_color(ui.RED, 'RETIRE', newline=True)
             break
-    ui.all_headers(cpu, breakpoints)
-
-
-@func
-def __step(input: list[str], cpu: CPU):
-    steps = 1
-    info: CPUStatus = None
-    if len(input) == 1:
-        try:
-            steps = int(input[0])
-        except ValueError:
-            print("Usage: step <steps>")
-            return None
-        if steps < 0:
-            cpu = cpu.restore_snapshot(cpu, steps)
-            if cpu is None:
-                print("Can't restore snapshot")
-                return None
-            steps = 0
-    for _ in range(steps):
-        info: CPUStatus = cpu.tick()
-        if not info.executing_program:
-            print("Program finished")
-            break
-        if info.fault_info is not None:
-            print(ui.BOLD + ui.RED + f"FAULT at {info.fault_info.pc}: " + str(info.fault_info.instr) + ui.ENDC + "\n", end="")
-            break
+        i += 1
     ui.all_headers(cpu, breakpoints)
     return cpu
 
@@ -220,17 +228,17 @@ def __break(input: list[str], cpu: CPU):
     '''
     if len(input) < 1:
         __not_found(input, cpu)
-        return
+        return cpu
     subcmd = input[0]
     if subcmd == 'add':
         if len(input) < 2:
             print("Usage: break add <address in hex>")
-            return
+            return cpu
         try:
             addr = int(input[1], base=10)
             if addr in breakpoints:
                 print("Breakpoint already exists")
-                return
+                return cpu
             breakpoints[addr] = True
             print("Breakpoint added")
         except ValueError:
@@ -238,12 +246,12 @@ def __break(input: list[str], cpu: CPU):
     elif subcmd == 'delete':
         if len(input) < 2:
             print("Usage: break delete <address in hex>")
-            return
+            return cpu
         try:
             addr = int(input[1], base=10)
             if addr not in breakpoints:
                 print("Breakpoint does not exist")
-                return
+                return cpu
             breakpoints.pop(addr)
             print("Breakpoint deleted")
         except ValueError:
@@ -258,12 +266,12 @@ def __break(input: list[str], cpu: CPU):
     elif subcmd == 'toggle':
         if len(input) < 2:
             print("Usage: break toggle <address in hex>")
-            return
+            return cpu
         try:
             addr = int(input[1], base=10)
             if addr not in breakpoints:
                 print("Breakpoint does not exist")
-                return
+                return cpu
             breakpoints[addr] = not breakpoints[addr]
             print("Breakpoint toogled")
         except ValueError:
@@ -275,7 +283,7 @@ def __break(input: list[str], cpu: CPU):
 @func
 def __clear(input: list[str], cpu: CPU):
     system('clear')
-    return
+    return cpu
 
 
 @func
@@ -297,8 +305,13 @@ completer = NestedCompleter.from_nested_dict(completions)
 if __name__ == "__main__":
     # grab arguments
     args = sys.argv[1:]
+
+    # grab config file
+    path = 'config.yml'
+    config = benedict.from_yaml(path)
+
     # Create CPU
-    cpu = CPU()
+    cpu = CPU(config)
 
     # Add `mul` instruction for test programme
     mul = InstrReg("mul", lambda a, b: Word(a.value * b.value), cycles=10)
@@ -325,6 +338,7 @@ if __name__ == "__main__":
             text = '__' + text
             cmd = text.split()[0]
             params = text.split()[1:]
+            ui.get_terminal_size()
             fn = funcs.get(cmd, __not_found)
             n_cpu = fn(params, cpu)
             if n_cpu is not None:

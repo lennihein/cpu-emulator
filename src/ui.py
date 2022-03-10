@@ -41,10 +41,16 @@ BOX_ARROW_BIG_OUTLINE = "⇨"
 BOX_ARROW_PHAT = '🠊'
 
 # get terminal size
-try:
-    columns, rows = os.get_terminal_size(0)
-except OSError:
-    columns, rows = 120, 30
+columns: int = 120
+rows: int = 30
+
+
+def get_terminal_size():
+    global columns, rows
+    try:
+        columns, rows = os.get_terminal_size(0)
+    except OSError:
+        columns, rows = 120, 30
 
 
 # print colored text using ANSI escape sequences
@@ -127,10 +133,14 @@ def print_regs(engine: ExecutionEngine):
             print(" " if j != 0 else "", end="")
             print(BOLD + GREEN + "R" + str(i)
                   + (" : " if i < 10 else ": "), end="")
-            try:
-                print_hex(regs[i].value, p_end="", base_style=ENDC + FAINT)
-            except AttributeError:
-                print(ENDC + FAINT + "RS {:03}".format(regs[i]), end="")
+            val = regs[i]
+            if isinstance(val, Word):
+                print_hex(val.value, p_end="", base_style=ENDC + FAINT)
+            elif isinstance(val, int):
+                print(ENDC + FAINT + "RS {:03}".format(val) + ENDC, end="")
+            else:
+                print(BOLD + RED + "ERR", end="")
+                exit(1)
             print(" |" if j != fits - 1 else "\n", end="")
             i += 1
     print()
@@ -224,8 +234,8 @@ def prog_str(front: Frontend, engine: ExecutionEngine,
     return prog_str, line_lengths
 
 
-def print_rs(engine: ExecutionEngine) -> None:
-    strings, _ = rs_str(engine)
+def print_rs(engine: ExecutionEngine, show_rs_empty: bool) -> None:
+    strings, _ = rs_str(engine, show_empty=show_rs_empty)
     for line in strings:
         if line != "":
             print(line)
@@ -324,7 +334,7 @@ def header_regs(engine: ExecutionEngine):
     print()
 
 
-def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict):
+def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict, show_rs_empty: bool = True):
     # calculate prog start and end
     lowest_inflight = min([slot.pc for slot in engine.slots() if slot is not None], default=0)
     highest_inflight = max([slot.pc for slot in engine.slots() if slot is not None], default=len(front.instr_list))
@@ -332,7 +342,7 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict)
     prog, prog_lengths = prog_str(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 2)
     arrow = ["  ╭─► "] + ["  │   "] * (len(prog) - 2) + [" ─╯   "]
     q, q_lengths = queue_str(front)
-    rs, rs_length = rs_str(engine)
+    rs, rs_length = rs_str(engine, show_empty=show_rs_empty)
 
     lines = max(len(prog), len(q), len(rs) - 1)
 
@@ -346,12 +356,19 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict)
     q = [q[i] + " " * (max_q - q_lengths[i])
          for i in range(len(q))] + [" " * max_q] * (lines - len(q))
 
-    # TODO: check if line fits
     header_str = "-" * ceil((max_prog - len("[ Program ]")) / 2) + "[ Program ]" + "-" * floor((max_prog - len("[ Program ]")) / 2)
     header_str += "-" * max_arrow
     header_str += "-" * ceil((max_q - len("[ Queue ]")) / 2) + "[ Queue ]" + "-" * floor((max_q - len("[ Queue ]")) / 2)
     header_str += "-" * 4
     header_str += "-" * ceil((rs_length - len("[ Reservation Stations ]")) / 2) + "[ Reservation Stations ]" + "-" * floor((rs_length - len("[ Reservation Stations ]")) / 2)
+    if columns < len(header_str):
+        print(BOLD + RED + UNDERLINE + "Please increase the terminal width to at least " + str(len(header_str)) + " characters" + ENDC + "\n")
+        print_prog(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 1)
+        print_div(length=columns)
+        print_queue(front)
+        print_div(length=columns)
+        print_rs(engine, show_rs_empty=show_rs_empty)
+        return
     print(header_str + "-" * (columns - len(header_str)))
 
     print(" " * (max_prog + max_arrow + max_q + 4), end="")
@@ -388,4 +405,4 @@ def all_headers(cpu: CPU, breakpoints: dict):
     # header_info(cpu)
     header_regs(cpu.get_exec_engine())
     header_memory(cpu.get_mmu())
-    header_pipeline(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints)
+    header_pipeline(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints, cpu._config["UX"]["show_empty_slots"])

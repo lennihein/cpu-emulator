@@ -563,15 +563,16 @@ class ExecutionEngine:
     # Cycle counter, incremented on each tick
     _cyclecount: int
 
-    def __init__(self, mmu, regs=32, slots=8):
+    def __init__(self, mmu, config):
         """Create a new Reservation Station, with empty slots and zeroed registers."""
         self._mmu = mmu
+        rs_conf = config["ExecutionEngine"]
 
         # Initialize registers to zero
-        self._registers = [Word(0) for _ in range(regs)]
+        self._registers = [Word(0) for _ in range(rs_conf["regs"])]
 
         # Initialize slots to empty
-        self._slots = [None for _ in range(slots)]
+        self._slots = [None for _ in range(rs_conf["slots"])]
 
         # No instructions in flight
         self._faulting_inflight = set()
@@ -582,6 +583,10 @@ class ExecutionEngine:
     def slots(self) -> list[Optional[InflightInfo]]:
         """Return information about the slots of the Reservation Station."""
         return [(None if slot is None else InflightInfo.from_slot(slot)) for slot in self._slots]
+
+    def occupied_slots(self) -> int:
+        """Return the number of occupied slots in the Reservation Station."""
+        return sum(1 for slot in self._slots if slot is not None)
 
     def is_done(self) -> bool:
         """Return whether all slots of the Reservation Station are empty."""

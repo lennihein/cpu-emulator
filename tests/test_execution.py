@@ -5,6 +5,7 @@ from src.instructions import InstrReg
 from src.mmu import MMU
 from src.parser import Parser
 from src.word import Word
+from benedict import benedict as bd
 
 
 class ExecutionTest(TestCase):
@@ -55,7 +56,7 @@ class ExecutionTest(TestCase):
         # TODO: Use frontend, to be able to execute the loop
 
         # Create execution engine with MMU
-        exe = ExecutionEngine(MMU())
+        exe = ExecutionEngine(MMU(bd.from_yaml('config.yml')), bd.from_yaml('config.yml'))
 
         # Issue all instructions in the code
         for pc, instr in enumerate(p.parse(code)):
