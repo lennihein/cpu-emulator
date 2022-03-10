@@ -1,0 +1,33 @@
+BPU:
+    advanced: True
+    index_bits: 4
+    init_counter: 2
+
+Memory:
+    layout:
+    -   start: 0x0000
+        end: 0x7FFF
+        access: True
+    -   start: 0x8000
+        end: 0xFFFF
+        access: False
+
+Cache:
+    num_sets: 4
+    num_lines: 4
+    line_size: 4
+    replacement_policy: LRU
+    cache_hit_cycles: 2
+    cache_miss_cycles: 5
+    num_write_cycles: 5
+    num_fault_cycles: 8
+
+InstrQ:
+   size: 5
+
+ExecutionEngine:
+    slots: 8
+    regs: 32
+
+UX:
+    show_empty_slots: True

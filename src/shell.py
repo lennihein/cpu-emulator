@@ -4,6 +4,7 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from os import system
 from math import ceil
 import sys
+from benedict import benedict
 
 from src.instructions import InstrReg
 from src.word import Word
@@ -73,7 +74,7 @@ def __show(input: list[str], cpu: CPU):
     elif subcmd == 'queue':
         ui.print_queue(cpu.get_frontend())
     elif subcmd == 'rs':
-        ui.print_rs(cpu.get_exec_engine())
+        ui.print_rs(cpu.get_exec_engine(), cpu._config["UX"]["show_empty_slots"])
     elif subcmd == 'prog':
         ui.print_prog(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints)
     elif subcmd == 'bpu':
@@ -304,8 +305,13 @@ completer = NestedCompleter.from_nested_dict(completions)
 if __name__ == "__main__":
     # grab arguments
     args = sys.argv[1:]
+
+    # grab config file
+    path = 'config.yml'
+    config = benedict.from_yaml(path)
+
     # Create CPU
-    cpu = CPU()
+    cpu = CPU(config)
 
     # Add `mul` instruction for test programme
     mul = InstrReg("mul", lambda a, b: Word(a.value * b.value), cycles=10)

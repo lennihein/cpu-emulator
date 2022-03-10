@@ -6,6 +6,7 @@ stages:
 
 before_script:
   - python3 -V  # Print out python version for debugging
+  - pip3 install -r requirements.txt
 
 linting:
   stage: linting

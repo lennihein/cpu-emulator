@@ -2,6 +2,7 @@ import unittest
 from src.frontend import Frontend
 import logging
 import sys
+from benedict import benedict as bd
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
@@ -15,7 +16,7 @@ class FrontendTest(unittest.TestCase):
 
         # preparations for building a working frontend
         from src import bpu, parser, instructions
-        cpu_bpu = bpu.BPU()
+        cpu_bpu = bpu.BPU(bd.from_yaml('config.yml'))
         addi = instructions.all_instructions["addi"]
         beq = instructions.all_instructions["beq"]
         p = parser.Parser()
@@ -32,7 +33,8 @@ class FrontendTest(unittest.TestCase):
         cpu_bpu.update(2, True)
 
         # build frontend
-        front = Frontend(cpu_bpu, instrs, 3)
+        conf = {"InstrQ": {"size": 3}}
+        front = Frontend(cpu_bpu, instrs, conf)
 
         # check raised errors when queue is empty
         with self.assertRaises(Exception) as context:

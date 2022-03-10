@@ -234,8 +234,8 @@ def prog_str(front: Frontend, engine: ExecutionEngine,
     return prog_str, line_lengths
 
 
-def print_rs(engine: ExecutionEngine) -> None:
-    strings, _ = rs_str(engine)
+def print_rs(engine: ExecutionEngine, show_rs_empty: bool) -> None:
+    strings, _ = rs_str(engine, show_empty=show_rs_empty)
     for line in strings:
         if line != "":
             print(line)
@@ -334,7 +334,7 @@ def header_regs(engine: ExecutionEngine):
     print()
 
 
-def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict):
+def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict, show_rs_empty: bool = True):
     # calculate prog start and end
     lowest_inflight = min([slot.pc for slot in engine.slots() if slot is not None], default=0)
     highest_inflight = max([slot.pc for slot in engine.slots() if slot is not None], default=len(front.instr_list))
@@ -342,7 +342,7 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict)
     prog, prog_lengths = prog_str(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 2)
     arrow = ["  ╭─► "] + ["  │   "] * (len(prog) - 2) + [" ─╯   "]
     q, q_lengths = queue_str(front)
-    rs, rs_length = rs_str(engine)
+    rs, rs_length = rs_str(engine, show_empty=show_rs_empty)
 
     lines = max(len(prog), len(q), len(rs) - 1)
 
@@ -367,7 +367,7 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict)
         print_div(length=columns)
         print_queue(front)
         print_div(length=columns)
-        print_rs(engine)
+        print_rs(engine, show_empty=show_rs_empty)
         return
     print(header_str + "-" * (columns - len(header_str)))
 
@@ -405,4 +405,4 @@ def all_headers(cpu: CPU, breakpoints: dict):
     # header_info(cpu)
     header_regs(cpu.get_exec_engine())
     header_memory(cpu.get_mmu())
-    header_pipeline(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints)
+    header_pipeline(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints, cpu._config["UX"]["show_empty_slots"])

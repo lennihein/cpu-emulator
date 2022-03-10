@@ -2,6 +2,7 @@ from src.ui import *
 from src.word import Word
 from src.mmu import MMU
 from src.execution import ExecutionEngine
+from benedict import benedict as bd
 
 
 # # print current PC position
@@ -55,13 +56,13 @@ class UITest(TestCase):
 
     def test_registers(self):
         print()
-        mmu = MMU()
-        engine = ExecutionEngine(mmu)
+        mmu = MMU(bd.from_yaml('config.yml'))
+        engine = ExecutionEngine(mmu, bd.from_yaml('config.yml'))
         header_regs(engine)
 
     def test_cache(self):
         print()
-        mmu = MMU(mem_size=columns * 8, cache_config=(4, 4, 4))
+        mmu = MMU(bd.from_yaml('config.yml'), mem_size=columns * 8, cache_config=(4, 4, 4))
         from random import randrange
         for _ in range(50000):
             mmu.write_byte(

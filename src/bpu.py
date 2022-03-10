@@ -1,7 +1,7 @@
 class BPU:
-    def __init__(self, indexing_bits=4, init_counter=2) -> None:
-        self.indexing_bits = indexing_bits
-        self.counter = [init_counter] * (1 << indexing_bits)
+    def __init__(self, config) -> None:
+        self.indexing_bits = config["BPU"]["index_bits"]
+        self.counter = [(config["BPU"]["init_counter"])] * (1 << self.indexing_bits)
 
     def update(self, pc, taken: bool) -> None:
         self.counter[pc % (1 << self.indexing_bits)] = bimodal_update(
@@ -22,8 +22,11 @@ class BPU:
 
 
 class SimpleBPU:
-    def __init__(self, counter=2) -> None:
-        self.counter: int = counter
+    def __init__(self, config) -> None:
+        try:
+            self.counter: int = config["BPU"]["init_counter"]
+        except KeyError:
+            self.counter: int = 2
 
     def update(self, taken: bool) -> None:
         self.counter = bimodal_update(self.counter, taken)

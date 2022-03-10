@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 
-from .bpu import BPU
+from .bpu import BPU, SimpleBPU
 from .execution import ExecutionEngine, FaultInfo
 from .frontend import Frontend, InstrFrontendInfo
 from .instructions import InstrBranch, InstrFlush, InstrLoad, InstrStore
@@ -46,20 +46,27 @@ class CPU:
     _snapshots: list[CPU]
     _snapshot_index: int
 
-    def __init__(self):
+    _config: dict
+
+    def __init__(self, config):
+
+        self._config = config
 
         self._parser = Parser.from_default()
 
-        self._mmu = MMU()
+        self._mmu = MMU(config)
 
-        self._bpu = BPU()
+        if config["BPU"]["advanced"]:
+            self._bpu = BPU(config)
+        else:
+            self._bpu = SimpleBPU(config)
 
         # cannot initialize frontend without list of instructions
         # to execute
         self._frontend = None
 
         # Reservation stations
-        self._exec_engine = ExecutionEngine(self._mmu)
+        self._exec_engine = ExecutionEngine(self._mmu, config)
 
         # Snapshots
         self._snapshot_index = 0
@@ -75,9 +82,9 @@ class CPU:
         instructions = self._parser.parse(source)
 
         # Initialize frontend
-        self._frontend = Frontend(self._bpu, instructions)
+        self._frontend = Frontend(self._bpu, instructions, self._config)
         # Reset reservation stations?
-        self._exec_engine = ExecutionEngine(self._mmu)
+        self._exec_engine = ExecutionEngine(self._mmu, self._config)
 
         # take snapshot
         self._take_snapshot()
@@ -171,7 +178,7 @@ class CPU:
         """
         # Deepcopy already is insanely slow. Some classes
         # implement their own deepcoyp functions.
-        cpu_copy = CPU()
+        cpu_copy = CPU(self._config)
 
         # For the following classes, we use the default
         # deepcopy function.
@@ -185,6 +192,8 @@ class CPU:
 
         cpu_copy._snapshots = self._snapshots
         cpu_copy._snapshot_index = self._snapshot_index
+
+        cpu_copy._config = self._config
 
         return cpu_copy
 

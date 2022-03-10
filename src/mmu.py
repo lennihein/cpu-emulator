@@ -44,6 +44,7 @@ class MMU:
 
     def __init__(
         self,
+        config: dict = None,
         mem_size: int = 1 << Word.WIDTH,
         cache_hit_cycles: int = 2,
         cache_miss_cycles: int = 5,

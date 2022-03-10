@@ -3,6 +3,7 @@ import unittest
 from src.cpu import CPU
 from src.instructions import InstrReg
 from src.word import Word
+from benedict import benedict as bd
 
 
 class CPUTests(unittest.TestCase):
@@ -14,7 +15,7 @@ class CPUTests(unittest.TestCase):
         # feature is to allow the user to step forward and backwards during the execution of their
         # program.
 
-        cpu = CPU()
+        cpu = CPU(bd.from_yaml('config.yml'))
 
         address = Word(Word.WIDTH // 2)
 
@@ -103,7 +104,7 @@ class CPUTests(unittest.TestCase):
         """
 
         # Create CPU
-        cpu = CPU()
+        cpu = CPU(bd.from_yaml('config.yml'))
 
         # Add `mul` instruction
         mul = InstrReg("mul", lambda a, b: Word(a.value * b.value), cycles=10)
@@ -124,7 +125,7 @@ class CPUTests(unittest.TestCase):
 
     def test_immediate_snaprestore(self):
         """Test immediate snapshot/restore."""
-        cpu = CPU()
+        cpu = CPU(bd.from_yaml('config.yml'))
 
         # Create a program that sets r1 to 1
         code = """
@@ -150,7 +151,7 @@ class CPUTests(unittest.TestCase):
         """
 
         # Create CPU
-        cpu = CPU()
+        cpu = CPU(bd.from_yaml('config.yml'))
 
         # Load program
         cpu.load_program(code)
