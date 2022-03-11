@@ -71,7 +71,7 @@
         suggested literature:
             todo
             
-## Our Emulator Program/ backend (17-18 pages)
+## CPU emulator/ backend (17-18 pages)
 
     maybe general info e.g. that we wrote it in python, if we used special tools/ libraries
     for everything we implemented:
@@ -98,25 +98,27 @@
             
             coordinate rollbacks?
             
-        #### program handling
+        #### Instructions and Parser
         
             instructions
             
             parser
             
-        #### data handling
+        #### Data representation
         
             how we model and handle data
             
             byte, word
             
-        #### scheduling
+        #### CPU frontend
         
-            BPU
+            Branch Prediction Unit (BPU)
             
-            frontend
+            Instruction Queue
         
         #### memory
+        
+            no virtuel adresses
         
             mmu
             
@@ -130,21 +132,21 @@
                 
                 how do we model if something is cached and the access times (i.p. wrt Meltdown)
             
-        #### execution
+        #### Execution Engine
         
             Reservation Station/ Slots
             
             unlimited execution units
     
-    ### Tomasulo (2 pages)
+    ### Out of Order Execution (2 pages)
         
-        our version of out-of-order execution
+        our version of out-of-order execution/ Tomasulo
     
         where in our program do we implement which components
         
         what did we leave out/ do differently
         
-    ### Rollbacks/ Exception handling (2-3 pages)
+    ### Exceptions and Rollbacks (2-3 pages)
         
             in particular wrt making Meltdown possible
             
@@ -255,5 +257,6 @@
     
     further work
         more (detailed/ realistic) functionality for more Meltdown and Spectre variants
+            more elaborate BPU with btb (and ghr) for more spectre variants
         more mitigations
         maybe nice to haves wrt to the visualisation/ general UI functionality/ ISA?
