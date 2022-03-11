@@ -61,7 +61,7 @@ class Frontend:
     def add_instructions_to_queue(self) -> None:
         '''
         Fills the queue with the InstrFrontendInfo objects
-        for th next instructions from the instruction list, as indicated by the pc.
+        for the next instructions from the instruction list, as indicated by the pc.
 
         Only adds an instruction, if max_langth is not yet reached
         and the pc does not exceed the number of instructions in the instr_list.
