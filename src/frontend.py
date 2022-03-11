@@ -40,7 +40,7 @@ class Frontend:
     An exception to this max length is made when adding micro programs.
     Expects an already initialised bpu (e.g. shallow copy of the bpu from a surrounding cpu class)
     and a list of instructions (e.g. as provided by the Parser in paser.py) upon initilisation.
-    Max_length can be initialised, too, otherwise a default of 5 is used.
+    Max_length is determined in the config file.
     Uses a program counter pc to keep track of
     the next instruction from the provided instruction list that should be added to the queue.
     '''
