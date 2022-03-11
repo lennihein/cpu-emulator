@@ -70,13 +70,13 @@ def __show(input: list[str], cpu: CPU):
     elif subcmd == 'cache':
         ui.print_cache(cpu.get_mmu())
     elif subcmd == 'regs':
-        ui.print_regs(cpu.get_exec_engine())
+        ui.print_regs(cpu.get_exec_engine(), reg_capitalisation=cpu._config["UX"]["reg_capitalisation"])
     elif subcmd == 'queue':
-        ui.print_queue(cpu.get_frontend())
+        ui.print_queue(cpu.get_frontend(), reg_capitalisation=cpu._config["UX"]["reg_capitalisation"])
     elif subcmd == 'rs':
-        ui.print_rs(cpu.get_exec_engine(), cpu._config["UX"]["show_empty_slots"])
+        ui.print_rs(cpu.get_exec_engine(), cpu._config["UX"]["show_empty_slots"], reg_capitalisation=cpu._config["UX"]["reg_capitalisation"])
     elif subcmd == 'prog':
-        ui.print_prog(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints)
+        ui.print_prog(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints, reg_capitalisation=cpu._config["UX"]["reg_capitalisation"])
     elif subcmd == 'bpu':
         ui.print_bpu(cpu.get_bpu())
     else:
