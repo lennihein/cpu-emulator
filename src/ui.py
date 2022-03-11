@@ -6,7 +6,7 @@ from src.execution import ExecutionEngine
 from math import ceil, floor
 from src.word import Word
 from src.cpu import CPU
-from src.instructions import Instruction
+from src.instructions import Instruction, InstrReg, InstrImm, InstrLoad, InstrStore, InstrFlush, InstrCyclecount, InstrBranch, InstrFence
 
 HEADER = '\033[95m'
 BLUE = '\033[94m'
@@ -122,17 +122,18 @@ def print_memory(mmu: MMU, lines=8, base=0x0000):
         print()
 
 
-def print_regs(engine: ExecutionEngine):
+def print_regs(engine: ExecutionEngine, reg_capitalisation: bool = False):
     regs = engine._registers
     fits = (columns + 3) // 14
     lines = ceil(len(regs) / fits)
     i = 0
+    reg_symbol = "R" if reg_capitalisation else "r"
     for _ in range(lines):
         for j in range(fits):
             if i >= 32:
                 break
             print(" " if j != 0 else "", end="")
-            print(BOLD + GREEN + "R" + str(i)
+            print(BOLD + GREEN + reg_symbol + str(i)
                   + (" : " if i < 10 else ": "), end="")
             val = regs[i]
             if isinstance(val, Word):
@@ -164,40 +165,71 @@ def print_cache(mmu: MMU) -> None:
         print('')
 
 
-def instruction_str(instr: Instruction) -> tuple[str, int]:
-    instr_str = YELLOW + instr.ty.name + ENDC
-    instr_str += " " * (6 - len(instr.ty.name))
-    op_str = ", ".join(
-        [hex_str((Word(op).value), p_end="", fixed_width=False) for op in instr.ops])
-    length = 6 + sum([len(hex(Word(op).value)) for op in instr.ops]) + \
-        len(instr.ops) * 2 - 2 if len(instr.ops) > 0 else 6
+def instruction_str(instr: Instruction, reg_capitalisation: bool = False) -> tuple[str, int]:
+    instr_str = f"{YELLOW}{instr.ty.name}{ENDC}{' ' * (6 - len(instr.ty.name))}"
+    length = 6
+    op_str = ""
+
+    reg_symbol = "R" if reg_capitalisation else "r"
+
+    if isinstance(instr.ty, InstrReg):
+        for index, op in enumerate(instr.ops):
+            op_str += f"{reg_symbol}{op}"
+            length += 1 + len(str(op))
+            if index != len(instr.ops) - 1:
+                op_str += ", "
+                length += 2
+
+    elif isinstance(instr.ty, (InstrStore, InstrLoad, InstrImm, InstrFlush, InstrCyclecount, InstrFence)):
+        for index, op in enumerate(instr.ops):
+            if index == len(instr.ops) - 1:
+                op_str += hex_str(Word(op).value, p_end="", fixed_width=False)
+                length += len(hex(Word(op).value))
+            else:
+                op_str += f"{reg_symbol}{op}, "
+                length += 3 + len(str(op))
+
+    elif isinstance(instr.ty, InstrBranch):
+        for index, op in enumerate(instr.ops):
+            if index == len(instr.ops) - 1:
+                op_str += str(abs(op))
+                length += len(str(abs(op)))
+            else:
+                op_str += f"{reg_symbol}{op}"
+                op_str += ", "
+                length += 3 + len(str(op))
+
+    else:
+        print(f"{RED + BOLD}Unknown instruction type: {instr.ty}{ENDC}")
+        exit(1)
+
     return instr_str + op_str, length
 
 
-def print_queue(queue: Frontend):
-    q_str, _ = queue_str(queue)
+def print_queue(queue: Frontend, reg_capitalisation: bool = False):
+    q_str, _ = queue_str(queue, reg_capitalisation)
     for line in q_str:
         print(line)
 
 
-def queue_str(queue: Frontend) -> tuple[list[str], list[int]]:
+def queue_str(queue: Frontend, reg_capitalisation: bool = False) -> tuple[list[str], list[int]]:
     q_str: list[str] = [""] * len(queue.instr_queue)
     q_lengths: list[int] = [0] * len(queue.instr_queue)
     for index, item in enumerate(queue.instr_queue):
         instr = item.instr
-        q_str[index], q_lengths[index] = instruction_str(instr)
+        q_str[index], q_lengths[index] = instruction_str(instr, reg_capitalisation)
     return q_str, q_lengths
 
 
 def print_prog(front: Frontend, engine: ExecutionEngine,
-               breakpoints: dict, start=0, end=-1):
-    prog, _ = prog_str(front, engine, breakpoints, start, end)
+               breakpoints: dict, start=0, end=-1, reg_capitalisation: bool = False):
+    prog, _ = prog_str(front, engine, breakpoints, start, end, reg_capitalisation)
     for line in prog:
         print(line)
 
 
 def prog_str(front: Frontend, engine: ExecutionEngine,
-             breakpoints: dict, start=0, end=-1) -> tuple[list[str], list[int]]:
+             breakpoints: dict, start=0, end=-1, reg_capitalisation: bool = False) -> tuple[list[str], list[int]]:
     start = 0 if start < 0 else start
     end = len(front.instr_list) if end == -1 else end
     end = min(end, len(front.instr_list))
@@ -229,20 +261,20 @@ def prog_str(front: Frontend, engine: ExecutionEngine,
         line_lengths[index] = 5 if end < 100 else 6
 
         instr = front.instr_list[line]
-        instr_part, length = instruction_str(instr)
+        instr_part, length = instruction_str(instr, reg_capitalisation)
         prog_str[index] += instr_part
         line_lengths[index] += length
     return prog_str, line_lengths
 
 
-def print_rs(engine: ExecutionEngine, show_rs_empty: bool) -> None:
-    strings, _ = rs_str(engine, show_empty=show_rs_empty)
+def print_rs(engine: ExecutionEngine, show_rs_empty: bool, reg_capitalisation: bool = False) -> None:
+    strings, _ = rs_str(engine, show_empty=show_rs_empty, reg_capitalisation=reg_capitalisation)
     for line in strings:
         if line != "":
             print(line)
 
 
-def rs_str(engine: ExecutionEngine, show_empty=True) -> tuple[list[str], int]:
+def rs_str(engine: ExecutionEngine, show_empty=True, reg_capitalisation: bool = False) -> tuple[list[str], int]:
 
     rs_length: int
 
@@ -262,7 +294,7 @@ def rs_str(engine: ExecutionEngine, show_empty=True) -> tuple[list[str], int]:
             instr_lengths += [0]
             continue
 
-        instr_str, instr_length = instruction_str(slot.instr)
+        instr_str, instr_length = instruction_str(slot.instr, reg_capitalisation)
         instructions.append(instr_str)
 
         pcs.append(str(slot.pc))
@@ -329,22 +361,22 @@ def header_memory(mmu: MMU):
     print()
 
 
-def header_regs(engine: ExecutionEngine):
+def header_regs(engine: ExecutionEngine, reg_capitalisation: bool = False):
     print_header("Registers", BOLD + CYAN + ENDC)
     print()
-    print_regs(engine)
+    print_regs(engine, reg_capitalisation)
     print()
 
 
-def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict, show_rs_empty: bool = True):
+def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict, show_rs_empty: bool = True, reg_capitalisation: bool = False):
     # calculate prog start and end
     lowest_inflight = min([slot.pc for slot in engine.slots() if slot is not None], default=0)
     highest_inflight = max([slot.pc for slot in engine.slots() if slot is not None], default=len(front.instr_list))
 
-    prog, prog_lengths = prog_str(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 2)
+    prog, prog_lengths = prog_str(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 2, reg_capitalisation=reg_capitalisation)
     arrow = ["  ╭─► "] + ["  │   "] * (len(prog) - 2) + [" ─╯   "]
-    q, q_lengths = queue_str(front)
-    rs, rs_length = rs_str(engine, show_empty=show_rs_empty)
+    q, q_lengths = queue_str(front, reg_capitalisation=reg_capitalisation)
+    rs, rs_length = rs_str(engine, show_empty=show_rs_empty, reg_capitalisation=reg_capitalisation)
 
     lines = max(len(prog), len(q), len(rs) - 1)
 
@@ -397,7 +429,7 @@ def header_info(cpu: CPU):
     print()
 
 
-def header_rs(engine: ExecutionEngine):
+def header_rs(engine: ExecutionEngine, reg_capitalisation: bool = False):
     print_header("Reservation Stations", BOLD + CYAN + ENDC)
     print()
     print_rs(engine)
@@ -405,7 +437,6 @@ def header_rs(engine: ExecutionEngine):
 
 
 def all_headers(cpu: CPU, breakpoints: dict):
-    # header_info(cpu)
-    header_regs(cpu.get_exec_engine())
+    header_regs(cpu.get_exec_engine(), cpu._config["UX"]["reg_capitalisation"])
     header_memory(cpu.get_mmu())
-    header_pipeline(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints, cpu._config["UX"]["show_empty_slots"])
+    header_pipeline(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints, cpu._config["UX"]["show_empty_slots"], cpu._config["UX"]["reg_capitalisation"])

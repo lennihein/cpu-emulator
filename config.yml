@@ -24,3 +24,4 @@ ExecutionEngine:
 
 UX:
     show_empty_slots: True
+    reg_capitalisation: True
