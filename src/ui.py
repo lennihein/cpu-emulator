@@ -104,6 +104,7 @@ def hex_str(num: int, p_end=" ", base=True, fixed_width=True,
 
 def print_memory(mmu: MMU, lines=8, base=0x0000):
     fits = (columns - 8) // 5
+    fits = fits - (fits % 8)
     i = base
     for _ in range(lines):
         if i >= mmu.mem_size:
