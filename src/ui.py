@@ -275,8 +275,9 @@ def rs_str(engine: ExecutionEngine, show_empty=True) -> tuple[list[str], int]:
     max_pc_length = max([len(pc) for pc in pcs]) if pcs else 0
     max_index_length = max([len(index) for index in indices]) if indices else 0
 
-    if max_index_length == 0 and max_pc_length == 0 and max_instr_length == 0:
-        return [""], 0
+    max_instr_length = max(max_instr_length, 10)
+    max_pc_length = max(max_pc_length, 1)
+    max_index_length = max(max_index_length, 1)
 
     rs_length = max_instr_length + max_pc_length + 1 + 3 + 3 + 4
     if not show_empty:
@@ -362,6 +363,7 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict,
     header_str += "-" * ceil((max_q - len("[ Queue ]")) / 2) + "[ Queue ]" + "-" * floor((max_q - len("[ Queue ]")) / 2)
     header_str += "-" * 4
     header_str += "-" * ceil((rs_length - len("[ Reservation Stations ]")) / 2) + "[ Reservation Stations ]" + "-" * floor((rs_length - len("[ Reservation Stations ]")) / 2)
+
     if columns < len(header_str):
         print(BOLD + RED + UNDERLINE + "Please increase the terminal width to at least " + str(len(header_str)) + " characters" + ENDC + "\n")
         print_prog(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 1)
@@ -381,7 +383,7 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict,
             print(arrow[i], end="") if len(front.instr_queue) else print(" " * max_arrow, end="")
         if i < len(q):
             print(q[i], end="")
-        print("    ", end="") if i != lines // 2 or rs_length == 0 else print(" " + "─►" + " ", end="")
+        print("    ", end="") if i != (len(rs) - 2) // 2 - 1 else print(" " + "─►" + " ", end="")
         if i < len(rs) - 1:
             print(rs[i + 1], end="")
         print("")
