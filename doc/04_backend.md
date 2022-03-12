@@ -21,8 +21,9 @@ Lastly we show how our emulator can be adapted for different demonstrations and 
 todo
 
 ### CPU {#sec:CPU}
+The primary purpose of the CPU module is to allow all other components to work together. That is, the CPU initializes all other components and provides interfaces to their functions, which allows the GUI to visualize the current state. In addition, the CPU provides functions which load user programs and a tick function that is called each cycle and does the following: instructions from the instruction queue are fetched from the frontend and forwarded to the execution engine, until either no more slots in the unified reservation station are available, or the instruction queue is empty. It then calls the tick function of the execution engine. In case of a rollback, the instruction queue maintained by the frontend is flushed. If the rollback was caused by a faulting load instruction, execution is resumed at the next instruction (as described in [@sec:rollback]). In case a branch was mispredicted, the frontend is notified and refills the instruction queue accordingly. If configured, corresponding microprograms are sent to the instruction queue. Lastly, a snapshot of the current state of the CPU is taken.
 
-todo
+The second purpose of the CPU is to provide the snapshot functionality which allows a user of the emulator to step back to previous cycles. The snapshot list is simply a list which grows at each cycle, where each entry is a deep copy of the CPU instance. However, this would imply that each snapshot maintains a full list of snapshots, where each entry contains a list of snapshots, and so on. To combat this, there is only a single global list of snapshots, and each snapshot entry maintains a reference and an index to its own entry. As a result, the default deep copy function is adjusted accordingly. Due to the low complexity of the programs we expect users to run, at the moment, no maximum number of available snapshots is configured.
 
 ### Instructions and Parser {#sec:parser}
 
