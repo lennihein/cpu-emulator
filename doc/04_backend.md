@@ -149,6 +149,8 @@ todo
 
 ## Out of Order Execution (2 pages) {#sec:Tomasulo}
 
+<!--no implicit register renaming by assigning macro- to µ-registers` -->
+
 todo
 
 ## Exceptions and Rollbacks (2-3 pages) {#sec:rollback}
@@ -156,9 +158,185 @@ todo
 todo
 
 ## ISA (2 pages) {#sec:ISA}
+<!--
+todo: decideshould we move this subchapter to the frontend?
+    general concept fits nicely into the backend
+    ISA itself is more of a manual
+-->
 
-todo
+Real life Intel x86 CPUs differenciate between two types of instructions or operations. 
+Macro-operations refer to the relatively easily human readable and convenient but complex instructions that are described by the x86 ISA.
+Their length differs between the instructions.
+Internally, in the execution units, the CPU works on µ-operations, which are small operations of a fixed length.
+One macro-operation contains one or multiple µ-operations.
+The CPU frontend has to decode the macro-operations into µ-operations in an expensive multi step process.
+sources: [@skylake], https://en.wikichip.org/wiki/macro-operation, https://en.wikichip.org/wiki/micro-operation
+<!--todo: get a better source. Intel directly? Gruss habille? -->
+<!--
+    erstmal weg lassen und auf x86 konzentrieren, weil die das aus der VL kennen
+RISC V: pseudo- and base instructions
+pseudo instructions: can encapsulate more than one base instruction or can be a convenient ... for a base instruction where one or more operand is fixed (e.g. nop -> addi x0, x0, 0, mv rd, rs -> addi rd, rs, 0) (source: RISC V ISA Doc)
+    in RISC V also directly use base instructions? not really the same?
+-->
+
+Our CPU emulator only uses one type of instructions.
+They are directly read from our assembler code by the parser and passed to the execution engine without further decoding, splitting or replacing [@sec:parser], [@sec:CPU_frontend].
+To show basic Meltdown and Spectre variants, we do not need overly complex instructions, e.g. instructions that contain multiple memory accesses in one or that are used to perform encryption in hardware [ref_evaluation_meltdown], [ref_evaluation_spectre].
+Basic arithmetic operations, memory accesses, branches and a few special operations are sufficient for the demonstrated attacks and are both easy to implement as single instructions and to use in assembler code that should be well understood by the author. 
+Using the same operations throughout the emulator also makes the visualization more clear and easier to follow, e.g. when the same operations appear, one after the other, in the visualization of the assembler code, the instruction queue and the reservation stations [ref_ui].
+<!--todo: am Endeeinzelne UI Komponenten referenzieren -->
+<!--todo: Formulierungen überarbeiten -->
+
+### Default Instruction Set {#sec:Instructions} 
+
+In order that our CPU emulator can recognize and work with an instruction, it has to be registered with the parser [@sec:parser].
+<!--todo: maybe adjust time they need to execute/ in MMU -> maybe sufficiently summarized by "register with the parser" -->
+In our default setting default, we register a basic set of instructions with the parser so students can start writing assembler code and using the emulator right away.
+This basic instruction set is also used in our example programs in [ref_UI].
+
+Our relatively small instruction set is based on a subset of the RISC-V ISA.
+It offers a selection of instructions that is sufficient to implement Meltdown and Spectre attacks as well as other small assembler programs while still being of a manageable size so students can start to write assembler code quickly without spending much time to get to  know our ISA.
+<!--todo: add this? (still turing complete, vgl. vllt. TI-Folien wegen konkreter min. Instruktionssets...) -->
+The syntax of the assembler representation is also based on RISC-V (as introduced in the "RISC-V Assembly Programmer’s Handbook" chapter of the RISC-V ISA) [ref_RISC-V]. 
+If needed, students can add further instructions by registering them with the parser [@sec:parser].
+
+In the following subchapters we introduce the instructions of our default ISA.
+They are grouped according to their respective instruction type in the emulator except for the special instructions which are grouped together [@sec:parser].
+
+<!--
+try inline LAtex and the option to place tables "here"
+if that does not work, maybe table descritions? but that would be a bad formatting choice
+-->
+
+#### Arithmetic and Logical Instructions without Immediate
+
+These are basic arithmetic and logical instructions that operate solely on register values, i.e. both source operands and the distination operand reference registers.
+For simplicity, we write for example Reg1 when referring to the value read from or stored in the register referenced by the first register operand.
+
+Each of these default operations uses the respective python standard operator on our Word class to compute the result, except for the right shifts.
+For the logical and the arithmetic right shift, the python standard right shift operator is used on the unsigned and the signed version of the register value respectively.
+When returning the result as a Word, it is truncated to the maximal word langth by a modulo operation, if necessary.
+This means, that any potential carry bits or overflow are effectively ignored.
+<!--
+    weg lassen, eh schon wieder sehr lang:
+    no explicit NOP, but in RISC V: NOP is encoded as ADDI x0, x0, 0
+        if needed, can do something similar manually
+-->
+<!--
+(arithmetic) flags:
+same as RISC V: branch and comparison function in one -> can be easily implemented, is easier for the students than splitting this into a comparison and a branch instruction, no real influence on Meltdown and SPectre
+no need for flags (RISC V: does not seem to use flags for normal arithmetic instr (carry, zero etc.), only for exceptions, memory accesses -> leave out)
+-> do I even mention this?
+-->
+
+\begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
+\centering
+\h! %position the table here and override internal latex parameters for nice positioning
+\hline
+\multicolumn{3}{|c|}{Arithmetic and Logical Instructions without Immediate} \\
+\hline
+Instr. Name&Operators&Description\\
+\hline
+add &Reg1, Reg2, Reg3&   Reg1 $:=$ Reg2 $+$ Reg3\\
+sub& Reg1, Reg2, Reg3   & Reg1 $:=$ Reg2 $-$ Reg3\\
+sll& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 $<<$ Reg3\\
+srl& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 $>>$ Reg3 logical\\
+sra  & Reg1, Reg2, Reg3& Reg1 $:=$ Reg2 $>>$ Reg3 arithmetical\\
+xor& Reg1, Reg2, Reg3 &  Reg1 $:=$ Reg2 xor Reg3\\
+or& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 or Reg3\\
+and& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 and Reg3\\
+\hline
+\end{tabular} 
+
+
+ALU with I
+    same as ALU without I, just that one of the source operands is an immediate value (range: Word size, at least according to the result function InstrImm expects) set/ determined in the assembler code
+
+Memory Instructions
+    basic memory interactions
+    load and stores both word-wise for convenience and byte-wise for the fine granular (?wording?) access needed in micro architectural attacks
+    flush flushes (sets data and tag (if no data at tag left) to none) a cacheline
+    for more detailed information about how these affect the memory and especially the cache, look at the backend.memory subchapter
+    address calculation always the same:
+        addr = Reg + immediate
+        one acts as base, the other as offset
+            why this way around? fixed base and variable offset seem more logical
+            ask Jan-Niklas, maybe different logic or real life model
+
+Branch Instructions
+    same basic structure: comparison on 2 registers
+        if evaluates to true: resume execution at a predefined label in the program
+        if fales: next instruction
+    labels are automatically resolved by the parser (reference parser)
+    multiple options for the condition, so students can choose what suits them best
+    again address calculation always the same:
+
+Special Instructions
+    rdtsc important if one wants to try CBSCA without just looking at the
+        memory visualization
+        basic timing instruction
+        cyclecount: number of executed execution unit ticks (ref. execution unit)
+            all the ticks or reset when the instruction is called? -> look into code
+    fence can be used for a sort of mitigation
+        compare to mfence, lfence etc. in x86
+        all instr in the EU unit at the point of issueing the fence are ex- ecuted before the fence ist executed; no new instructions are issued before the fence is executed
+
+ggf. auf Cheat Sheet im Anhang verweisen
+    maybe put information like address calculation in table description so everyone has all the information
+adjust cheat sheet and table snippets so the wording is nice and the table is as non-redundant as possible
+    
+\begin{tabular}{ |p{2cm}||p{2cm}|p{3cm}|p{5cm}|  }
+\hline
+\multicolumn{4}{|c|}{Instructions} \\
+\hline %hier weiter
+Instr. Kind&Instr. Name&Operators&Description\\
+\hline
+\multirow{8}{2cm}{ALU Instructions without Immediate} & add &Reg1, Reg2, Reg3&   Reg1 $:=$ Reg2 $+$ Reg3\\
+&sub& Reg1, Reg2, Reg3   & Reg1 $:=$ Reg2 $-$ Reg3\\
+&sll& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 $<<$ Reg3\\
+&srl& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 $>>$ Reg3 logical (fill space with 0)\\
+&sra  & Reg1, Reg2, Reg3& Reg1 $:=$ Reg2 $>>$ Reg3 arithmetical (fill space with sign bit)\\
+&xor& Reg1, Reg2, Reg3 &  Reg1 $:=$ Reg2 xor Reg3\\
+&or& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 or Reg3\\
+&and& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 and Reg3\\
+\hline
+\multirow{8}{2cm}{ALU Instructions with Immediate} & addi &Reg1, Reg2, Imm&  Reg1 $:=$ Reg2 $+$ Imm\\
+&subi& Reg1, Reg2, Imm   & Reg1 $:=$ Reg2 $-$ Imm\\
+&slli& Reg1, Reg2, Imm&  Reg1 $:=$ Reg2 $<<$ Imm\\
+&srli& Reg1, Reg2, Imm&  Reg1 $:=$ Reg2 $>>$ Imm logical (fill space with 0)\\
+&srai  & Reg1, Reg2, Imm&Reg1 $:=$ Reg2 $>>$ Imm arithmetical (fill space with sign bit)\\
+&xori& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 xor Imm\\
+&ori& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 or Imm\\
+&andi& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 and Imm\\
+\hline
+%sources 1, 2 destination 0
+\multirow{5}{2cm}{Memory Instructions} & lw &Reg1, Reg2, Imm&addr$:=$Reg2(base)$+$Imm(offset), Reg1$:=$(Mem\_word[addr])\\
+&lb& Reg1, Reg2, Imm   &addr$:=$Reg2(base)$+$Imm(offset), Reg1$:=$(Mem\_byte[addr])\\
+&sw& Reg1, Reg2, Imm  &addr$:=$Reg2(base)$+$Imm(offset), Mem\_word[addr]$:=$Reg1\\
+&sb& Reg1, Reg2, Imm  &addr$:=$Reg2(base)$+$Imm(offset), Mem\_byte[addr]$:=$Reg1\\
+%sources 0,1
+&flush  & Reg, Imm&addr$:=$Reg(base)$+$Imm(offset), flush\_cashline(adr)\\
+\hline
+%source 0, 1, 2
+\multirow{8}{2cm}{Branch Instructions} & beq &Reg1, Reg2, Label& pc$:=$Label if Reg1$==$Reg2, else pc$+=$1\\
+&bne& Reg1, Reg2, Label&pc$:=$Label if Reg1$!=$Reg2\\
+&bltu& Reg1, Reg2, Label&  pc$:=$Label if u(Reg1)$<$u(Reg2)\\
+&bleu& Reg1, Reg2, Label&  pc$:=$Label if u(Reg1)$<=$u(Reg2)\\
+&bgtu  & Reg1, Reg2, Label&pc$:=$Label if u(Reg1)$>$u(Reg2)\\
+&bgeu& Reg1, Reg2, Label&pc$:=$Label if u(Reg1)$>=$u(Reg2)\\
+&blts& Reg1, Reg2, Label&pc$:=$Label if s(Reg1)$<$s(Reg2)\\
+&bles& Reg1, Reg2, Label&pc$:=$Label if s(Reg1)$<=$s(Reg2)\\
+&bgts& Reg1, Reg2, Label&pc$:=$Label if s(Reg1)$>$s(Reg2)\\
+&bges& Reg1, Reg2, Label&pc$:=$Label if s(Reg1)$>=$s(Reg2)\\
+\hline
+\multirow{2}{2cm}{Special Instructions} & rdtsc &Reg& Reg$:=$cyclecount(number of executed execution unit ticks)\\
+&fence&none&all instr in the EU unit at the point of issueing the fence are executed before the fence ist executed; no new instructions are issued before the fence is executed\\
+\hline
+\end{tabular} 
+
 
 ## Config Files (1 page) {#sec:config}
+<!--todo: should we move this to the frontend? more like a manual? -->
+
 
 todo
