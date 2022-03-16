@@ -187,7 +187,7 @@ Using the same operations throughout the emulator also makes the visualization m
 <!--todo: am Endeeinzelne UI Komponenten referenzieren -->
 <!--todo: Formulierungen überarbeiten -->
 
-### Default Instruction Set {#sec:Instructions} 
+### Default Instruction Set {#sec:default_instr} 
 
 In order that our CPU emulator can recognize and work with an instruction, it has to be registered with the parser [@sec:parser].
 <!--todo: maybe adjust time they need to execute/ in MMU -> maybe sufficiently summarized by "register with the parser" -->
@@ -203,20 +203,22 @@ If needed, students can add further instructions by registering them with the pa
 In the following subchapters we introduce the instructions of our default ISA.
 They are grouped according to their respective instruction type in the emulator except for the special instructions which are grouped together [@sec:parser].
 
+<!--todo: hier der Vollständigkeit halber einfügen, dass unser Parser Kommentare kann? -->
+
 <!--
 try inline LAtex and the option to place tables "here"
 if that does not work, maybe table descritions? but that would be a bad formatting choice
 -->
 
-#### Arithmetic and Logical Instructions without Immediate
+#### Arithmetic and Logical Instructions without Immediate {#sec:instr_alu}
 
-These are basic arithmetic and logical instructions that operate solely on register values, i.e. both source operands and the distination operand reference registers.
-For simplicity, we write for example Reg1 when referring to the value read from or stored in the register referenced by the first register operand.
+These are basic arithmetic and logical instructions that operate solely on register values, i.e. both source operands and the destination operand reference registers.
+For simplicity, we write, for example, Reg1 when referring to the value read from or stored in the register referenced by the first register operand.
 
 Each of these default operations uses the respective python standard operator on our Word class to compute the result, except for the right shifts.
 For the logical and the arithmetic right shift, the python standard right shift operator is used on the unsigned and the signed version of the register value respectively.
-When returning the result as a Word, it is truncated to the maximal word langth by a modulo operation, if necessary.
-This means, that any potential carry bits or overflow are effectively ignored.
+When returning the result as a Word, it is truncated to the maximal word length by a modulo operation, if necessary [@sec:data]. 
+This means, that any potential carry bits or overflows are effectively ignored.
 <!--
     weg lassen, eh schon wieder sehr lang:
     no explicit NOP, but in RISC V: NOP is encoded as ADDI x0, x0, 0
@@ -230,8 +232,6 @@ no need for flags (RISC V: does not seem to use flags for normal arithmetic inst
 -->
 
 \begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
-\centering
-\h! %position the table here and override internal latex parameters for nice positioning
 \hline
 \multicolumn{3}{|c|}{Arithmetic and Logical Instructions without Immediate} \\
 \hline
@@ -248,9 +248,34 @@ and& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 and Reg3\\
 \hline
 \end{tabular} 
 
+#### Arithmetic and Logical Instructions with Immediate {#sec:instr_alui}
 
-ALU with I
-    same as ALU without I, just that one of the source operands is an immediate value (range: Word size, at least according to the result function InstrImm expects) set/ determined in the assembler code
+These are basically the same instructions as in [@sec:instr_alu].
+The main difference is, that the second source register is replaced by an immediate operand which is set directly in the Assembler code.
+This immediate is used as the value of a Word in the execution engine, so it is truncated by a modulo operation to be in the appropriate range [@sec:data], [@sec:execution].
+
+\begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
+\hline
+\multicolumn{3}{|c|}{Arithmetic and Logical Instructions with Immediate} \\
+\hline
+Instr. Name&Operators&Description\\
+\hline
+ addi &Reg1, Reg2, Imm&  Reg1 $:=$ Reg2 $+$ Imm\\
+subi& Reg1, Reg2, Imm   & Reg1 $:=$ Reg2 $-$ Imm\\
+slli& Reg1, Reg2, Imm&  Reg1 $:=$ Reg2 $<<$ Imm\\
+srli& Reg1, Reg2, Imm&  Reg1 $:=$ Reg2 $>>$ Imm logical\\
+srai  & Reg1, Reg2, Imm&Reg1 $:=$ Reg2 $>>$ Imm arithmetical\\
+xori& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 xor Imm\\
+ori& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 or Imm\\
+andi& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 and Imm\\
+\hline
+\end{tabular} 
+
+
+    
+#### Memory Instructions {#sec:instr_mem}
+
+
 
 Memory Instructions
     basic memory interactions
@@ -263,6 +288,7 @@ Memory Instructions
             why this way around? fixed base and variable offset seem more logical
             ask Jan-Niklas, maybe different logic or real life model
 
+#### Branch Instructions {#sec:instr_branch}
 Branch Instructions
     same basic structure: comparison on 2 registers
         if evaluates to true: resume execution at a predefined label in the program
@@ -271,6 +297,7 @@ Branch Instructions
     multiple options for the condition, so students can choose what suits them best
     again address calculation always the same:
 
+#### Special Instructions {#sec:instr_special}
 Special Instructions
     rdtsc important if one wants to try CBSCA without just looking at the
         memory visualization
