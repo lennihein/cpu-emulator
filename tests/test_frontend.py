@@ -203,7 +203,7 @@ class FrontendTest(unittest.TestCase):
         _ = front.pop_instruction_from_queue()
         front.add_instructions_to_queue()
 
-        self.assertEqual(front.get_pc(), 1)
+        self.assertEqual(front.get_pc(), 2)
         self.assertEqual(len(front.instr_queue), 3)
         self.assertIs(front.instr_queue[0].instr, micro_program[0])
         self.assertIs(front.instr_queue[1].instr, micro_program[1])
