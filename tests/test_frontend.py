@@ -207,11 +207,11 @@ class FrontendTest(unittest.TestCase):
         self.assertEqual(len(front.instr_queue), 3)
         self.assertIs(front.instr_queue[0].instr, micro_program[0])
         self.assertIs(front.instr_queue[1].instr, micro_program[1])
-        self.assertIs(front.instr_queue[2].instr, instrs[0])
+        self.assertIs(front.instr_queue[2].instr, instrs[1])
 
         self.assertIs(front.instr_queue[0].instr_index, -1)
         self.assertIs(front.instr_queue[1].instr_index, -1)
-        self.assertIs(front.instr_queue[2].instr_index, 0)
+        self.assertIs(front.instr_queue[2].instr_index, 1)
 
         # check adding instructions after branch and pop_refill function
         front.flush_instruction_queue()
