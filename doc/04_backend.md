@@ -290,7 +290,7 @@ These instructions provide basic interactions with the emulated memory [@sec:mem
 Load and store instructions exist in two versions, one that operates on Word length data chunks, for convenience, and one that operates on Byte length data chunks, for the fine granular access needed in micro architectural attacks.
 The flush instruction flushes the cache line for the given address [@sec:memory].
 <!--todo: maybe be more precise about what the flush instruction does -->
-The address is calculated in the same way for all memory instructions: addr:=Reg2+Imm, and addr:=Reg+Imm for the flush instruction respectively..
+The address is calculated in the same way for all memory instructions: addr:=Reg2+Imm, and addr:=Reg+Imm for the flush instruction respectively.
 <!--with Reg2 acting as the base and Imm acting as an offset -->
 
 \begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
@@ -303,7 +303,7 @@ lw &Reg1, Reg2, Imm&Reg1$:=$Mem\_word[addr]\\
 lb& Reg1, Reg2, Imm   &Reg1$:=$Mem\_byte[addr]\\
 sw& Reg1, Reg2, Imm  &Mem\_word[addr]$:=$Reg1\\
 sb& Reg1, Reg2, Imm  &Mem\_byte[addr]$:=$Reg1\\
-flush  & Reg, Imm&flush\_cashline(addr)\\
+flush  & Reg, Imm&flush cache line of addr\\
 \hline
 \end{tabular} 
 
