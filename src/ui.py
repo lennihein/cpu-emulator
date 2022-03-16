@@ -63,8 +63,9 @@ def fmt_color(c, str, newline=False):
 
 
 # print a simple divider
-def print_div(c=None, length=columns, newline=True):
-    str = "-" * length
+def print_div(c=None, length=None, newline=True):
+    global columns
+    str = "-" * (length if length is not None else columns)
     if c is None:
         print(str)
     else:
