@@ -9,7 +9,6 @@ from benedict import benedict as bd
 class CPUTests(unittest.TestCase):
 
     def test_cpu(self):
-
         # As testing the CPU class as a whole is only possible once the project is complete, the
         # main focus of this test is the snapshot feature for now. The intended purpose of this
         # feature is to allow the user to step forward and backwards during the execution of their
@@ -26,22 +25,22 @@ class CPUTests(unittest.TestCase):
         self.assertEqual(self.get_vals_at_addresses(cpu, address), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         # We will have 11 snapshots because the first one is created when the CPU instance is
         # initialized
-        self.assertEqual(len(cpu._snapshots), 11)
-        self.assertEqual(cpu._snapshot_index, len(cpu._snapshots) - 1)
+        self.assertEqual(len(cpu.get_snapshots()), 11)
+        self.assertEqual(cpu._snapshot_index, len(cpu.get_snapshots()) - 1)
 
         # Go 6 steps back...
         cpu = CPU.restore_snapshot(cpu, -6)
         self.assertEqual(self.get_vals_at_addresses(cpu, address), [0, 1, 2, 3, 0, 0, 0, 0, 0, 0])
         # Still should have same number of snapshots, but different index pointer
-        self.assertEqual(len(cpu._snapshots), 11)
-        self.assertEqual(cpu._snapshot_index, len(cpu._snapshots) - 1 - 6)
+        self.assertEqual(len(cpu.get_snapshots()), 11)
+        self.assertEqual(cpu._snapshot_index, len(cpu.get_snapshots()) - 1 - 6)
 
         # Now we step forward again. Again, we expect the number of snapshots to remain the same as
         # we are simply moving an index pointer around.
         cpu = CPU.restore_snapshot(cpu, 1)
         self.assertEqual(self.get_vals_at_addresses(cpu, address), [0, 1, 2, 3, 4, 0, 0, 0, 0, 0])
-        self.assertEqual(len(cpu._snapshots), 11)
-        self.assertEqual(cpu._snapshot_index, len(cpu._snapshots) - 1 - 6 + 1)
+        self.assertEqual(len(cpu.get_snapshots()), 11)
+        self.assertEqual(cpu._snapshot_index, len(cpu.get_snapshots()) - 1 - 6 + 1)
 
         # Now we write to an address. In reality, this will create a new snapshot (here, we force it
         # to happen). As a result, a new snapshot branch is entered and the snapshots at
@@ -52,13 +51,13 @@ class CPUTests(unittest.TestCase):
         cpu._take_snapshot()
 
         self.assertEqual(self.get_vals_at_addresses(cpu, address), [42, 1, 2, 3, 4, 0, 0, 0, 0, 0])
-        self.assertEqual(len(cpu._snapshots), 11 - 6 + 1 + 1)
+        self.assertEqual(len(cpu.get_snapshots()), 11 - 6 + 1 + 1)
         # Again, we expect the snapshot index to point to the last entry
-        self.assertEqual(cpu._snapshot_index, len(cpu._snapshots) - 1)
+        self.assertEqual(cpu._snapshot_index, len(cpu.get_snapshots()) - 1)
 
         # Lastly, our second to last snapshot should be the one we had before we wrote 42 to address
         self.assertEqual(
-            self.get_vals_at_addresses(cpu._snapshots[-2], address), [0, 1, 2, 3, 4, 0, 0, 0, 0, 0]
+            self.get_vals_at_addresses(cpu.get_snapshots()[-2], address), [0, 1, 2, 3, 4, 0, 0, 0, 0, 0]
         )
 
         # Stepping forwards / backwards outside of the snapshot list should not be possible
@@ -121,6 +120,7 @@ class CPUTests(unittest.TestCase):
 
         # Check that the registers have the correct values
         target = (0, 1, 2, 3, 4, 5, 0x105, 1)
+
         self.assertEqual(cpu._exec_engine._registers[: len(target)], [Word(x) for x in target])
 
     def test_immediate_snaprestore(self):

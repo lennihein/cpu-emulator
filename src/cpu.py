@@ -27,6 +27,7 @@ class CPUStatus:
     # been issued this tick.
     issued_instructions: list[int]
 
+_snapshots: list[CPU] = []
 
 class CPU:
 
@@ -43,7 +44,7 @@ class CPU:
 
     # Snapshots. Intended for usage by the UI to allow users to
     # step forward/backwards freely.
-    _snapshots: list[CPU]
+    _snapshots: list[CPU] = []
     _snapshot_index: int
 
     _config: dict
@@ -69,9 +70,10 @@ class CPU:
         self._exec_engine = ExecutionEngine(self._mmu, self._bpu, config)
 
         # Snapshots
+        global _snapshots
         self._snapshot_index = 0
-        self._snapshots = []
-        self._snapshots.append(copy.deepcopy(self))
+        _snapshots = []
+        _snapshots.append(copy.deepcopy(self))
 
     def load_program_from_file(self, path: str):
         with open(path, "r") as f:
@@ -176,6 +178,9 @@ class CPU:
         and restoring snapshots, as each snapshot having a list
         of snapshots is inefficent.
         """
+
+        return copy.deepcopy(self)
+
         # Deepcopy already is insanely slow. Some classes
         # implement their own deepcoyp functions.
         cpu_copy = CPU(self._config)
@@ -183,14 +188,17 @@ class CPU:
         # For the following classes, we use the default
         # deepcopy function.
         cpu_copy._parser = copy.deepcopy(self._parser)
-        cpu_copy._frontend = copy.deepcopy(self._frontend)
         cpu_copy._bpu = copy.deepcopy(self._bpu)
+        cpu_copy._mmu = copy.deepcopy(self._mmu)
+
+        cpu_copy._frontend = copy.deepcopy(self._frontend)
+        cpu_copy._frontend.bpu = cpu_copy._bpu
 
         cpu_copy._exec_engine = copy.deepcopy(self._exec_engine)
-        cpu_copy._mmu = copy.deepcopy(self._mmu)
         cpu_copy._exec_engine._mmu = cpu_copy._mmu
+        cpu_copy._exec_engine._bpu = cpu_copy._bpu
 
-        cpu_copy._snapshots = self._snapshots
+        cpu_copy._snapshots = _snapshots
         cpu_copy._snapshot_index = self._snapshot_index
 
         cpu_copy._config = self._config
@@ -198,8 +206,9 @@ class CPU:
         return cpu_copy
 
     def _take_snapshot(self) -> None:
+        global _snapshots
 
-        if self._snapshot_index < len(self._snapshots) - 1:
+        if self._snapshot_index < len(_snapshots) - 1:
             # The snapshot index is not pointing to the last snapshot in the list.
             # This means a snapshot was restored recently. After doing so, it would
             # still have been possible to go forward to newer snapshots again.
@@ -211,12 +220,12 @@ class CPU:
             # list, rather than using "self.deepcopy()" here. In case this class
             # instance (self) was changed before taking this snapshot, we would
             # be altering the snapshot list at the index pointed to by snapshot_index.
-            # current_cpu = self._snapshots[self._snapshot_index].deepcopy()
-            current_cpu = self._snapshots[self._snapshot_index].deepcopy()
+            # current_cpu = _snapshots[self._snapshot_index].deepcopy()
+            current_cpu = _snapshots[self._snapshot_index].deepcopy()
 
             # Now we strip the snapshot list of all more recent invalid snapshots.
-            self._snapshots = self._snapshots[: self._snapshot_index]
-            self._snapshots.append(current_cpu)
+            _snapshots = _snapshots[: self._snapshot_index]
+            _snapshots.append(current_cpu)
 
             # Finally, we can add the potentially modified version of this instance
             # to the snapshot list (as the most recent snapshot).
@@ -224,17 +233,19 @@ class CPU:
         self._snapshot_index += 1
         cpu_copy = self.deepcopy()
 
-        self._snapshots.append(cpu_copy)
+        _snapshots.append(cpu_copy)
 
     def get_snapshots(self) -> list[CPU]:
-        return self._snapshots
+        global _snapshots
+        return _snapshots
 
     @staticmethod
     def restore_snapshot(cpu: CPU, steps: int) -> CPU:
-        if cpu._snapshot_index + steps < 1 or cpu._snapshot_index + steps >= len(cpu._snapshots):
+        global _snapshots
+        if cpu._snapshot_index + steps < 1 or cpu._snapshot_index + steps >= len(_snapshots):
             return None
 
         # Returning copies are is important, as otherwise a manipulation
         # of the returned cpu instance (for example, calling tick),
         # changes the class that is stored in the snapshot list.
-        return cpu._snapshots[cpu._snapshot_index + steps].deepcopy()
+        return _snapshots[cpu._snapshot_index + steps].deepcopy()
