@@ -143,7 +143,7 @@ def print_regs(engine: ExecutionEngine, reg_capitalisation: bool = False):
             else:
                 print(BOLD + RED + "ERR", end="")
                 exit(1)
-            print(" |" if j != fits - 1 else "\n", end="")
+            print(" │" if j != fits - 1 else "\n", end="")
             i += 1
     print()
 
@@ -159,7 +159,7 @@ def print_cache(mmu: MMU) -> None:
                 val = mmu.cache.sets[i][j].data[a]
                 print(
                     '{:04x}'.format(val) if val is not None else "none",
-                    end='|')
+                    end='│')
             # print(mmu.cache.sets[i][j].data)
             print(' ', end='')
         print('')
@@ -329,12 +329,12 @@ def rs_str(engine: ExecutionEngine, show_empty=True, reg_capitalisation: bool = 
                 rs_str.append('│' + ' ' * (max_pc_length + 2) + '│' + ' ' * (max_instr_length + 2) + '│' + ' ' * 3 + '│')
             continue
         else:
-            line = '| '
+            line = '│ '
             if not show_empty:
-                line += ' ' * (max_index_length - len(indices[i])) + indices[i] + ' | '
-            line += ' ' * (max_pc_length - len(pcs[i])) + pcs[i] + ' | '
-            line += instructions[i] + ' ' * (max_instr_length - instr_lengths[i]) + ' |'
-            line += f" {status[i]} |"
+                line += ' ' * (max_index_length - len(indices[i])) + indices[i] + ' │ '
+            line += ' ' * (max_pc_length - len(pcs[i])) + pcs[i] + ' │ '
+            line += instructions[i] + ' ' * (max_instr_length - instr_lengths[i]) + ' │'
+            line += f" {status[i]} │"
             rs_str.append(line)
 
     line_bot = '╰'
