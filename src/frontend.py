@@ -135,7 +135,7 @@ class Frontend:
 
             if isinstance(current_instr.ty, instructions.InstrBranch):
 
-                self.pc = current_instr.ops[0]
+                self.pc = current_instr.ops[-1]
 
         return
 
@@ -161,7 +161,7 @@ class Frontend:
             if isinstance(current_instr.ty, instructions.InstrBranch):
 
                 if taken:
-                    self.pc = current_instr.ops[0]
+                    self.pc = current_instr.ops[-1]
 
                 else:
                     self.pc = instr_index + 1
