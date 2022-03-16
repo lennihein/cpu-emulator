@@ -66,7 +66,7 @@ class CPU:
         self._frontend = None
 
         # Reservation stations
-        self._exec_engine = ExecutionEngine(self._mmu, config)
+        self._exec_engine = ExecutionEngine(self._mmu, self._bpu, config)
 
         # Snapshots
         self._snapshot_index = 0
@@ -84,7 +84,7 @@ class CPU:
         # Initialize frontend
         self._frontend = Frontend(self._bpu, instructions, self._config)
         # Reset reservation stations?
-        self._exec_engine = ExecutionEngine(self._mmu, self._config)
+        self._exec_engine = ExecutionEngine(self._mmu, self._bpu, self._config)
 
         # take snapshot
         self._take_snapshot()
