@@ -6,8 +6,9 @@
 
     general task/ goal
         CPU emulator with actual out of order execution, maybe speculative execution and comprehensible implementation and documentation
-        implement different µ-architectural features like out-of-order exe., speculative exe. b.c. we want to observe and teach µ-arch. attacks
+        implement different µ-architectural features like out-of-order exe., speculative exe. b.c. we want to observe and demonstrate µ-arch. attacks
     brief context of the task/ goal (e.g. a sentence on Meltdown and why it is important to understand it)
+        why is it important to have the emulator: so far no possibility to observe microarchitectural attacks in real life
     structure of the report
 
 ## Brief Theoretical Background (2-3 pages)
@@ -61,8 +62,10 @@
 
 ## maybe Specification of the task (1 page)
 
+    rauswerfen, in Introduction mit übernehmen
+
     emulator to execute and teach Meltdown
-        who is the target audience
+        who is the target audience´
         which Meltdown attacks specifically
         etc. further concretisations
         
@@ -118,7 +121,7 @@
         
         #### memory
         
-            no virtuel adresses
+            no virtual adresses
         
             mmu
             
@@ -141,6 +144,7 @@
     ### Out of Order Execution (2 pages)
         
         our version of out-of-order execution/ Tomasulo
+            how much details on Tomasulo? our choice
     
         where in our program do we implement which components
         
@@ -173,6 +177,12 @@
 ## Our Visualisation and Usage/ Frontend (10 pages)
 
     ggf. gemäß Anmerkung von Lenni umsortieren: die idee das UI nicht mit in die 'unsere designetnscheidungen' zu nehmen, sondern im prinzip so als Manual abzukapseln finde ich eigentlich ganz gut. Müssen wir aber dann mal in der Praxis schauen. Soll ja keine didaktischen begründungen das manual zu sehr aufblähen, vllt wird das sinnvoll, dann einen teil des UI im "backend" kapitel einzubauen, und dann wirklich ein cleanes manual kapitel zu haben
+    
+    zwei Strukturiereungsmöglichkeiten:
+        z.B. alphabetisch
+        z.B. nach einzelnen Angriffen etc. aufgeteilt und aufeinander aufbauend
+    erklären was technisch passiert nachdem man gezeigt hat wie es aussieht
+    man kann auch explizit sagen, "ich gehe davon aus, dass du GDB kannst, daran ist das angelehnt, hier sind die Unterschiede"
 
     ### general concept
     
@@ -221,15 +231,19 @@
         
         #### mitigations
         
+            it is known which mitigations exist, here is what we have in our emulator:
+        
             what is possible in our program as is
                 planned:    cache flush: microcode -> config file
                             mfence im assembler (normally in compiler)
-                            aslr directly in program -> config
-                            flush IQ -> 
+                            aslr directly in program -> config (es gibt ja auch mitigations, die keine echte mitigation sind; nice to have -> könnte demonstrieren dass es nicht der Fall ist; war eh schon einige Jahre vor Meltdown vorhanden/ in Gebrauch; KSLR brachen kann man auch als Angriff verkaufen)
+                            flush IQ -> passiert eh schon
                             disable speculation und out of order (nice to have)-> config
             
-            how effective are these
-                in real life
+            is our meltdown/ spectre variant still possible?
+            ggf. how does this affect the performance?
+            vorsichtig sein, dass man dann auch die richtige Frage für die Antwort stellt
+                in real life (already in background)
                 in our program
             
             what would be the necessary steps/ changes to the program for further mitigations
@@ -238,6 +252,7 @@
 ## Conclusion (1 Page)
 
     recap goals
+    main goal of this chapter: to which extend did we reach our goals?
 
     did we reach the goal of implementing a CPU emulator where a user can perform a Meltdown attack
     
@@ -254,6 +269,7 @@
         how easy to use and convenient do we think our program is? 
         do we think this will be a good tool for teaching?
         how accessible is it wrt different host architectures?
+        1 überzeugter Satz: wir haben sehr gute Arbeit geleistet und das Werkzeug ist sehr gut. wenig hin schreiben, damit keiner fragt, ob wir das nicht weiter evaluieren müssten. nicht weit aus dem Fenster mit Behauptungen lehnen sondern klar und kurz unsere Meinung formulieren
     
     further work
         more (detailed/ realistic) functionality for more Meltdown and Spectre variants
