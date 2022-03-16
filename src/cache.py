@@ -68,7 +68,7 @@ class CacheLine:
 
         self.set_tag(None)
 
-    def read(self, offset: int) -> int:
+    def read(self, offset: int, side_effects: bool = True) -> int:
         """
         Reads from the cache line at index 'offset'.
         Note that this function does NOT check for
@@ -76,6 +76,9 @@ class CacheLine:
 
         Parameters:
             offset (int) -- the offset at which to read
+            side_effects (bool) -- whether the read should
+                have an effect on caches that use access
+                times for their replacement policy, like LRU.
 
         Returns:
             int: The data saved at 'offset'.
@@ -193,13 +196,16 @@ class Cache:
         """
         raise Exception("Cache Replacement Policy not implemented.")
 
-    def read(self, addr: int) -> int:
+    def read(self, addr: int, side_effects = True) -> int:
         """
         Returns the data at address addr as an integer.
         If no data is cached for this address, None is returned.
 
         Parameters:
             addr (int) -- the address from which to read
+            side_effects (bool) -- whether the read should
+                have an effect on caches that use access
+                times for their replacement policy, like LRU.
 
         Returns:
             int: The cached data.
@@ -210,7 +216,7 @@ class Cache:
 
         for i in range(self.num_lines):
             if self.sets[index][i].check_tag(tag):
-                return self.sets[index][i].read(offset)
+                return self.sets[index][i].read(offset, side_effects)
 
         return None
 
@@ -341,9 +347,9 @@ class CacheLineLRU(CacheLine):
         super().__init__(line_size)
         self.lru_timestamp = time()
 
-    def read(self, offset: int) -> int:
+    def read(self, offset: int, side_effects: bool = True) -> int:
         data = super().read(offset)
-        if data is not None:
+        if data is not None and side_effects:
             self.lru_timestamp = time()
         return data
 
