@@ -81,7 +81,7 @@ class MMU:
 
         self.cache_replacement_policy = cache_conf["replacement_policy"]
 
-        cache_config = (cache_conf["num_sets"], cache_conf["num_lines"], cache_conf["line_size"])
+        cache_config = (cache_conf["sets"], cache_conf["ways"], cache_conf["line_size"])
 
         if self.cache_replacement_policy == "RR":
             self.cache = CacheRR(*cache_config)

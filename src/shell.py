@@ -1,10 +1,15 @@
 from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit import __version__ as prompt_toolkit_version
+from benedict import __version__ as benedict_version
 from os import system
 from math import ceil
 import sys
 from benedict import benedict
+import platform
+import subprocess
+
 
 from src.instructions import InstrReg
 from src.word import Word
@@ -20,6 +25,29 @@ session: PromptSession = PromptSession()
 funcs = {}
 completions = {}
 breakpoints: dict[int, bool] = {}
+
+
+def print_version():
+    if platform.system() == 'Windows':
+        print(f"Windows {platform.release()}")
+    if platform.system() == 'Linux':
+        f = open("/etc/os-release", "r")
+        lines = f.readlines()
+        f.close()
+        for i in lines:
+            if i.startswith("PRETTY_NAME"):
+                print(i.split("\"")[1].strip(), end=" ")
+            if i.startswith("BUILD_ID"):
+                print(i.split("=")[1].strip(), end="")
+        print()
+    print(f"Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+    print(f"Python-Prompt {prompt_toolkit_version}")
+    print(f"Python-Benedict {benedict_version}")
+    # print(f"https://git.cs.uni-bonn.de/boes/lab_transient_ws_2122/-/tree/{subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()}")
+    try:
+        print(f"Git Commit {subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()}")
+    except FileNotFoundError:
+        print("Git not installed")
 
 
 def func(f):
@@ -329,7 +357,10 @@ if __name__ == "__main__":
         # Load program
         cpu.load_program_from_file(args[0])
     except IndexError:
-        print("Provide the path to your programm!")
+        print_version()
+        ui.get_terminal_size()
+        ui.print_div()
+        print(f"{ui.RED + ui.BOLD}Usage: py -m src.shell <program>{ui.ENDC}\n")
         exit()
 
     ui.get_terminal_size()

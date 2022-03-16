@@ -1,11 +1,12 @@
 from unittest import TestCase
 
+from benedict import benedict as bd
+from src.bpu import BPU
 from src.execution import ExecutionEngine
 from src.instructions import InstrReg
 from src.mmu import MMU
 from src.parser import Parser
 from src.word import Word
-from benedict import benedict as bd
 
 
 class ExecutionTest(TestCase):
@@ -55,8 +56,9 @@ class ExecutionTest(TestCase):
 
         # TODO: Use frontend, to be able to execute the loop
 
-        # Create execution engine with MMU
-        exe = ExecutionEngine(MMU(bd.from_yaml('config.yml')), bd.from_yaml('config.yml'))
+        # Create execution engine with MMU and BPU
+        config = bd.from_yaml("config.yml")
+        exe = ExecutionEngine(MMU(config), BPU(config), config)
 
         # Issue all instructions in the code
         for pc, instr in enumerate(p.parse(code)):

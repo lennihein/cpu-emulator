@@ -13,8 +13,8 @@ class MMUTests(unittest.TestCase):
                 "cache_hit_cycles": 2,
                 "cache_miss_cycles": 5,
                 "line_size": 4,
-                "num_lines": 4,
-                "num_sets": 4,
+                "ways": 4,
+                "sets": 4,
                 "replacement_policy": "LRU"
             },
             "Memory":
