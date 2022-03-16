@@ -229,7 +229,6 @@ This means, that any potential carry bits or overflows are effectively ignored.
 same as RISC V: branch and comparison function in one -> can be easily implemented, is easier for the students than splitting this into a comparison and a branch instruction, no real influence on Meltdown and SPectre
 no need for flags (RISC V: does not seem to use flags for normal arithmetic instr (carry, zero etc.), only for exceptions, memory accesses -> leave out)
 -> do I even mention this?
--->
 
 \begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
 \hline
@@ -247,6 +246,7 @@ or& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 or Reg3\\
 and& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 and Reg3\\
 \hline
 \end{tabular} 
+-->
 
 #### Arithmetic and Logical Instructions with Immediate {#sec:instr_alui}
 
@@ -311,7 +311,8 @@ Special Instructions
 ggf. auf Cheat Sheet im Anhang verweisen
     maybe put information like address calculation in table description so everyone has all the information
 adjust cheat sheet and table snippets so the wording is nice and the table is as non-redundant as possible
-    
+
+<!--
 \begin{tabular}{ |p{2cm}||p{2cm}|p{3cm}|p{5cm}|  }
 \hline
 \multicolumn{4}{|c|}{Instructions} \\
@@ -360,6 +361,7 @@ Instr. Kind&Instr. Name&Operators&Description\\
 &fence&none&all instr in the EU unit at the point of issueing the fence are executed before the fence ist executed; no new instructions are issued before the fence is executed\\
 \hline
 \end{tabular} 
+-->
 
 
 ## Config Files (1 page) {#sec:config}

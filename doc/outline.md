@@ -9,6 +9,7 @@
         implement different µ-architectural features like out-of-order exe., speculative exe. b.c. we want to observe and demonstrate µ-arch. attacks
     brief context of the task/ goal (e.g. a sentence on Meltdown and why it is important to understand it)
         why is it important to have the emulator: so far no possibility to observe microarchitectural attacks in real life
+        rauscharme Umgebung, die macht was man erwartet
     structure of the report
 
 ## Brief Theoretical Background (2-3 pages)
@@ -178,7 +179,7 @@
 
     ggf. gemäß Anmerkung von Lenni umsortieren: die idee das UI nicht mit in die 'unsere designetnscheidungen' zu nehmen, sondern im prinzip so als Manual abzukapseln finde ich eigentlich ganz gut. Müssen wir aber dann mal in der Praxis schauen. Soll ja keine didaktischen begründungen das manual zu sehr aufblähen, vllt wird das sinnvoll, dann einen teil des UI im "backend" kapitel einzubauen, und dann wirklich ein cleanes manual kapitel zu haben
     
-    zwei Strukturiereungsmöglichkeiten:
+    zwei Strukturierungsmöglichkeiten:
         z.B. alphabetisch
         z.B. nach einzelnen Angriffen etc. aufgeteilt und aufeinander aufbauend
     erklären was technisch passiert nachdem man gezeigt hat wie es aussieht
@@ -206,8 +207,10 @@
 
     what kind of system do we need/ did we use to run this?
         which python Version?
+        which program version ? git commit
+        other dependencies?
 
-    ## general demonstration
+    ### general demonstration
     
         brief example program showing all the features in a "normal" execution, e.g. adding stuff
 
@@ -237,8 +240,9 @@
                 planned:    cache flush: microcode -> config file
                             mfence im assembler (normally in compiler)
                             aslr directly in program -> config (es gibt ja auch mitigations, die keine echte mitigation sind; nice to have -> könnte demonstrieren dass es nicht der Fall ist; war eh schon einige Jahre vor Meltdown vorhanden/ in Gebrauch; KSLR brachen kann man auch als Angriff verkaufen)
-                            flush IQ -> passiert eh schon
-                            disable speculation und out of order (nice to have)-> config
+                            flush IQ -> passiert eh schon, ist das überhaupt eine echte mitigation?
+                            disable speculation (nice to have, lassen wir weg)-> config
+                            out of order -> in config RS mit nur einem Slot
             
             is our meltdown/ spectre variant still possible?
             ggf. how does this affect the performance?
