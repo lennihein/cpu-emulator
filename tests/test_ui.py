@@ -1,6 +1,7 @@
 from src.ui import *
 from src.word import Word
 from src.mmu import MMU
+from src.bpu import BPU
 from src.execution import ExecutionEngine
 from benedict import benedict as bd
 
@@ -85,7 +86,8 @@ class UITest(TestCase):
     def test_registers(self):
         print()
         mmu = MMU(bd.from_yaml('config.yml'))
-        engine = ExecutionEngine(mmu, bd.from_yaml('config.yml'))
+        bpu = BPU(bd.from_yaml('config.yml'))
+        engine = ExecutionEngine(mmu, bpu, bd.from_yaml('config.yml'))
         header_regs(engine)
 
     def test_cache(self):

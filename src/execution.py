@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import NewType, Optional, TypeVar, Union, cast, final
 
+from .bpu import BPU
 from .byte import Byte
 from .instructions import (
     InstrBranch,
@@ -416,12 +417,16 @@ class _SlotBranch(_SlotFaulting):
 
     instr_ty: InstrBranch
 
+    # Reference to BPU so we can inform it about the result of our branch condition
+    bpu: BPU
     prediction: bool
     cycles_remaining: int
     condition: Optional[bool]
 
     def __init__(self, args: _ArgsSlot):
         super().__init__(args)
+
+        self.bpu = args.exe._bpu
 
         assert args.prediction is not None
         self.prediction = args.prediction
@@ -444,7 +449,11 @@ class _SlotBranch(_SlotFaulting):
         operands = cast(list[Word], self.operands)
         # Compute the branch condition
         assert self.instr_ty.condition is not None
-        self.condition = self.instr_ty.condition(*operands)
+        condition = self.instr_ty.condition(*operands)
+        self.condition = condition
+
+        # Notify BPU of branch condition
+        self.bpu.update(self.pc, condition)
 
         # Return dummy value
         return Word(0)
@@ -552,6 +561,7 @@ class ExecutionEngine:
     # TODO: The MMU object should only be copied once when using `copy.deepcopy`, check that this is
     # actually the case. If not, the Slot classes above also need changing
     _mmu: MMU
+    _bpu: BPU
 
     # Register file, containing the architectural register state if all in-flight instructions were
     # completed
@@ -563,9 +573,10 @@ class ExecutionEngine:
     # Cycle counter, incremented on each tick
     _cyclecount: int
 
-    def __init__(self, mmu, config):
+    def __init__(self, mmu, bpu, config):
         """Create a new Reservation Station, with empty slots and zeroed registers."""
         self._mmu = mmu
+        self._bpu = bpu
         rs_conf = config["ExecutionEngine"]
 
         # Initialize registers to zero
