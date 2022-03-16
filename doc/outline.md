@@ -158,6 +158,7 @@
             general goal/ concept of rolling back after a misprediction or an exception
             
             snapshots and interaction of the CPU components
+                components that are fully reset after a rollback: cache, BPU
 
     ### ISA (2 pages)
     

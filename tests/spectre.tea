@@ -1,0 +1,28 @@
+// Set up array at 0x1000, 8 elements, all zeroes, followed by one out-of-bounds 0x41 value
+addi r1, r0, 0x1000
+sb r0, r1, 0
+sb r0, r1, 1
+sb r0, r1, 2
+sb r0, r1, 3
+sb r0, r1, 4
+sb r0, r1, 5
+sb r0, r1, 6
+sb r0, r1, 7
+addi r2, r0, 0x41
+sb r2, r1, 8
+
+// Loop over array, encode every value in cache
+addi r2, r0, 0
+addi r3, r0, 8
+loop:
+// Load array element
+lb r4, r2, 0x1000
+// Encode value in cache
+slli r4, r4, 4
+lb r4, r4, 0x2000
+// Increment loop index
+addi r2, r2, 1
+// Loop while index is in bounds
+bne r2, r3, loop
+
+// Although the out-of-bounds element was never accessed, the value 0x41 is encoded in the cache

@@ -164,6 +164,8 @@ todo: decideshould we move this subchapter to the frontend?
     ISA itself is more of a manual
 -->
 
+<!--todo: nochmal drübergehen, ob ich instructions und operations noch besser auseinanderhalten muss -->
+
 Real life Intel x86 CPUs differenciate between two types of instructions or operations. 
 Macro-operations refer to the relatively easily human readable and convenient but complex instructions that are described by the x86 ISA.
 Their length differs between the instructions.
@@ -202,11 +204,19 @@ If needed, students can add further instructions by registering them with the pa
 
 In the following subchapters we introduce the instructions of our default ISA.
 They are grouped according to their respective instruction type in the emulator except for the special instructions which are grouped together [@sec:parser].
+All default instructions are summarized in the appendix into a quick reference sheet [@ref_appendix]. 
+<!--
+todo: cheat sheet in Anhang
+vllt. referenz in Fussnote verschieben
+ggf. auf Cheat Sheet im Anhang verweisen
+    maybe put information like address calculation in table description so everyone has all the information
+adjust cheat sheet and table snippets so the wording is nice and the table is as non-redundant as possible
+-->
 
 <!--todo: hier der Vollständigkeit halber einfügen, dass unser Parser Kommentare kann? -->
 
 <!--
-try inline LAtex and the option to place tables "here"
+try inline LAtex and the option to place tables "here" \h! , needs some additional LaTex package
 if that does not work, maybe table descritions? but that would be a bad formatting choice
 -->
 
@@ -276,93 +286,76 @@ andi& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 and Imm\\
     
 #### Memory Instructions {#sec:instr_mem}
 
+These instructions provide basic interactions with the emulated memory [@sec:memory].
+Load and store instructions exist in two versions, one that operates on Word length data chunks, for convenience, and one that operates on Byte length data chunks, for the fine granular access needed in micro architectural attacks.
+The flush instruction flushes the cache line for the given address [@sec:memory].
+<!--todo: maybe be more precise about what the flush instruction does -->
+The address is calculated in the same way for all memory instructions: addr:=Reg2+Imm, and addr:=Reg+Imm for the flush instruction respectively.
+<!--with Reg2 acting as the base and Imm acting as an offset -->
 
-
-Memory Instructions
-    basic memory interactions
-    load and stores both word-wise for convenience and byte-wise for the fine granular (?wording?) access needed in micro architectural attacks
-    flush flushes (sets data and tag (if no data at tag left) to none) a cacheline
-    for more detailed information about how these affect the memory and especially the cache, look at the backend.memory subchapter
-    address calculation always the same:
-        addr = Reg + immediate
-        one acts as base, the other as offset
-            why this way around? fixed base and variable offset seem more logical
-            ask Jan-Niklas, maybe different logic or real life model
-
-#### Branch Instructions {#sec:instr_branch}
-Branch Instructions
-    same basic structure: comparison on 2 registers
-        if evaluates to true: resume execution at a predefined label in the program
-        if fales: next instruction
-    labels are automatically resolved by the parser (reference parser)
-    multiple options for the condition, so students can choose what suits them best
-    again address calculation always the same:
-
-#### Special Instructions {#sec:instr_special}
-Special Instructions
-    rdtsc important if one wants to try CBSCA without just looking at the
-        memory visualization
-        basic timing instruction
-        cyclecount: number of executed execution unit ticks (ref. execution unit)
-            all the ticks or reset when the instruction is called? -> look into code
-    fence can be used for a sort of mitigation
-        compare to mfence, lfence etc. in x86
-        all instr in the EU unit at the point of issueing the fence are ex- ecuted before the fence ist executed; no new instructions are issued before the fence is executed
-
-ggf. auf Cheat Sheet im Anhang verweisen
-    maybe put information like address calculation in table description so everyone has all the information
-adjust cheat sheet and table snippets so the wording is nice and the table is as non-redundant as possible
-
-<!--
-\begin{tabular}{ |p{2cm}||p{2cm}|p{3cm}|p{5cm}|  }
+\begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
 \hline
-\multicolumn{4}{|c|}{Instructions} \\
-\hline %hier weiter
-Instr. Kind&Instr. Name&Operators&Description\\
+\multicolumn{3}{|c|}{Memory Instructions} \\
 \hline
-\multirow{8}{2cm}{ALU Instructions without Immediate} & add &Reg1, Reg2, Reg3&   Reg1 $:=$ Reg2 $+$ Reg3\\
-&sub& Reg1, Reg2, Reg3   & Reg1 $:=$ Reg2 $-$ Reg3\\
-&sll& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 $<<$ Reg3\\
-&srl& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 $>>$ Reg3 logical (fill space with 0)\\
-&sra  & Reg1, Reg2, Reg3& Reg1 $:=$ Reg2 $>>$ Reg3 arithmetical (fill space with sign bit)\\
-&xor& Reg1, Reg2, Reg3 &  Reg1 $:=$ Reg2 xor Reg3\\
-&or& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 or Reg3\\
-&and& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 and Reg3\\
+Instr. Name&Operators&Description\\
 \hline
-\multirow{8}{2cm}{ALU Instructions with Immediate} & addi &Reg1, Reg2, Imm&  Reg1 $:=$ Reg2 $+$ Imm\\
-&subi& Reg1, Reg2, Imm   & Reg1 $:=$ Reg2 $-$ Imm\\
-&slli& Reg1, Reg2, Imm&  Reg1 $:=$ Reg2 $<<$ Imm\\
-&srli& Reg1, Reg2, Imm&  Reg1 $:=$ Reg2 $>>$ Imm logical (fill space with 0)\\
-&srai  & Reg1, Reg2, Imm&Reg1 $:=$ Reg2 $>>$ Imm arithmetical (fill space with sign bit)\\
-&xori& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 xor Imm\\
-&ori& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 or Imm\\
-&andi& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 and Imm\\
-\hline
-%sources 1, 2 destination 0
-\multirow{5}{2cm}{Memory Instructions} & lw &Reg1, Reg2, Imm&addr$:=$Reg2(base)$+$Imm(offset), Reg1$:=$(Mem\_word[addr])\\
-&lb& Reg1, Reg2, Imm   &addr$:=$Reg2(base)$+$Imm(offset), Reg1$:=$(Mem\_byte[addr])\\
-&sw& Reg1, Reg2, Imm  &addr$:=$Reg2(base)$+$Imm(offset), Mem\_word[addr]$:=$Reg1\\
-&sb& Reg1, Reg2, Imm  &addr$:=$Reg2(base)$+$Imm(offset), Mem\_byte[addr]$:=$Reg1\\
-%sources 0,1
-&flush  & Reg, Imm&addr$:=$Reg(base)$+$Imm(offset), flush\_cashline(adr)\\
-\hline
-%source 0, 1, 2
-\multirow{8}{2cm}{Branch Instructions} & beq &Reg1, Reg2, Label& pc$:=$Label if Reg1$==$Reg2, else pc$+=$1\\
-&bne& Reg1, Reg2, Label&pc$:=$Label if Reg1$!=$Reg2\\
-&bltu& Reg1, Reg2, Label&  pc$:=$Label if u(Reg1)$<$u(Reg2)\\
-&bleu& Reg1, Reg2, Label&  pc$:=$Label if u(Reg1)$<=$u(Reg2)\\
-&bgtu  & Reg1, Reg2, Label&pc$:=$Label if u(Reg1)$>$u(Reg2)\\
-&bgeu& Reg1, Reg2, Label&pc$:=$Label if u(Reg1)$>=$u(Reg2)\\
-&blts& Reg1, Reg2, Label&pc$:=$Label if s(Reg1)$<$s(Reg2)\\
-&bles& Reg1, Reg2, Label&pc$:=$Label if s(Reg1)$<=$s(Reg2)\\
-&bgts& Reg1, Reg2, Label&pc$:=$Label if s(Reg1)$>$s(Reg2)\\
-&bges& Reg1, Reg2, Label&pc$:=$Label if s(Reg1)$>=$s(Reg2)\\
-\hline
-\multirow{2}{2cm}{Special Instructions} & rdtsc &Reg& Reg$:=$cyclecount(number of executed execution unit ticks)\\
-&fence&none&all instr in the EU unit at the point of issueing the fence are executed before the fence ist executed; no new instructions are issued before the fence is executed\\
+lw &Reg1, Reg2, Imm&Reg1$:=$Mem\_word[addr]\\
+lb& Reg1, Reg2, Imm   &Reg1$:=$Mem\_byte[addr]\\
+sw& Reg1, Reg2, Imm  &Mem\_word[addr]$:=$Reg1\\
+sb& Reg1, Reg2, Imm  &Mem\_byte[addr]$:=$Reg1\\
+flush  & Reg, Imm&flush cache line of addr\\
 \hline
 \end{tabular} 
--->
+
+#### Branch Instructions {#sec:instr_branch}
+
+All branch instructions compare the values of two source registers. If the comparison evaluates to true, the execution of the program is resumed at the given label in the assembler code.
+If it evaluates to false, the next instruction in the program is executed.
+Depending on the instruction, the register values are interpreted as signed or unsigned integers.
+Labels in the assembler code are automatically resolved by the parser [@sec:parser], [rev_eval_and_example_code].
+<!-- There are different options for the branch condition so the students can choose which one suits their program best. -->
+
+
+\begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
+\hline
+\multicolumn{3}{|c|}{Branch Instructions} \\
+\hline
+Instr. Name&Operators&Description\\
+\hline
+beq &Reg1, Reg2, Label& jump to Label if Reg1$==$Reg2\\
+bne& Reg1, Reg2, Label&jump to Label if Reg1$!=$Reg2\\
+bltu& Reg1, Reg2, Label&  jump to Label if u(Reg1)$<$u(Reg2)\\
+bleu& Reg1, Reg2, Label&  jump to Label if u(Reg1)$<=$u(Reg2)\\
+bgtu& Reg1, Reg2, Label&jump to Label if u(Reg1)$>$u(Reg2)\\
+bgeu& Reg1, Reg2, Label&jump to Label if u(Reg1)$>=$u(Reg2)\\
+blts& Reg1, Reg2, Label&jump to Label if s(Reg1)$<$s(Reg2)\\
+bles& Reg1, Reg2, Label&jump to Label if s(Reg1)$<=$s(Reg2)\\
+bgts& Reg1, Reg2, Label&jump to Label if s(Reg1)$>$s(Reg2)\\
+bges& Reg1, Reg2, Label&jump to Label if s(Reg1)$>=$s(Reg2)\\
+\hline
+\end{tabular} 
+
+#### Special Instructions {#sec:instr_special}
+
+Rdtsc acts like a basic timing instruction.
+It returns the number of ticks the execution unit has executed so far in the given register.
+<!-- not reset when called-->
+<!--todo: This kind of information is used in real life micro architectural attacks [@source]. -->
+
+The fence instruction acts as a fixed point in the out of order execution.
+All instructions that are already issued in the execution unit at the point of issueing the fence instruction are executed before the fence is executed.
+No new instructions are issued before the execution of the fence instruction is complete.
+
+\begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
+\hline
+\multicolumn{3}{|c|}{Special Instructions} \\
+\hline
+Instr. Name&Operators&Description\\
+\hline
+rdtsc &Reg& Reg$:=$cyclecount\\
+fence&none& add execution fixpoint at this code position\\
+\hline
+\end{tabular} 
 
 
 ## Config Files (1 page) {#sec:config}
