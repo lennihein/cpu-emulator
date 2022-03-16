@@ -229,6 +229,7 @@ This means, that any potential carry bits or overflows are effectively ignored.
 same as RISC V: branch and comparison function in one -> can be easily implemented, is easier for the students than splitting this into a comparison and a branch instruction, no real influence on Meltdown and SPectre
 no need for flags (RISC V: does not seem to use flags for normal arithmetic instr (carry, zero etc.), only for exceptions, memory accesses -> leave out)
 -> do I even mention this?
+-->
 
 \begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
 \hline
@@ -246,7 +247,7 @@ or& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 or Reg3\\
 and& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 and Reg3\\
 \hline
 \end{tabular} 
--->
+
 
 #### Arithmetic and Logical Instructions with Immediate {#sec:instr_alui}
 
