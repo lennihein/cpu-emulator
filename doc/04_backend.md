@@ -20,10 +20,10 @@ Lastly we show how our emulator can be adapted for different demonstrations and 
 
 todo
 
-### CPU {#sec:CPU}
+### CPU (F) {#sec:CPU}
 The primary purpose of the CPU module is to allow all other components to work together. That is, the CPU initializes all other components and provides interfaces to their functions, which allows the GUI to visualize the current state. In addition, the CPU provides functions which load user programs and a tick function that is called each cycle and does the following: instructions from the instruction queue are fetched from the frontend and forwarded to the execution engine, until either no more slots in the unified reservation station are available, or the instruction queue is empty. It then calls the tick function of the execution engine. In case of a rollback, the instruction queue maintained by the frontend is flushed. If the rollback was caused by a faulting load instruction, execution is resumed at the next instruction (as described in [@sec:rollback]). In case a branch was mispredicted, the frontend is notified and refills the instruction queue accordingly. If configured, corresponding microprograms are sent to the instruction queue. Lastly, a snapshot of the current state of the CPU is taken.
 
-The second purpose of the CPU is to provide the snapshot functionality which allows a user of the emulator to step back to previous cycles. The snapshot list is simply a list which grows at each cycle, where each entry is a deep copy of the CPU instance. However, this would imply that each snapshot maintains a full list of snapshots, where each entry contains a list of snapshots, and so on. To combat this, there is only a single global list of snapshots, and each snapshot entry maintains a reference and an index to its own entry. As a result, the default deep copy function is adjusted accordingly. Due to the low complexity of the programs we expect users to run, at the moment, no maximum number of available snapshots is configured.
+The second purpose of the CPU is to provide the snapshot functionality, which allows a user of the emulator to step back to previous cycles. The snapshot list is simply a list that grows at each cycles, where ech entry is a deepcopy of the CPU instance. To simply be able to deepcopy the CPU class, the snapshot list is held separately and not one of its members. Instead, the CPU class, and therefore each snapshot, maintains an index to its own entry in the snapshot list. This reference makes traversing the snapshot list one step at a time easier. Due to the low complexity of the programs we expect our users to run, at the moment, no maximum number of available snapshots is configured.
 
 ### Instructions and Parser {#sec:parser}
 
@@ -139,9 +139,21 @@ The frontend provides further basic interfaces, e.g. for reading the size the in
 These are used by the other components during regular execution, e.g. when issuing instructions to the execution engine, but also to reset the queue to a certain point in the program after an exception has occured [@sec:rollback].
 Since our emulator only executes one program at a time, the other components can check via another interface whether the frontend has reached the end of the program.
 
-### Memory {#sec:memory}
+### Memory (F) {#sec:memory}
+Memory is primarily managed by the Memory Subsystem (MS). The class contains a simple array that has $2^{Word Width}$ entries, half of which are initialized to $0$. Since our emulator does not run an operating system and therefore does not support paging, a different method is needed to model a page fault that allows attackers to enter the transient execution phase of the Meltdown-US-L1 attack (as explained in [@sec:meltdown-and-spectre]). To solve this, we have decided to make the upper half of the address space ($32768$ to $65535$, by default) inaccessible. Any reads to an address within the upper half result in a fault which causes a rollback a couple of cycles later. Naturally, the value written to the inaccessible addresses is $0x42$.
 
-todo
+To handle memory accesses, _read\_byte_, _read\_word_, _write\_byte_, and _write\_word_ functions are available, which do what their names suggest. Each function returns a _MemResult_ object, which contains the data ($0$ for _write_ functions), the number of cycles this operation takes, whether the operation should raise a fault (i.e. memory address is inaccessible), and, if so, how many cycles this should take. These values allow users to configure the width of the transient execution window.
+<!-- Braucht man bei writes diese cycle_values? -->
+
+Other functions that allow the UI to visualize the memory contents are provided. More specifically, _is\_addr\_cached_ and _is\_illegal\_access_ return whether an address is currently cached and whether a memory access to a specific address would raise a fault, respectively. Further, the MS includes functions that handle the cache management, such as _\_load\_line_, _flush\_line_, and _flush\_all_.
+
+#### Meltdown Mitigation (F)
+As explained in [@sec:meltdown-and-spectre-mitigations], one of the mitigations implemented by Intel is believed to zero out data illegally read during transient execution. To model this, both the _read\_byte_ functions still perform the read operation, but provide $0$ as the data in the returned _MemResult_, if the mitigation is enabled. As of now, the read operation still changes the cache, but since only the contents of the inaccessible memory address are cached and not the corresponding oracle entry of the attacker, the mitigation still works. The reason for this is that we believe a consequence of the CPU still performing the read operation but zeroing out the result should have side effects on the cache. If desired, this behavior can be changed easily in the _read\_byte_ functions.
+
+#### Cache (F)
+To enable tattackers to encode transiently read data, the MS maintains a single cache. The number of sets, ways, and entries per line can be configured via the config file (see [@sec:config])
+
+By default, there are three available cache replacement policies.
 
 ### Execution Engine {#sec:execution}
 
