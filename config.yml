@@ -8,8 +8,8 @@ Memory:
     num_fault_cycles: 8
 
 Cache:
-    sets: 32
-    ways: 32
+    sets: 4
+    ways: 4
     line_size: 4
     replacement_policy: LRU
     cache_hit_cycles: 2
