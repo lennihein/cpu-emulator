@@ -288,7 +288,7 @@ class MMU:
         Returns:
             bool: True if data at address is cached
         """
-        return self.cache.read(address.value, side_effects = False) is not None
+        return self.cache.read(address.value, side_effects=False) is not None
 
     def write_cycles(self) -> int:
         """

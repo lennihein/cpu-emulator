@@ -196,7 +196,7 @@ class Cache:
         """
         raise Exception("Cache Replacement Policy not implemented.")
 
-    def read(self, addr: int, side_effects = True) -> int:
+    def read(self, addr: int, side_effects=True) -> int:
         """
         Returns the data at address addr as an integer.
         If no data is cached for this address, None is returned.

@@ -27,7 +27,9 @@ class CPUStatus:
     # been issued this tick.
     issued_instructions: list[int]
 
+
 _snapshots: list[CPU] = []
+
 
 class CPU:
 
