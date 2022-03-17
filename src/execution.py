@@ -53,10 +53,12 @@ class InflightInfo:
     instr: Instruction
     # Whether the instruction is executing or retiring
     executing: bool
+    # Source operands
+    source_operands: list[_WordOrSlot]
 
     @classmethod
     def from_slot(cls, slot: "_Slot"):
-        return cls(slot.pc, slot.instr, slot.executing)
+        return cls(slot.pc, slot.instr, slot.executing, slot.operands)
 
 
 @dataclass
