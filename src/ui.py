@@ -173,7 +173,7 @@ def instruction_str(instr: Instruction, reg_capitalisation: bool = False) -> tup
 
     reg_symbol = "R" if reg_capitalisation else "r"
 
-    if isinstance(instr.ty, InstrReg):
+    if isinstance(instr.ty, (InstrReg, InstrCyclecount)):
         for index, op in enumerate(instr.ops):
             op_str += f"{reg_symbol}{op}"
             length += 1 + len(str(op))
@@ -181,7 +181,7 @@ def instruction_str(instr: Instruction, reg_capitalisation: bool = False) -> tup
                 op_str += ", "
                 length += 2
 
-    elif isinstance(instr.ty, (InstrStore, InstrLoad, InstrImm, InstrFlush, InstrCyclecount, InstrFence)):
+    elif isinstance(instr.ty, (InstrStore, InstrLoad, InstrImm, InstrFlush, InstrFence)):
         for index, op in enumerate(instr.ops):
             if index == len(instr.ops) - 1:
                 op_str += hex_str(Word(op).value, p_end="", fixed_width=False)
