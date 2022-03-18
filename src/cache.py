@@ -309,7 +309,7 @@ class CacheRR(Cache):
         tag, index, offset = self.parse_addr(addr)
 
         replaceIndex = random.randrange(self.num_lines)
-        self.sets[index][replaceIndex].clear_data()
+        self.sets[index][replaceIndex].flush()
         self.sets[index][replaceIndex].set_tag(tag)
         self.sets[index][replaceIndex].write(offset, data)
 
@@ -363,7 +363,7 @@ class CacheLRU(Cache):
                 lru_index = i
                 lru_time = self.sets[index][i].get_lru_time()
 
-        self.sets[index][lru_index].clear_data()
+        self.sets[index][lru_index].flush()
         self.sets[index][lru_index].set_tag(tag)
         self.sets[index][lru_index].write(offset, data)
 
@@ -420,6 +420,6 @@ class CacheFIFO(Cache):
                 fifo_index = i
                 fifo_time = self.sets[index][i].get_fifo_time()
 
-        self.sets[index][fifo_index].clear_data()
+        self.sets[index][fifo_index].flush()
         self.sets[index][fifo_index].set_tag(tag)
         self.sets[index][fifo_index].write(offset, data)

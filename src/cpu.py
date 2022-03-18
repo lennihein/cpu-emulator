@@ -44,9 +44,7 @@ class CPU:
     # Execution engine.
     _exec_engine: ExecutionEngine
 
-    # Snapshots. Intended for usage by the UI to allow users to
-    # step forward/backwards freely.
-    _snapshots: list[CPU] = []
+    # Index for snapshot list.
     _snapshot_index: int
 
     _config: dict
