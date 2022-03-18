@@ -15,8 +15,7 @@ class ParserTest(TestCase):
         p = Parser.from_default()
         instrs = p.parse(
             """
-            a:
-            addi r1, r0, 100
+            a: addi r1, r0, 100
             beq r0, r0, a
             """
         )
