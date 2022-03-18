@@ -10,6 +10,7 @@ from .instructions import (
     InstrCyclecount,
     InstrFence,
     InstrFlush,
+    InstrFlushAll,
     InstrImm,
     InstrLoad,
     InstrReg,
@@ -420,6 +421,31 @@ class _SlotFlush(_SlotMem):
         return self.mmu.flush_line(self.address)
 
 
+class _SlotFlushAll(_Slot):
+    """An occupied slot in the Reservation Station, storing a flush all instruction."""
+
+    instr_ty: InstrFlushAll
+
+    # Reference to MMU so we can perform memory operations
+    mmu: MMU
+
+    def __init__(self, args: _ArgsSlot):
+        super().__init__(args)
+
+        self.mmu = args.exe._mmu
+
+    def _tick_execute(self) -> Optional[Word]:
+        # Flush the whole cache
+        self.mmu.flush_all()
+
+        # Return dummy value
+        return Word(0)
+
+    def _tick_retire(self) -> Optional[tuple[Optional[_FaultState]]]:
+        # Retire immediately without a fault
+        return (None,)
+
+
 class _SlotBranch(_SlotFaulting):
     """An occupied slot in the Reservation Station, storing a branch instruction."""
 
@@ -537,6 +563,8 @@ def _get_slot_type(kind: InstructionKind) -> type:
         return _SlotStore
     if isinstance(kind, InstrFlush):
         return _SlotFlush
+    if isinstance(kind, InstrFlushAll):
+        return _SlotFlushAll
     if isinstance(kind, InstrBranch):
         return _SlotBranch
     if isinstance(kind, InstrCyclecount):

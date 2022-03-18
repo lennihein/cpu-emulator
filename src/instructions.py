@@ -150,6 +150,18 @@ class InstrFlush(InstructionKind):
         return None
 
 
+class InstrFlushAll(InstructionKind):
+    """A flush all instruction, flushing the whole cache."""
+
+    operand_types: list[OperandKind] = []
+
+    def sources(self) -> Iterable[int]:
+        return []
+
+    def destination(self) -> Optional[int]:
+        return None
+
+
 class InstrBranch(InstructionKind):
     """A branch instruction, branching to the destination when the condition is met."""
 
@@ -241,6 +253,7 @@ def _all_instructions() -> Iterable[InstructionKind]:
     yield InstrStore("sw", False)
     yield InstrStore("sb", True)
     yield InstrFlush("flush")
+    yield InstrFlushAll("flushall")
 
     # Branch instructions
     for name, op in [
