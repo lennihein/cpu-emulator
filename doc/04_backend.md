@@ -29,9 +29,30 @@ The second purpose of the CPU is to provide the snapshot functionality, which al
 
 todo
 
+- Instruction mnemonic already determines the exact instruction, including the types of its operands
+- Possible operand types: reg, imm, label
+- Instructions distinguished based on instruction category: reg, imm, branch load, store, flush, special: cyclecount, fence
+- Instruction object knows its mnemonic, types of its operands, which category of instruction it belongs to, and some category-specific information
+  - For register-register and register-immediate instructions the concrete computation performed
+  - For branch instructions the branch condition
+  - For load and store instructions the width of the memory access
+- Execution Engine only has to handle each instruction category, not all concrete instructions
+- New instructions that fit an existing category can be added easily by the user
+
+- Parser consumes abstract description of instructions, only mnemonic and operand types
+  - Doesn't need to know about every concrete instruction
+- Strips comments, introduced by `//`
+- Handles labels, label name followed by `:`
+  - Labels can be referenced before they are defined without special indication
+- Two passes: first to extract all labels, second to actually parse instructions
+
 ### Data representation {#sec:data}
 
 todo
+
+how we model and handle data
+
+byte, word
 
 ### CPU frontend {#sec:CPU_frontend}
 
