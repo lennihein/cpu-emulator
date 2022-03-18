@@ -175,6 +175,7 @@
     
         what can be configured without changing the source code
             why these variables? relevant for Meltdown?
+            why did we choose which default values?
 
 ## Our Visualisation and Usage/ Frontend (10 pages)
 
