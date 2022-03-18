@@ -21,6 +21,7 @@ class BPU:
         return res
 
 
+# TODO: SimpleBPU should have the same interface as BPU
 class SimpleBPU:
     def __init__(self, config) -> None:
         try:

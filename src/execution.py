@@ -58,7 +58,13 @@ class InflightInfo:
 
     @classmethod
     def from_slot(cls, slot: "_Slot"):
-        return cls(slot.pc, slot.instr, slot.executing, slot.operands)
+        operands = slot.operands
+        # Reorder operands of store instructions to match order after parsing
+        if isinstance(slot, _SlotStore):
+            assert len(operands) == 3
+            operands = [operands[2], operands[0], operands[1]]
+
+        return cls(slot.pc, slot.instr, slot.executing, operands)
 
 
 @dataclass
