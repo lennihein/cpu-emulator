@@ -340,6 +340,7 @@ class CacheLineLRU(CacheLine):
     def get_lru_time(self):
         return self.lru_timestamp
 
+
 class CacheLRU(Cache):
     """A cache implementing the least-recently-used replacement policy."""
 
