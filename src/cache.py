@@ -17,7 +17,7 @@ class CacheLine:
     access, is needed by the replacement policy, this
     class should be extended accordingly.
     """
-    data: list
+    data: list[int]
     tag: int
     line_size: int
 
@@ -58,16 +58,6 @@ class CacheLine:
         """
         self.tag = tag
 
-    def clear_data(self) -> None:
-        """
-        Removes all data of this cache line and clears
-        the tag.
-        """
-        for i in range(self.line_size):
-            self.data[i] = None
-
-        self.set_tag(None)
-
     def read(self, offset: int, side_effects: bool = True) -> int:
         """
         Reads from the cache line at index 'offset'.
@@ -103,18 +93,8 @@ class CacheLine:
 
     def flush(self) -> None:
         """
-        Flushes the data written at the index 'offset'.
-        This means that further reads to this index
-        return 'None'.
-
-        If no more data is saved in this cache line,
-        the tag will be cleared as well.
-
-        Parameters:
-            offset (int) -- the offset at which to flush
-
-        Returns:
-            This function does not have a return value.
+        Flushes the data held by this cache line
+        and clears its tag.
         """
         for i in range(len(self.data)):
             self.data[i] = None
@@ -359,13 +339,6 @@ class CacheLineLRU(CacheLine):
 
     def get_lru_time(self):
         return self.lru_timestamp
-
-    # Should flushing count as an access to a cache line?
-    # If not, remove the following method:
-    def flush(self) -> None:
-        super().flush()
-        self.lru_timestamp = time()
-
 
 class CacheLRU(Cache):
     """A cache implementing the least-recently-used replacement policy."""
