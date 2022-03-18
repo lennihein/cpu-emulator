@@ -157,7 +157,49 @@ By default, there are three available cache replacement policies.
 
 ### Execution Engine {#sec:execution}
 
-todo
+<!-- - Executes instructions out-of-order
+  - Ofc data dependencies have to be honored to guarantee correctness
+  - We use a modified version of Tomasulo's Algorithm described in sec:tomasulo -->
+
+The Execution Engine is the central component of a CPU. It is the component responsible for actually performing computations, by executing the stream of instructions provided by the frontend.
+Just like the Execution Engine of modern x86 processors, our Execution Engine executes instructions out-of-order, i.e. not necessarily in the order of the incoming instruction stream. In order to preserve the semantics of the program, any data dependencies have to be honored during reordering. For this we use a modified version of Tomasulo's Algorithm, that is described in detail in [@sec:tomasulo].
+<!-- although the frontend passes instructions in program order to the Execution Engine, the order in which these instructions are actually executed usually differs. -->
+
+<!-- - Contains Reservation Station with a fixed number of slots
+  - Unified, i.e. each slot can contain any instruction (same as in modern CPUs)
+  - Also used to model Load Buffer and Store Buffer, specifics of memory accesses are handled by the slots directly
+  - Instructions' ability to execute concurrently only limited by available slots, no concept of Execution Units that instructions need to be dispatched to; instructions execute in slots directly -->
+
+The Execution Engine contains the Reservation Station with a fixed number of instruction slots. Each slot contains an instruction that is currently being executed. We call such instructions *in-flight*.
+Our Reservation Station is unified, i.e. each slot can contain any kind of instruction. The same is often found in modern CPUs.
+The slots of our Reservation Station are also used to model Load Buffers and Store Buffers; the specifics of executing memory accesses are handled by the slots directly instead of separate components.
+We also have no concept of Execution Units that instructions need to be dispatched to, which means that instructions' ability to execute concurrently is only limited by the number of available slots.
+
+<!-- - Stages of execution:
+  - Executing:
+    - Wait for source operands to become available and compute result
+    - Once result is computed: Make it available to other instructions (or the register file), transition to retiring -->
+
+All instructions pass through two phases during execution: In the first phase the instruction is said to be *executing*. It waits for any source operands to become available and computes its result. Once the result is computed, it is made available to waiting instructions, and the instruction transitions to the second phase.
+
+  <!-- - Retiring: Determine if instruction causes a fault
+    - Fault means microarchitectural fault; both architecturally visible faults like memory protection violations and architecturally invisible faults like branch mispredictions are handled in the same way in the Execution Engine
+    - Once the instruction finishes retiring its slot becomes available and may execute a new instruction -->
+
+In the second phase the instruction is said to be *retiring*. It determines if it causes a *fault*, which in this case means a *microarchitectural* fault. These can be architecturally visible faults like memory protection violations or architecturally invisible faults like branch mispredictions; both are handled the same way in the Execution Engine.
+Once the instruction finishes retiring its slot becomes available again and may be used to execute a new instruction.
+
+<!-- - In each clock cycle only one instruction is able to finish execution or retirement
+  - Models contention of the common data bus, and improves debugging experience -->
+
+In each clock cycle only a single instruction may finish execution or retirement. This models the contention of the Common Data Bus, which is used to provide information about computation results inside the Execution Engine and to other components and can only transmit information about a single result each clock cycle.
+
+<!-- - Contains register file
+  - Each register entry either contains a concrete value or references a slot of the Reservation Station that will produce the register's value
+  - Since instructions are issued in program order, the state of the register file at a single point in time represents the architectural register state at that point in time, with yet-unknown register values present as slot references -->
+
+Besides the Reservation Station, the Execution Engine also contains the Register File, with one entry for each register. Each register entry either contains the concrete value of the register or references a slot of the Reservation Station that will produce the register's value.
+Since instructions are issued in program order, the state of the register file at a single point in time represents the architectural register state at that point in time, with yet-unknown register values present as slot references.
 
 ## Out of Order Execution (2 pages) {#sec:Tomasulo}
 
