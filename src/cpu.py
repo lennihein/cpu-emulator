@@ -208,7 +208,7 @@ class CPU:
         if cpu._snapshot_index + steps < 1 or cpu._snapshot_index + steps >= len(_snapshots):
             return None
 
-        # Returning copies are is important, as otherwise a manipulation
+        # Returning copies is important, as otherwise a manipulation
         # of the returned cpu instance (for example, calling tick),
         # changes the class that is stored in the snapshot list.
         return copy.deepcopy(_snapshots[cpu._snapshot_index + steps])
