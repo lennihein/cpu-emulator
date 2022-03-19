@@ -125,7 +125,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
             try:
                 addr = int(input[1], base=16)
                 val = int(input[2], base=16)
-                cpu.get_mmu().edit_word(Word(addr), Word(val))
+                cpu.get_mmu().write_word(Word(addr), Word(val), cache_side_effects=False)
             except ValueError:
                 print("Usage: edit word <address in hex> <value in hex>")
                 return cpu
@@ -136,7 +136,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
             try:
                 addr = int(input[1], base=16)
                 val = int(input[2], base=16)
-                cpu.get_mmu().edit_byte(Word(addr), Byte(val))
+                cpu.get_mmu().write_byte(Word(addr), Byte(val), cache_side_effects=False)
             except ValueError:
                 print("Usage: edit byte <address in hex> <value in hex>")
                 return cpu
