@@ -89,6 +89,8 @@ class MemorySubsystem:
             self.cache = CacheLRU(*cache_config)
         elif self.cache_replacement_policy == "FIFO":
             self.cache = CacheFIFO(*cache_config)
+        else:
+            raise Exception("Unknown cache replacement policy. Check the config.yml file.")
 
     def read_byte(self, address: Word, cache_side_effects: bool = True) -> MemResult:
         """
