@@ -30,11 +30,18 @@ The second purpose of the CPU is to provide the snapshot functionality, which al
 
 ### Instructions and Parser {#sec:parser}
 
-todo
-
+- General instruction format: mnemonic followed by comma-separated operands, as is common in assembly languages
 - Instruction mnemonic already determines the exact instruction, including the types of its operands
 - Possible operand types: reg, imm, label
-- Instructions distinguished based on instruction category: reg, imm, branch load, store, flush, special: cyclecount, fence
+
+The general instruction format used by our instruction set is the instruction mnemonic followed by a comma-separated list of instruction operands, as is common in assembly languages.
+In our instruction set, the instruction mnemonic already determines the exact instruction, including the number and types of its operands. This greatly simplifies parsing.
+
+- Concrete instructions and their semantics covered in sec:isa
+- We don't support reading or writing instruction memory
+  - Instructions have no defined in-memory representation
+
+- Instructions distinguished based on instruction category: reg, imm, branch, load, store, flush, special: cyclecount, fence, flushall
 - Instruction object knows its mnemonic, types of its operands, which category of instruction it belongs to, and some category-specific information
   - For register-register and register-immediate instructions the concrete computation performed
   - For branch instructions the branch condition
@@ -51,11 +58,15 @@ todo
 
 ### Data representation {#sec:data}
 
-todo
+- Based on 8-bit byte, 16-bit word
+- All registers store a word
+- All instructions operate on whole words, except for lb and sb
+- All immediate operands of instructions are words
+- Words are interpreted as unsigned or twos-complement signed values
+  - Distinction only relevant for comparisons of the branch instructions, see sec:isa
 
-how we model and handle data
-
-byte, word
+- Bytes only relevant for the representation of words in memory
+- The two individual bytes of words are stored in memory in little endian order, i.e. the least-significant byte at the lowest memory address
 
 ### CPU frontend {#sec:CPU_frontend}
 
@@ -194,7 +205,7 @@ Even though more complex replacement policies exist, the exact way in which they
   - We use a modified version of Tomasulo's Algorithm described in sec:tomasulo -->
 
 The Execution Engine is the central component of a CPU. It is the component responsible for actually performing computations, by executing the stream of instructions provided by the frontend.
-Just like the Execution Engine of modern x86 processors, our Execution Engine executes instructions out-of-order, i.e. not necessarily in the order of the incoming instruction stream. In order to preserve the semantics of the program, any data dependencies have to be honored during reordering. For this we use a modified version of Tomasulo's Algorithm, that is described in detail in [@sec:tomasulo].
+Just like the Execution Engine of modern x86 processors, our Execution Engine executes instructions out-of-order, i.e. not necessarily in the order of the incoming instruction stream. In order to preserve the semantics of the program, any data dependencies have to be honored during reordering. For this we use a modified version of Tomasulo's Algorithm, that is described in detail in [@sec:Tomasulo].
 <!-- although the frontend passes instructions in program order to the Execution Engine, the order in which these instructions are actually executed usually differs. -->
 
 <!-- - Contains Reservation Station with a fixed number of slots
@@ -220,6 +231,8 @@ All instructions pass through two phases during execution: In the first phase th
 
 In the second phase the instruction is said to be *retiring*. It determines if it causes a *fault*, which in this case means a *microarchitectural* fault. These can be architecturally visible faults like memory protection violations or architecturally invisible faults like branch mispredictions; both are handled the same way in the Execution Engine.
 Once the instruction finishes retiring its slot becomes available again and may be used to execute a new instruction.
+
+TODO: Describe concrete execution/retirement behavior for each instruction category?
 
 <!-- - In each clock cycle only one instruction is able to finish execution or retirement
   - Models contention of the common data bus, and improves debugging experience -->
