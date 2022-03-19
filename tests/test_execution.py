@@ -4,7 +4,7 @@ from benedict import benedict as bd
 from src.bpu import BPU
 from src.execution import ExecutionEngine
 from src.instructions import InstrReg
-from src.mmu import MMU
+from src.memory import MemorySubsystem
 from src.parser import Parser
 from src.word import Word
 
@@ -50,9 +50,9 @@ class ExecutionTest(TestCase):
         p = Parser.from_default()
         p.add_instruction(mul)
 
-        # Create execution engine with MMU and BPU
+        # Create execution engine with MS and BPU
         config = bd.from_yaml("config.yml")
-        exe = ExecutionEngine(MMU(config), BPU(config), config)
+        exe = ExecutionEngine(MemorySubsystem(config), BPU(config), config)
 
         # Issue all instructions in the code
         for pc, instr in enumerate(p.parse(code)):

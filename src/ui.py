@@ -1,7 +1,7 @@
 import os
 from src.bpu import BPU
 from src.frontend import Frontend
-from src.mmu import MMU
+from src.memory import MemorySubsystem
 from src.execution import ExecutionEngine
 from math import ceil, floor
 from src.word import Word
@@ -103,22 +103,22 @@ def hex_str(num: int, p_end=" ", base=True, fixed_width=True,
     return base_str + num_str + p_end
 
 
-def print_memory(mmu: MMU, lines=8, base=0x0000):
+def print_memory(memory: MemorySubsystem, lines=8, base=0x0000):
     fits = (columns - 8) // 5
     fits = fits - (fits % 8)
     i = base
     for _ in range(lines):
-        if i >= mmu.mem_size:
+        if i >= memory.mem_size:
             return
         print_hex(i, p_end=": ", base_style=BOLD + YELLOW, style=BOLD + YELLOW)
         for _ in range(fits):
-            if i >= mmu.mem_size:
+            if i >= memory.mem_size:
                 return
-            if(mmu.is_addr_cached(Word(i))):
-                print_hex(mmu.memory[i + 1] * 256 + mmu.memory[i],
+            if(memory.is_addr_cached(Word(i))):
+                print_hex(memory.memory[i + 1] * 256 + memory.memory[i],
                           base_style=FAINT + RED, style=RED, base=False)
             else:
-                print_hex(mmu.memory[i + 1] * 256 + mmu.memory[i], base=False)
+                print_hex(memory.memory[i + 1] * 256 + memory.memory[i], base=False)
             i += 2
         print()
 
@@ -149,19 +149,19 @@ def print_regs(engine: ExecutionEngine, reg_capitalisation: bool = False):
     print()
 
 
-def print_cache(mmu: MMU) -> None:
+def print_cache(memory: MemorySubsystem) -> None:
     """Prints the cache. Only to be used during development."""
-    for i in range(len(mmu.cache.sets)):
+    for i in range(len(memory.cache.sets)):
         print(i, end=' ')
-        for j in range(len(mmu.cache.sets[i])):
-            if mmu.cache.sets[i][j].is_in_use():
+        for j in range(len(memory.cache.sets[i])):
+            if memory.cache.sets[i][j].is_in_use():
                 print("*", end='')
-            for a in range(len(mmu.cache.sets[i][j].data)):
-                val = mmu.cache.sets[i][j].data[a]
+            for a in range(len(memory.cache.sets[i][j].data)):
+                val = memory.cache.sets[i][j].data[a]
                 print(
                     '{:04x}'.format(val) if val is not None else "none",
                     end='│')
-            # print(mmu.cache.sets[i][j].data)
+            # print(memory.cache.sets[i][j].data)
             print(' ', end='')
         print('')
 
@@ -355,10 +355,10 @@ def print_info(cpu: CPU) -> None:
     print("PC: ", cpu.get_frontend().get_pc(), end="")
 
 
-def header_memory(mmu: MMU):
+def header_memory(memory: MemorySubsystem):
     print_header("Memory", BOLD + YELLOW + ENDC)
     print()
-    print_memory(mmu, lines=8, base=0x0000)
+    print_memory(memory, lines=8, base=0x0000)
     print()
 
 
@@ -439,5 +439,5 @@ def header_rs(engine: ExecutionEngine, reg_capitalisation: bool = False):
 
 def all_headers(cpu: CPU, breakpoints: dict):
     header_regs(cpu.get_exec_engine(), cpu._config["UX"]["reg_capitalisation"])
-    header_memory(cpu.get_mmu())
+    header_memory(cpu.get_memory_subsystem())
     header_pipeline(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints, cpu._config["UX"]["show_empty_slots"], cpu._config["UX"]["reg_capitalisation"])

@@ -77,7 +77,7 @@ def __show(input: list[str], cpu: CPU):
             try:
                 start = int(input[1], base=16)
                 start = max(start, 0)
-                ui.print_memory(cpu.get_mmu(), base=start)
+                ui.print_memory(cpu.get_memory_subsystem(), base=start)
             except ValueError:
                 print("Usage: show mem <start in hex> <words in hex>")
                 return cpu
@@ -89,14 +89,14 @@ def __show(input: list[str], cpu: CPU):
                 words = int(input[2], base=16)
                 fits_per_line = (ui.columns - 8) // 7
                 lines = ceil(words / fits_per_line)
-                ui.print_memory(cpu.get_mmu(), base=start, lines=lines)
+                ui.print_memory(cpu.get_memory_subsystem(), base=start, lines=lines)
             except ValueError:
                 print("Usage: show mem <start in hex> <words in hex>")
                 return cpu
         else:
-            ui.print_memory(cpu.get_mmu())
+            ui.print_memory(cpu.get_memory_subsystem())
     elif subcmd == 'cache':
-        ui.print_cache(cpu.get_mmu())
+        ui.print_cache(cpu.get_memory_subsystem())
     elif subcmd == 'regs':
         ui.print_regs(cpu.get_exec_engine(), reg_capitalisation=cpu._config["UX"]["reg_capitalisation"])
     elif subcmd == 'queue':
@@ -125,7 +125,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
             try:
                 addr = int(input[1], base=16)
                 val = int(input[2], base=16)
-                cpu.get_mmu().write_word(Word(addr), Word(val), cache_side_effects=False)
+                cpu.get_memory_subsystem().write_word(Word(addr), Word(val), cache_side_effects=False)
             except ValueError:
                 print("Usage: edit word <address in hex> <value in hex>")
                 return cpu
@@ -136,7 +136,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
             try:
                 addr = int(input[1], base=16)
                 val = int(input[2], base=16)
-                cpu.get_mmu().write_byte(Word(addr), Byte(val), cache_side_effects=False)
+                cpu.get_memory_subsystem().write_byte(Word(addr), Byte(val), cache_side_effects=False)
             except ValueError:
                 print("Usage: edit byte <address in hex> <value in hex>")
                 return cpu
@@ -144,11 +144,11 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
             print("Usage: edit word <address in hex> <value in hex>")
     elif subcmd == 'flush':
         if len(input) == 1:
-            cpu.get_mmu().flush_all()
+            cpu.get_memory_subsystem().flush_all()
         elif len(input) == 2:
             try:
                 addr = int(input[1], base=16)
-                cpu.get_mmu().flush_line(Word(addr))
+                cpu.get_memory_subsystem().flush_line(Word(addr))
             except ValueError:
                 print("Usage: edit flush <address in hex>")
                 return cpu
@@ -158,7 +158,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
         if len(input) == 2:
             try:
                 addr = int(input[1], base=16)
-                cpu.get_mmu()._load_line(Word(addr))
+                cpu.get_memory_subsystem()._load_line(Word(addr))
             except ValueError:
                 print("Usage: edit load <address in hex>")
                 return cpu

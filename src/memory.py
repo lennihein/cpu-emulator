@@ -20,13 +20,13 @@ class MemResult:
     cycles_fault: int
 
 
-class MMU:
+class MemorySubsystem:
     """
-    The memory management unit (MMU).
+    The memory subsystem (MS).
 
-    In our model, the MMU includes the main memory and
+    In our model, the MS includes the main memory and
     cache. Contrary  to the Skylake architecture, our
-    MMU does not contain load- and store-buffers, and
+    MS does not contain load- and store-buffers, and
     for the sake of simplicity, there is one cache only.
     Therefore, whether our cache is an L3 or L1 cache
     does not matter.
