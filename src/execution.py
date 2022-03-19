@@ -18,7 +18,7 @@ from .instructions import (
     Instruction,
     InstructionKind,
 )
-from .mmu import MMU, MemResult
+from .memory import MemorySubsystem, MemResult
 from .word import Word
 
 _T = TypeVar("_T")
@@ -220,8 +220,8 @@ class _SlotMem(_SlotFaulting):
 
     instr_ty: Union[InstrLoad, InstrStore, InstrFlush]
 
-    # Reference to MMU so we can perform memory operations
-    mmu: MMU
+    # Reference to MemorySubsystem so we can perform memory operations
+    memory: MemorySubsystem
     # Reference to Execution Engine so we can check for hazards
     exe: "ExecutionEngine"
     # Effective address of the memory access, or `None` if it is not yet available
@@ -235,7 +235,7 @@ class _SlotMem(_SlotFaulting):
     def __init__(self, args: _ArgsSlot):
         super().__init__(args)
 
-        self.mmu = args.exe._mmu
+        self.memory = args.exe._memory
         self.exe = args.exe
         self.address = None
         self.hazards = None
@@ -379,9 +379,9 @@ class _SlotLoad(_SlotMem):
 
         # Perform the load operation
         if self.instr_ty.width_byte:
-            return self.mmu.read_byte(self.address)
+            return self.memory.read_byte(self.address)
         else:
-            return self.mmu.read_word(self.address)
+            return self.memory.read_word(self.address)
 
 
 class _SlotStore(_SlotMem):
@@ -404,9 +404,9 @@ class _SlotStore(_SlotMem):
 
         # Perform the store operation
         if self.instr_ty.width_byte:
-            return self.mmu.write_byte(self.address, Byte(value.value))
+            return self.memory.write_byte(self.address, Byte(value.value))
         else:
-            return self.mmu.write_word(self.address, value)
+            return self.memory.write_word(self.address, value)
 
 
 class _SlotFlush(_SlotMem):
@@ -418,7 +418,7 @@ class _SlotFlush(_SlotMem):
         assert self.address is not None
 
         # Perform the flush operation
-        return self.mmu.flush_line(self.address)
+        return self.memory.flush_line(self.address)
 
 
 class _SlotFlushAll(_Slot):
@@ -426,17 +426,17 @@ class _SlotFlushAll(_Slot):
 
     instr_ty: InstrFlushAll
 
-    # Reference to MMU so we can perform memory operations
-    mmu: MMU
+    # Reference to MS so we can perform memory operations
+    memory: MemorySubsystem
 
     def __init__(self, args: _ArgsSlot):
         super().__init__(args)
 
-        self.mmu = args.exe._mmu
+        self.memory = args.exe._memory
 
     def _tick_execute(self) -> Optional[Word]:
         # Flush the whole cache
-        self.mmu.flush_all()
+        self.memory.flush_all()
 
         # Return dummy value
         return Word(0)
@@ -594,9 +594,7 @@ class ExecutionEngine:
     time, with yet-unknown register values present as slot references.
     """
 
-    # TODO: The MMU object should only be copied once when using `copy.deepcopy`, check that this is
-    # actually the case. If not, the Slot classes above also need changing
-    _mmu: MMU
+    _memory: MemorySubsystem
     _bpu: BPU
 
     # Register file, containing the architectural register state if all in-flight instructions were
@@ -609,9 +607,9 @@ class ExecutionEngine:
     # Cycle counter, incremented on each tick
     _cyclecount: int
 
-    def __init__(self, mmu, bpu, config):
+    def __init__(self, memory, bpu, config):
         """Create a new Reservation Station, with empty slots and zeroed registers."""
-        self._mmu = mmu
+        self._memory = memory
         self._bpu = bpu
         rs_conf = config["ExecutionEngine"]
 

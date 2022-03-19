@@ -19,7 +19,7 @@ class CPUTests(unittest.TestCase):
         address = Word(Word.WIDTH // 2)
 
         for i in range(10):
-            cpu.get_mmu().write_byte(address + Word(i), Word(i))
+            cpu.get_memory_subsystem().write_byte(address + Word(i), Word(i))
             cpu._take_snapshot()
 
         self.assertEqual(self.get_vals_at_addresses(cpu, address), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
@@ -47,7 +47,7 @@ class CPUTests(unittest.TestCase):
         # `snapshots[10 - 6 + 1 + 1:]` (the ones that were created AFTER the snapshot that is
         # pointed to by cpu._snapshot_index) are no longer valid. Since we discard them, we now
         # expect the snapshot list to be smaller.
-        cpu.get_mmu().write_byte(address, Word(42))
+        cpu.get_memory_subsystem().write_byte(address, Word(42))
         cpu._take_snapshot()
 
         self.assertEqual(self.get_vals_at_addresses(cpu, address), [42, 1, 2, 3, 4, 0, 0, 0, 0, 0])
@@ -65,7 +65,7 @@ class CPUTests(unittest.TestCase):
         self.assertEqual(CPU.restore_snapshot(cpu, 10), None)
 
     def get_vals_at_addresses(self, cpu: CPU, address: Word) -> list[int]:
-        return [cpu.get_mmu().read_byte(address + Word(i)).value.value for i in range(10)]
+        return [cpu.get_memory_subsystem().read_byte(address + Word(i)).value.value for i in range(10)]
 
     def test_program(self):
         """Test execution of a simple program."""

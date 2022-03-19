@@ -6,7 +6,7 @@ from .bpu import BPU, SimpleBPU
 from .execution import ExecutionEngine, FaultInfo
 from .frontend import Frontend, InstrFrontendInfo
 from .instructions import InstrBranch, InstrFlush, InstrLoad, InstrStore
-from .mmu import MMU
+from .memory import MemorySubsystem
 from .parser import Parser
 
 from dataclasses import dataclass
@@ -39,7 +39,7 @@ class CPU:
 
     _bpu: BPU
 
-    _mmu: MMU
+    _mem: MemorySubsystem
 
     # Execution engine.
     _exec_engine: ExecutionEngine
@@ -55,7 +55,7 @@ class CPU:
 
         self._parser = Parser.from_default()
 
-        self._mmu = MMU(config)
+        self._mem = MemorySubsystem(config)
 
         if config["BPU"]["advanced"]:
             self._bpu = BPU(config)
@@ -67,7 +67,7 @@ class CPU:
         self._frontend = None
 
         # Reservation stations
-        self._exec_engine = ExecutionEngine(self._mmu, self._bpu, config)
+        self._exec_engine = ExecutionEngine(self._mem, self._bpu, config)
 
         # Snapshots
         global _snapshots
@@ -86,7 +86,7 @@ class CPU:
         # Initialize frontend
         self._frontend = Frontend(self._bpu, instructions, self._config)
         # Reset reservation stations?
-        self._exec_engine = ExecutionEngine(self._mmu, self._bpu, self._config)
+        self._exec_engine = ExecutionEngine(self._mem, self._bpu, self._config)
 
         # take snapshot
         self._take_snapshot()
@@ -148,9 +148,9 @@ class CPU:
 
         return cpu_status
 
-    def get_mmu(self) -> MMU:
-        """Returns an instance of the MMU class."""
-        return self._mmu
+    def get_memory_subsystem(self) -> MemorySubsystem:
+        """Returns an instance of the MS class."""
+        return self._mem
 
     def get_frontend(self) -> Frontend:
         """
@@ -208,7 +208,7 @@ class CPU:
         if cpu._snapshot_index + steps < 1 or cpu._snapshot_index + steps >= len(_snapshots):
             return None
 
-        # Returning copies are is important, as otherwise a manipulation
+        # Returning copies is important, as otherwise a manipulation
         # of the returned cpu instance (for example, calling tick),
         # changes the class that is stored in the snapshot list.
         return copy.deepcopy(_snapshots[cpu._snapshot_index + steps])
