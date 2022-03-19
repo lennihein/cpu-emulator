@@ -149,21 +149,53 @@ def print_regs(engine: ExecutionEngine, reg_capitalisation: bool = False):
     print()
 
 
-def print_cache(mmu: MMU) -> None:
-    """Prints the cache. Only to be used during development."""
-    for i in range(len(mmu.cache.sets)):
-        print(i, end=' ')
-        for j in range(len(mmu.cache.sets[i])):
-            if mmu.cache.sets[i][j].is_in_use():
-                print("*", end='')
-            for a in range(len(mmu.cache.sets[i][j].data)):
-                val = mmu.cache.sets[i][j].data[a]
-                print(
-                    '{:04x}'.format(val) if val is not None else "none",
-                    end='│')
-            # print(mmu.cache.sets[i][j].data)
-            print(' ', end='')
-        print('')
+def print_cache(mmu: MMU, show_empty_sets: bool, show_empty_ways: bool) -> None:
+    # TODO: make compatible with more than 12 bits for tag or index
+    # long_index = True if num_index_bits > 12 else False
+    # long_tag = True if num_tag_bits > 12 else False
+
+    data_length = 1 + 7 * mmu.cache.line_size
+
+    data_header = ('─' * floor((data_length - 4) / 2)) + "Data" + ('─' * ceil((data_length - 4) / 2))
+    print(f"╭─Index─┬──Tag──┬{data_header}╮")
+
+    for i, set in enumerate(mmu.cache.sets):
+
+        if len([entry for entry in set if entry.is_in_use()]) == 0 and show_empty_sets is False:
+            print(f"├{'─' * 7}┼{'─'*7}┼{'─' * data_length}┤")
+            print(f"│ {FAINT}0x{ENDC}{'{:03x}'.format(i)} │ empty │{' ' * (data_length-0)}│")
+            continue
+
+        if i != 0:
+            print(f"├{'─'*7}┼{'─'*7}┼{'─' * data_length}┤")
+
+        if show_empty_ways is False:
+            set = [entry for entry in set if entry.is_in_use()]
+
+        for j, entry in enumerate(set):
+
+            if (j + 1) == ceil(len(set) / 2) and len(set) % 2 == 1:
+                index_gap = f" {FAINT}0x{ENDC}{'{:03x}'.format(i)} "
+            else:
+                index_gap = f"{' '*7}"
+
+            if entry.is_in_use():
+                print(f"│{index_gap}│ {FAINT}0x{ENDC}{'{:03x}'.format(entry.tag)} │ ", end="")
+                for a, val in enumerate(entry.data):
+                    print(f"{hex_str(val, p_end=' ')}", end='')
+                print("│")
+            else:
+                print(f"│{index_gap}│{' '*7}│{' '*data_length}│")
+
+            if (j + 1) == ceil(len(set) / 2) and len(set) % 2 == 0:
+                index_gap = f" {FAINT}0x{ENDC}{'{:03x}'.format(i)} "
+            else:
+                index_gap = f"{' '*7}"
+
+            if j != len(set) - 1:
+                print(f"│{index_gap}├{'─'*7}┼{'─' * data_length}┤")
+
+    print(f"╰{'─'*7}┴{'─'*7}┴{'─' * data_length}╯")
 
 
 def instruction_str(instr: Instruction, reg_capitalisation: bool = False) -> tuple[str, int]:

@@ -96,7 +96,7 @@ def __show(input: list[str], cpu: CPU):
         else:
             ui.print_memory(cpu.get_mmu())
     elif subcmd == 'cache':
-        ui.print_cache(cpu.get_mmu())
+        ui.print_cache(cpu.get_mmu(), cpu._config["UX"]["show_empty_sets"], cpu._config["UX"]["show_empty_ways"])
     elif subcmd == 'regs':
         ui.print_regs(cpu.get_exec_engine(), reg_capitalisation=cpu._config["UX"]["reg_capitalisation"])
     elif subcmd == 'queue':

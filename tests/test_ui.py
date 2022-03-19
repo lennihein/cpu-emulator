@@ -103,7 +103,7 @@ class UITest(TestCase):
                         0, 0xFF)))
         print_header("Cache", ENDC)
         print()
-        print_cache(mmu)
+        print_cache(mmu, False, False)
         print()
 
     def test_end(self):
