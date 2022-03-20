@@ -23,6 +23,9 @@ todo
 ### CPU {#sec:CPU}
 \marginpar{Felix Betke}
 The primary purpose of the _CPU_ class is to allow all other components to work together. That is, the CPU initializes all other components and provides interfaces to their functions. Most importantly, the _CPU_ provides a _tick_ function that is called each cycle and does the following: instructions from the instruction queue are fetched from the frontend and forwarded to the execution engine, until either no more slots in the unified reservation station are available, or the instruction queue is empty. It then calls the _tick_ function of the execution engine. In case of a rollback, the instruction queue maintained by the frontend is flushed. If configured, a µ-program is executed prior to resuming execution. If the rollback was caused by a faulting load instruction, execution is resumed at the next instruction (as described in [@sec:rollback]). In case a branch was mispredicted, the frontend is notified and refills the instruction queue accordingly. If configured, corresponding microprograms are sent to the instruction queue. Lastly, a snapshot of the current state of the CPU is taken. To provide the UI with useful information to display to the users, the _tick_ function returns an instance of a _CPUStatus_ class that contains a boolean indicating if the program has terminated, whether an exception has raised a fault, and a list of instructions that have been issued during this tick.
+<!---
+TODO: Microprograms
+-->
 
 Other functions exist to load programs from files and initialize the frontend and execution engine accordingly. Further, references to each component are exposed by getter functions to allow the UI to visualize their current state.
 
@@ -199,6 +202,7 @@ These are used by the other components during regular execution, e.g. when issui
 Since our emulator only executes one program at a time, the other components can check via another interface whether the frontend has reached the end of the program.
 
 ### Memory {#sec:memory}
+<!---TODO: No virtual addresses.-->
 \marginpar{Felix Betke}
 Memory is primarily managed by the Memory Subsystem (MS). As a simplification over an MS as it is assumed to be used by Intel's Skylake architecture [@skylake], our version maintains only a single cache, no load, store, or fill buffers. Further, it maintains the main memory directly. These simplifications are possible, since our objective is to allow users to learn about Meltdown-US-L1 and Spectre v1, none of which rely on any of the MS components we removed in our version. Further, the fact that our CPU consists of a single core only, the MS can directly use the main memory.
 
@@ -485,6 +489,9 @@ fence&none& add execution fixpoint at this code position\\
 
 ## Config File {#sec:config}
 <!--todo: should we move this to the frontend? more like a manual? -->
+<!---
+TODO: Microprograms
+-->
 \marginpar{Felix Betke}
 To allow users to change certain parameters of the presented emulator, a configuration file is available. It can be found in the root folder of the project and edited with a regular text editor. This section briefly mentions which parts of the demonstrated emulator can be configured, and why which default values have been chosen.
 
