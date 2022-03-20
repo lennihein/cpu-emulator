@@ -30,31 +30,55 @@ The second purpose of the _CPU_ class is to provide the snapshot functionality, 
 
 ### Instructions and Parser {#sec:parser}
 
-- General instruction format: mnemonic followed by comma-separated operands, as is common in assembly languages
+<!-- - General instruction format: mnemonic followed by comma-separated operands, as is common in assembly languages
 - Instruction mnemonic already determines the exact instruction, including the types of its operands
-- Possible operand types: reg, imm, label
+- Possible operand types: reg, imm, label -->
 
 The general instruction format used by our instruction set is the instruction mnemonic followed by a comma-separated list of instruction operands, as is common in assembly languages.
 In our instruction set, the instruction mnemonic already determines the exact instruction, including the number and types of its operands. This greatly simplifies parsing.
+There are three different types of operands in our instruction set:
 
-- Concrete instructions and their semantics covered in sec:isa
+- *Register* operands specify a register the instruction should operate on. They are introduced by an `r` followed by the decimal register number.
+
+- *Immediate* operands specify a 16-bit immediate value used by the instruction. They take on the usual decimal or hexadecimal form for integer literals, optionally prefixed by a sign.
+
+- *Label* operands specify the destination of a branch instruction. The label referenced has to be defined somewhere in the assembly file, using the label name followed by a colon.
+
+<!-- - Concrete instructions and their semantics covered in sec:isa
 - We don't support reading or writing instruction memory
-  - Instructions have no defined in-memory representation
+  - Instructions have no defined in-memory representation -->
 
-- Instructions distinguished based on instruction category: reg, imm, branch, load, store, flush, special: cyclecount, fence, flushall
+Our instruction set, including all concrete instructions and their semantics, are covered in detail in [@sec:ISA].
+We do not support reading or writing instruction memory. Thus, instructions have no defined in-memory representation.
+
+<!-- - Instructions distinguished based on instruction category: reg, imm, branch, load, store, flush, special: cyclecount, fence, flushall
 - Instruction object knows its mnemonic, types of its operands, which category of instruction it belongs to, and some category-specific information
   - For register-register and register-immediate instructions the concrete computation performed
   - For branch instructions the branch condition
   - For load and store instructions the width of the memory access
 - Execution Engine only has to handle each instruction category, not all concrete instructions
-- New instructions that fit an existing category can be added easily by the user
+- New instructions that fit an existing category can be added easily by the user -->
 
-- Parser consumes abstract description of instructions, only mnemonic and operand types
+The instructions of our instruction set are further distinguished based on their *instruction category*. The possible instruction categories are *register-register* instructions, *register-immediate* instructions, *branch* instructions, *load* instructions, *store* instructions, *flush* instructions, and three special categories for the individual *rdtsc*, *fence*, and *flushall* instructions.
+Our implementation uses `InstructionKind` objects to model the individual instructions of our instruction set. Each such object defines an instruction by its mnemonic, the number and types of its operands, the instruction category it belongs to, as well as some category-specific information. For register-register and register-immediate instructions, this is the concrete computation performed. For branch instructions, this is the branch condition. And for load and store instructions, this is the width of the memory access.
+
+Grouping similar instructions into categories allows the Execution Engine to handle executed instructions based solely on their instruction category; the Execution Engine does not need to handle every concrete instruction separately.
+New instructions that match an existing instruction category can be added easily by users, without having to modify the Execution Engine.
+The mechanisms involved in the Execution Engine are described in detail in [@sec:execution].
+
+<!-- - Parser consumes abstract description of instructions, only mnemonic and operand types
   - Doesn't need to know about every concrete instruction
 - Strips comments, introduced by `//`
 - Handles labels, label name followed by `:`
   - Labels can be referenced before they are defined without special indication
-- Two passes: first to extract all labels, second to actually parse instructions
+- Two passes: first to extract all labels, second to actually parse instructions -->
+
+Our parser is based on an abstract description of the instructions of our instruction set. This description is limited to the instruction's mnemonic and the number and types of its operands. The parser handles all instructions uniformly and has no information about the semantics of any instruction.
+Operation of the parser is divided into two passes over the input file. The first pass exclusively handles label definitions, which consist of a label name followed by a colon. The parser maintains an internal directory of labels, associating each label name with the immediately following instruction.
+The second pass parses the actual program, with one instruction per line. After determining the mnemonic and looking up the corresponding instruction, it parses all operands, subject to the rules for operand types described above.
+Having identified the instruction and parsed all operands, the parser builds an `Instruction` object, which models a concrete instruction in program code. Every `Instruction` object references the `InstructionKind` object of the instruction it represents, and contains the concrete values of all operands.
+During both passes, the parser skips over any comments, which are lines starting with two slashes (`//`).
+Performing two passes in this way allows labels to be used both before and after their definition.
 
 ### Data representation {#sec:data}
 
