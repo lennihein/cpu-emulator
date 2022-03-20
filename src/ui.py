@@ -123,6 +123,16 @@ def print_memory(memory: MemorySubsystem, lines=8, base=0x0000):
         print()
 
 
+def reg_str(val) -> str:
+    if isinstance(val, Word):
+        return hex_str(val.value, p_end="", base_style=ENDC + FAINT)
+    elif isinstance(val, int):
+        return ENDC + "RS {:03}".format(val) + ENDC
+    else:
+        return BOLD + RED + "ERR"
+        exit(1)
+
+
 def print_regs(engine: ExecutionEngine, reg_capitalisation: bool = False):
     regs = engine._registers
     fits = (columns + 3) // 14
@@ -137,13 +147,7 @@ def print_regs(engine: ExecutionEngine, reg_capitalisation: bool = False):
             print(BOLD + GREEN + reg_symbol + str(i)
                   + (" : " if i < 10 else ": "), end="")
             val = regs[i]
-            if isinstance(val, Word):
-                print_hex(val.value, p_end="", base_style=ENDC + FAINT)
-            elif isinstance(val, int):
-                print(ENDC + FAINT + "RS {:03}".format(val) + ENDC, end="")
-            else:
-                print(BOLD + RED + "ERR", end="")
-                exit(1)
+            print(reg_str(val), end="")
             print(" │" if j != fits - 1 else "\n", end="")
             i += 1
     print()
@@ -344,7 +348,8 @@ def rs_str(engine: ExecutionEngine, show_empty=True, reg_capitalisation: bool = 
     max_pc_length = max(max_pc_length, 1)
     max_index_length = max(max_index_length, 1)
 
-    rs_length = max_instr_length + max_pc_length + 1 + 3 + 3 + 4
+    rs_length = max_instr_length + max_pc_length + 1 + 3 + 3 + 14 + 4
+
     if not show_empty:
         rs_length += max_index_length + 3
 
@@ -353,13 +358,13 @@ def rs_str(engine: ExecutionEngine, show_empty=True, reg_capitalisation: bool = 
     line_top = '╭'
     if not show_empty:
         line_top += '─' * (max_index_length + 2) + '┬'
-    line_top += '─' * (max_pc_length + 2) + '┬' + '─' * (max_instr_length + 2) + '┬' + '─' * 3 + '╮'
+    line_top += '─' * (max_pc_length + 2) + '┬' + '─' * (max_instr_length + 2) + '┬────────┬────────┬' + '─' * 3 + '╮'
     rs_str.append(line_top)
 
     for i, slot in enumerate(engine.slots()):
         if slot is None:
             if show_empty:
-                rs_str.append('│' + ' ' * (max_pc_length + 2) + '│' + ' ' * (max_instr_length + 2) + '│' + ' ' * 3 + '│')
+                rs_str.append('│' + ' ' * (max_pc_length + 2) + '│' + ' ' * (max_instr_length + 2) + '│        │        │' + ' ' * 3 + '│')
             continue
         else:
             line = '│ '
@@ -367,13 +372,15 @@ def rs_str(engine: ExecutionEngine, show_empty=True, reg_capitalisation: bool = 
                 line += ' ' * (max_index_length - len(indices[i])) + indices[i] + ' │ '
             line += ' ' * (max_pc_length - len(pcs[i])) + pcs[i] + ' │ '
             line += instructions[i] + ' ' * (max_instr_length - instr_lengths[i]) + ' │'
+            line += f" {reg_str(slot.source_operands[0]) if len(slot.source_operands) >= 1 else ' ' * 6} │"
+            line += f" {reg_str(slot.source_operands[1]) if len(slot.source_operands) >= 2 else ' ' * 6} │"
             line += f" {status[i]} │"
             rs_str.append(line)
 
     line_bot = '╰'
     if not show_empty:
         line_bot += '─' * (max_index_length + 2) + '┴'
-    line_bot += '─' * (max_pc_length + 2) + '┴' + '─' * (max_instr_length + 2) + '┴' + '─' * 3 + '╯'
+    line_bot += '─' * (max_pc_length + 2) + '┴' + '─' * (max_instr_length + 2) + '┴────────┴────────┴' + '─' * 3 + '╯'
     rs_str.append(line_bot)
 
     return rs_str, rs_length
@@ -429,6 +436,7 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict,
     header_str += "-" * 4
     header_str += "-" * ceil((rs_length - len("[ Reservation Stations ]")) / 2) + "[ Reservation Stations ]" + "-" * floor((rs_length - len("[ Reservation Stations ]")) / 2)
 
+    print(len(header_str))
     if columns < len(header_str):
         print(BOLD + RED + UNDERLINE + "Please increase the terminal width to at least " + str(len(header_str)) + " characters" + ENDC + "\n")
         print_prog(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 1)

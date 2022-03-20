@@ -25,5 +25,5 @@ ExecutionEngine:
 UX:
     show_empty_slots: True
     reg_capitalisation: False
-    show_empty_sets: True
+    show_empty_sets: False
     show_empty_ways: True
