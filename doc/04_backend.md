@@ -82,15 +82,24 @@ Performing two passes in this way allows labels to be used both before and after
 
 ### Data representation {#sec:data}
 
-- Based on 8-bit byte, 16-bit word
+<!-- - Based on 8-bit byte, 16-bit word
 - All registers store a word
 - All instructions operate on whole words, except for lb and sb
 - All immediate operands of instructions are words
 - Words are interpreted as unsigned or twos-complement signed values
-  - Distinction only relevant for comparisons of the branch instructions, see sec:isa
+  - Distinction only relevant for comparisons of the branch instructions, see sec:isa -->
 
-- Bytes only relevant for the representation of words in memory
-- The two individual bytes of words are stored in memory in little endian order, i.e. the least-significant byte at the lowest memory address
+The data representation used throughout our CPU is based on 16-bit values, called *words*.
+All CPU registers store a word. All instructions operate on words, and all immediate operands of instructions are words.
+A minor exception to this are the *store byte* and *load byte* instructions, that truncate a word to an 8-bit byte and zero-extend an 8-bit byte to a word, respectively. See [@sec:ISA] for a detailed description of memory operations.
+Words are interpreted either as unsigned or two's complement signed integer values. However, the distinction between unsigned and signed values is only relevant for the comparison operations used by branch instructions. See [@sec:ISA] for a detailed description of branch instructions.
+
+<!-- - Bytes only relevant for the representation of words in memory
+- The two individual bytes of words are stored in memory in little endian order, i.e. the least-significant byte at the lowest memory address -->
+
+Since our memory model is based on 8-bit *bytes*, words are separated into two 8-bit values when representing them in memory.
+The two individual bytes of words are stored in memory in little endian order, i.e. the least-significant byte is stored at the lowest memory address.
+For a detailed description of the mechanics involved in memory operations, see [@sec:memory].
 
 ### CPU frontend {#sec:CPU_frontend}
 
