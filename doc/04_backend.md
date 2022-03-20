@@ -23,6 +23,9 @@ todo
 ### CPU {#sec:CPU}
 \marginpar{Felix Betke}
 The primary purpose of the _CPU_ class is to allow all other components to work together. That is, the CPU initializes all other components and provides interfaces to their functions. Most importantly, the _CPU_ provides a _tick_ function that is called each cycle and does the following: instructions from the instruction queue are fetched from the frontend and forwarded to the execution engine, until either no more slots in the unified reservation station are available, or the instruction queue is empty. It then calls the _tick_ function of the execution engine. In case of a rollback, the instruction queue maintained by the frontend is flushed. If configured, a µ-program is executed prior to resuming execution. If the rollback was caused by a faulting load instruction, execution is resumed at the next instruction (as described in [@sec:rollback]). In case a branch was mispredicted, the frontend is notified and refills the instruction queue accordingly. If configured, corresponding microprograms are sent to the instruction queue. Lastly, a snapshot of the current state of the CPU is taken. To provide the UI with useful information to display to the users, the _tick_ function returns an instance of a _CPUStatus_ class that contains a boolean indicating if the program has terminated, whether an exception has raised a fault, and a list of instructions that have been issued during this tick.
+<!---
+TODO: Microprograms
+-->
 
 Other functions exist to load programs from files and initialize the frontend and execution engine accordingly. Further, references to each component are exposed by getter functions to allow the UI to visualize their current state.
 
@@ -30,43 +33,76 @@ The second purpose of the _CPU_ class is to provide the snapshot functionality, 
 
 ### Instructions and Parser {#sec:parser}
 
-- General instruction format: mnemonic followed by comma-separated operands, as is common in assembly languages
+<!-- - General instruction format: mnemonic followed by comma-separated operands, as is common in assembly languages
 - Instruction mnemonic already determines the exact instruction, including the types of its operands
-- Possible operand types: reg, imm, label
+- Possible operand types: reg, imm, label -->
 
 The general instruction format used by our instruction set is the instruction mnemonic followed by a comma-separated list of instruction operands, as is common in assembly languages.
 In our instruction set, the instruction mnemonic already determines the exact instruction, including the number and types of its operands. This greatly simplifies parsing.
+There are three different types of operands in our instruction set:
 
-- Concrete instructions and their semantics covered in sec:isa
+- *Register* operands specify a register the instruction should operate on. They are introduced by an `r` followed by the decimal register number.
+
+- *Immediate* operands specify a 16-bit immediate value used by the instruction. They take on the usual decimal or hexadecimal form for integer literals, optionally prefixed by a sign.
+
+- *Label* operands specify the destination of a branch instruction. The label referenced has to be defined somewhere in the assembly file, using the label name followed by a colon.
+
+<!-- - Concrete instructions and their semantics covered in sec:isa
 - We don't support reading or writing instruction memory
-  - Instructions have no defined in-memory representation
+  - Instructions have no defined in-memory representation -->
 
-- Instructions distinguished based on instruction category: reg, imm, branch, load, store, flush, special: cyclecount, fence, flushall
+Our instruction set, including all concrete instructions and their semantics, are covered in detail in [@sec:ISA].
+We do not support reading or writing instruction memory. Thus, instructions have no defined in-memory representation.
+
+<!-- - Instructions distinguished based on instruction category: reg, imm, branch, load, store, flush, special: cyclecount, fence, flushall
 - Instruction object knows its mnemonic, types of its operands, which category of instruction it belongs to, and some category-specific information
   - For register-register and register-immediate instructions the concrete computation performed
   - For branch instructions the branch condition
   - For load and store instructions the width of the memory access
 - Execution Engine only has to handle each instruction category, not all concrete instructions
-- New instructions that fit an existing category can be added easily by the user
+- New instructions that fit an existing category can be added easily by the user -->
 
-- Parser consumes abstract description of instructions, only mnemonic and operand types
+The instructions of our instruction set are further distinguished based on their *instruction category*. The possible instruction categories are *register-register* instructions, *register-immediate* instructions, *branch* instructions, *load* instructions, *store* instructions, *flush* instructions, and three special categories for the individual *rdtsc*, *fence*, and *flushall* instructions.
+Our implementation uses `InstructionKind` objects to model the individual instructions of our instruction set. Each such object defines an instruction by its mnemonic, the number and types of its operands, the instruction category it belongs to, as well as some category-specific information. For register-register and register-immediate instructions, this is the concrete computation performed. For branch instructions, this is the branch condition. And for load and store instructions, this is the width of the memory access.
+
+Grouping similar instructions into categories allows the Execution Engine to handle executed instructions based solely on their instruction category; the Execution Engine does not need to handle every concrete instruction separately.
+New instructions that match an existing instruction category can be added easily by users, without having to modify the Execution Engine.
+The mechanisms involved in the Execution Engine are described in detail in [@sec:execution].
+
+<!-- - Parser consumes abstract description of instructions, only mnemonic and operand types
   - Doesn't need to know about every concrete instruction
 - Strips comments, introduced by `//`
 - Handles labels, label name followed by `:`
   - Labels can be referenced before they are defined without special indication
-- Two passes: first to extract all labels, second to actually parse instructions
+- Two passes: first to extract all labels, second to actually parse instructions -->
+
+Our parser is based on an abstract description of the instructions of our instruction set. This description is limited to the instruction's mnemonic and the number and types of its operands. The parser handles all instructions uniformly and has no information about the semantics of any instruction.
+Operation of the parser is divided into two passes over the input file. The first pass exclusively handles label definitions, which consist of a label name followed by a colon. The parser maintains an internal directory of labels, associating each label name with the immediately following instruction.
+The second pass parses the actual program, with one instruction per line. After determining the mnemonic and looking up the corresponding instruction, it parses all operands, subject to the rules for operand types described above.
+Having identified the instruction and parsed all operands, the parser builds an `Instruction` object, which models a concrete instruction in program code. Every `Instruction` object references the `InstructionKind` object of the instruction it represents, and contains the concrete values of all operands.
+During both passes, the parser skips over any comments, which are lines starting with two slashes (`//`).
+Performing two passes in this way allows labels to be used both before and after their definition.
 
 ### Data representation {#sec:data}
 
-- Based on 8-bit byte, 16-bit word
+<!-- - Based on 8-bit byte, 16-bit word
 - All registers store a word
 - All instructions operate on whole words, except for lb and sb
 - All immediate operands of instructions are words
 - Words are interpreted as unsigned or twos-complement signed values
-  - Distinction only relevant for comparisons of the branch instructions, see sec:isa
+  - Distinction only relevant for comparisons of the branch instructions, see sec:isa -->
 
-- Bytes only relevant for the representation of words in memory
-- The two individual bytes of words are stored in memory in little endian order, i.e. the least-significant byte at the lowest memory address
+The data representation used throughout our CPU is based on 16-bit values, called *words*.
+All CPU registers store a word. All instructions operate on words, and all immediate operands of instructions are words.
+A minor exception to this are the *store byte* and *load byte* instructions, that truncate a word to an 8-bit byte and zero-extend an 8-bit byte to a word, respectively. See [@sec:ISA] for a detailed description of memory operations.
+Words are interpreted either as unsigned or two's complement signed integer values. However, the distinction between unsigned and signed values is only relevant for the comparison operations used by branch instructions. See [@sec:ISA] for a detailed description of branch instructions.
+
+<!-- - Bytes only relevant for the representation of words in memory
+- The two individual bytes of words are stored in memory in little endian order, i.e. the least-significant byte at the lowest memory address -->
+
+Since our memory model is based on 8-bit *bytes*, words are separated into two 8-bit values when representing them in memory.
+The two individual bytes of words are stored in memory in little endian order, i.e. the least-significant byte is stored at the lowest memory address.
+For a detailed description of the mechanics involved in memory operations, see [@sec:memory].
 
 ### CPU frontend {#sec:CPU_frontend}
 
@@ -175,6 +211,7 @@ These are used by the other components during regular execution, e.g. when issui
 Since our emulator only executes one program at a time, the other components can check via another interface whether the frontend has reached the end of the program.
 
 ### Memory {#sec:memory}
+<!---TODO: No virtual addresses.-->
 \marginpar{Felix Betke}
 Memory is primarily managed by the Memory Subsystem (MS). As a simplification over an MS as it is assumed to be used by Intel's Skylake architecture [@skylake], our version maintains only a single cache, no load, store, or fill buffers. Further, it maintains the main memory directly. These simplifications are possible, since our objective is to allow users to learn about Meltdown-US-L1 and Spectre v1, none of which rely on any of the MS components we removed in our version. Further, the fact that our CPU consists of a single core only, the MS can directly use the main memory.
 
@@ -461,6 +498,9 @@ fence&none& add execution fixpoint at this code position\\
 
 ## Config File {#sec:config}
 <!--todo: should we move this to the frontend? more like a manual? -->
+<!---
+TODO: Microprograms
+-->
 \marginpar{Felix Betke}
 To allow users to change certain parameters of the presented emulator, a configuration file is available. It can be found in the root folder of the project and edited with a regular text editor. This section briefly mentions which parts of the demonstrated emulator can be configured, and why which default values have been chosen.
 
