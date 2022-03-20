@@ -233,19 +233,31 @@ def exec(cpu: CPU, steps=-1, break_at_retire=False) -> CPU:
         inflights_before = cpu.get_exec_engine().occupied_slots()
         info: CPUStatus = cpu.tick()
         if info.fault_info is not None:
-            print(ui.BOLD + ui.RED + f"FAULT at {info.fault_info.pc}: " + str(info.fault_info.instr) + ui.ENDC + "\n", end="")
+            ui.all_headers(cpu, breakpoints)
+            if info.fault_info.prediction is not None:
+                # branch prediction error
+                ops = info.fault_info.instr.ops
+                print(f"{ui.RED + ui.BOLD}Prediction error at {info.fault_info.pc}:{ui.ENDC} {info.fault_info.instr.ty.name} r{ops[0]}, r{ops[1]}, {abs(ops[2])} (predicted branch {'' if info.fault_info.prediction else 'not '}taken{ui.ENDC})")
+            elif info.fault_info.address is not None:
+                # address error
+                ops = info.fault_info.instr.ops
+                print(f"{ui.RED + ui.BOLD}Memory access error at {info.fault_info.pc}:{ui.ENDC} {info.fault_info.instr.ty.name} r{ops[0]}, r{ops[1]}, {ui.hex_str(ops[2], fixed_width=False)}")
+            else:
+                print(ui.RED + "Unknown fault" + ui.ENDC)
             break
         if set(active_breakpoints) & set(info.issued_instructions):
+            ui.all_headers(cpu, breakpoints)
             ui.print_color(ui.RED, 'BREAKPOINT', newline=True)
             break
         if not info.executing_program:
+            ui.all_headers(cpu, breakpoints)
             print("Program finished")
             break
         if break_at_retire and len(info.issued_instructions) + cpu.get_exec_engine().occupied_slots() < inflights_before:
+            ui.all_headers(cpu, breakpoints)
             ui.print_color(ui.RED, 'RETIRE', newline=True)
             break
         i += 1
-    ui.all_headers(cpu, breakpoints)
     return cpu
 
 

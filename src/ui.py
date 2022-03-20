@@ -436,7 +436,6 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict,
     header_str += "-" * 4
     header_str += "-" * ceil((rs_length - len("[ Reservation Stations ]")) / 2) + "[ Reservation Stations ]" + "-" * floor((rs_length - len("[ Reservation Stations ]")) / 2)
 
-    print(len(header_str))
     if columns < len(header_str):
         print(BOLD + RED + UNDERLINE + "Please increase the terminal width to at least " + str(len(header_str)) + " characters" + ENDC + "\n")
         print_prog(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 1)
