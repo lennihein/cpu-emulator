@@ -291,9 +291,167 @@ Since instructions are issued in program order, the state of the register file a
 
 todo
 
-## Exceptions and Rollbacks (2-3 pages) {#sec:rollback}
+## Exception- and Fault-Handling (2-3 pages) {#sec:rollback}
 
-todo
+<!-- Exceptions: -->
+
+<!-- - Exceptions: Distinguish between architectural and microarchitectural exceptions
+- Architectural exceptions: visible to the program being executed, usually handled by that program or the underlying operating system
+  - In our case there is no operating system that could handle exceptions, and requiring the program to handle exceptions would increase the complexity of both our CPU and user programs
+  - For this reason architectural exceptions are handled implicitly, by skipping execution of the instruction that caused the exception. After an exception occurred, execution continues with the following instruction instead
+  - In our case: Invalid memory accesses
+- Microarchitectural exceptions: Not architecturally visible, handled directly by the microarchitecture
+  - In our case: Mispredicted branches -->
+
+*Exceptions* in general are certain conditions that can occur during execution and require handling before execution can be continued. We distinguish between *architectural* and *microarchitectural* exceptions.
+Architectural exceptions are visible to the program being executed and are usually handled by that program or the underlying operating system.
+In our CPU simulation there is no operating system that could handle architectural exceptions, and requiring the program to handle these would increase the complexity of both our CPU and user programs.
+For this reason architectural exceptions are handled implicitly, by skipping execution of the instruction that caused the exception. After an exception occurred, execution continues with the following instruction instead.
+The only architectural exceptions present in our CPU are caused by invalid memory accesses, when a memory operation is performed on an inaccessible address.
+
+Microarchitectural exceptions in contrast are not visible to the program being executed and handled directly by the microarchitecture.
+In our case the only cause for a microarchitectural exception are mispredicted branches.
+
+<!-- - Both architectural exceptions and microarchitectural exceptions cause what we call microarchitectural *faults*
+  - Both handled in the same way inside the Execution Engine
+  - Difference in behavior only introduced in the main CPU component, as mentioned in sec:CPU -->
+
+Both architectural exceptions and microarchitectural exceptions cause what we call microarchitectural *faults*.
+All microarchitectural faults are handled in the same way inside the Execution Engine;
+the difference in behavior between architectural exceptions and microarchitectural exceptions is only introduced in the main CPU component, as mentioned in [@sec:CPU].
+
+### Rollbacks
+
+<!-- - General concept of rollbacks:
+  - Since we execute instructions out-of-order:
+    - Instructions preceding the faulting instruction in program order might have not yet been executed
+    - Instructions following the faulting instruction in program order might already have been executed
+  - In order to preserve illusion / abstraction that instructions are executed in program order from an architectural point of view
+  - We have to restore the architectural state from the time the faulting instruction was issued before we can properly handle the fault
+- Instructions that follow the faulting instruction in program order, but are executed before the rollback is performed are said to occur in *transient execution*
+  - They are executed as usual, but afterwards their operation is rolled back -->
+
+As discussed in [@sec:Tomasulo], our CPU executes instructions out-of-order. Because of this, special care must be taken when handling microarchitectural faults. In particular, the following effects need to be considered:
+
+- Instructions preceding the faulting instruction in program order might have not yet been executed
+
+- Instructions following the faulting instruction in program order might already have been executed
+
+The abstraction that, from an architectural point of view, instructions are executed in program order has to be preserved.
+Thus, we have to restore the architectural state from the time the faulting instruction was issued before we can properly handle the fault.
+This process of restoring the architectural state is called *rollback*.
+Instructions that follow the faulting instruction in program order, but are executed before the rollback is performed, are said to occur in *transient execution*;
+they are executed as usual, but afterwards their operation is rolled back.
+
+<!-- - In our CPU, rollbacks are local to the Execution Engine
+  - In case of a fault, Execution Engine performs the rollback
+  - And returns information about the fault to the main CPU component, which performs the remainder of the fault handling -->
+
+In our CPU, rollbacks are local to the Execution Engine.
+In case of a fault, the Execution Engine performs the rollback,
+and returns information about the fault to the main CPU component. The main CPU component then performs the remainder of the fault handling.
+
+<!-- - Two possible approaches:
+  - Track changes any executed instructions made to the architectural state, perform in reverse to recover the target state
+  - Take a snapshot of the architectural state when we issue the faulting instruction, restore this snapshot on fault
+  - We don't know what approach real x86 CPUs take, snapshot-based approach is easier to implement in a software simulator like ours
+- Architectural state in our case includes the register state and the contents of memory
+  - Not included: Cache, BPU
+  - Two different techniques used for restoring the register state and the contents of memory
+  - If multiple instructions might cause a fault, we also have to ensure that the fault that comes first in program order is the one that gets handled
+  - To achieve that, implementation uses the category of *potentially faulting instructions*
+    - In our case that includes branch instruction and memory operations -->
+
+There are two possible approaches to performing rollbacks.
+The first approach tracks any changes that executed instructions make to the architectural state. When a fault occurs, these tracked changes can be performed in reverse in order to recover the target architectural state.
+The second approach records a snapshot of the architectural state when the faulting instruction is issued. When a fault occurs, this snapshot can be restored in order to recover the target architectural state.
+It is not publicly documented what approach real x86 CPUs take to performing rollbacks. Our implementation follows the snapshot-based approach, since it was judged to be easier to implement in a software-based simulator.
+
+In our case, the architectural state that needs to be restored includes the register state and the contents of memory.
+The state of the cache and the BPU are not considered part of the architectural state and are not restored when performing a rollback.
+If multiple instructions might cause a fault, the fault that comes first in program order must be the one that is handled.
+We employ different techniques for ensuring that the register state and the contents of memory have the proper state after the rollback, and for making sure the first fault in program order is handled. These are described in the following sections.
+Our implementation uses the category of *potentially faulting instructions*, which includes branch instructions and memory operations.
+
+#### Restoring the Register State
+
+<!-- - When a potentially faulting instruction is issued, a copy of the current register state is stored in the reservation station slot
+  - As described in sec:execution, the register state might contain references to other slots of the reservation station
+- When the instruction actually faults, we continue execution normally until all of the slots referenced by the captured register state have finished executing
+- Then we can restore the captured register state -->
+
+<!-- To restore the correct architectural register state during rollback, a copy of the current register state is made whenever a potentially faulting instruction is issued -->
+When a potentially faulting instruction is issued, a copy of the current register state is stored in the reservation station slot.
+As described in [@sec:execution], the register state might contain references to other slots of the reservation station.
+When the instruction actually faults, execution continues normally until all of the slots referenced by the captured register state have finished executing.
+Then the captured register state contains no more slot references, and can be restored.
+
+#### Restoring the Contents of Memory
+
+<!-- - Storing a snapshot of the contents of memory every time a potentially faulting instruction is issued would require lot of space and prevent the rollback from being local to the Execution Engine
+  - Thus, we instead serialize the execution of store instructions with respect to other potentially faulting instructions
+- When a store instruction is issued, we record all slots of the reservation station that contain potentially faulting instructions
+- Before performing the store operation, we wait until all of the recorded slots have retired
+- This ensures that store operations are only performed when we know that no preceding instructions cause a fault -->
+
+Storing a snapshot of the contents of memory every time a store instruction is issued would require a lot of space and prevent the rollback from being local to the Execution Engine.
+Thus, we instead serialize the execution of store instructions with respect to other potentially faulting instructions.
+When a store instruction is issued, all slots of the reservation station that contain potentially faulting instructions are recorded.
+Before performing the store operation, execution halts until all of the recorded slots have retired.
+This ensures that store operations are only performed when it is known that no preceding instructions cause a fault.
+
+#### Handling Faults in Program Order
+
+<!-- - Same technique as used to avoid having to restore contents of memory
+- When a potentially faulting instruction is issued, we record all slots of the reservation station that contain potentially faulting instructions
+- When the instruction actually faults, we continue execution normally until all of the recorded slots have retired
+- This ensures that potentially faulting instructions retire strictly in program order -->
+
+To make sure that faults are handled strictly in program order, we use the same technique as used to avoid having to snapshot and restore the contents of memory, described above.
+When a potentially faulting instruction is issued, all slots of the reservation station that contain potentially faulting instructions are recorded.
+When the instruction actually faults, execution continues normally until all of the recorded slots have retired.
+This ensures that potentially faulting instructions retire strictly in program order.
+
+<!-- - All three of these techniques require waiting on the execution or retirement of preceding instructions
+- Except for store instructions waiting for preceding potentially faulting instructions, this is only required in the case when a fault actually occurs
+- Thus, in the expected case of no faults the out-of-order execution is not unnecessarily restricted -->
+
+The techniques described above require waiting on the execution or retirement of preceding instructions.
+However, except for store instructions waiting for preceding potentially faulting instructions, this is only required in the case when a fault actually occurs.
+Thus, in the expected case of no faults the out-of-order execution is not unnecessarily restricted.
+
+### Transient Execution Attacks
+
+<!-- - State of the cache is not restored
+  - Allows using the cache as a transmission channel from transient execution
+  - As usually used in Meltdown- and Spectre-type attacks
+- State of the BPU is not restored
+  - Could be used as a transmission channel just like the cache -->
+
+As mentioned above, the state of the cache is not restored during a rollback.
+Thus, transiently executed instructions can influence the cache in a way that persists beyond the rollback. During normal execution, the state of the cache can then be observed using a timing-based side channel.
+This allows using the cache as a transmission channel from the transient execution domain to the usual architectural domain.
+Such a transmission channel is typically used in Meltdown- and Spectre-type attacks, and integral to their success.
+
+The state of the BPU is similarly not restored during a rollback. Transiently executed instructions can influence the BPU by performing branches, and during normal execution the state of the BPU can be observed using the differences in execution time caused by mispredicted branches.
+Because of this, the BPU could be used as a transmission channel just like the cache.
+
+<!-- - Why meltdown is possible
+  - The result of a faulting load operation is made available to following instructions before the fault is handled
+  - During transient execution, the result can be encoded in the cache -->
+
+The result of a faulting load operation is made available to following instructions before the fault is handled.
+During transient execution, this result can be transmitted to the architectural domain via a cache-based channel.
+Thus, Meltdown-type attacks are possible in our CPU simulation.
+
+<!-- - Why spectre is possible
+  - During transient execution after a mispredicted branch, memory loads can be performed and their result encoded in the cache -->
+
+During the transient execution after a mispredicted branch, memory loads can be performed.
+In the same transient execution, their result can be transmitted to the architectural domain via a cache-based channel.
+Thus, Spectre-type attacks are possible in our CPU simulation.
+
+TODO: Reference to Meltdown and Spectre demos performed in the evaluation
 
 ## ISA (2 pages) {#sec:ISA}
 <!--
