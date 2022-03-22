@@ -251,7 +251,7 @@ def exec(cpu: CPU, steps=-1, break_at_retire=False) -> CPU:
             break
         if not info.executing_program:
             ui.all_headers(cpu, breakpoints)
-            print("Program finished")
+            print(ui.BLUE + ui.BOLD + "Program finished" + ui.ENDC)
             break
         if break_at_retire and len(info.issued_instructions) + cpu.get_exec_engine().occupied_slots() < inflights_before:
             ui.all_headers(cpu, breakpoints)
