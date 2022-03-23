@@ -47,8 +47,20 @@
         \ifthenelse{\equal{\thesislanguage}{german}}{ausgearbeitet von}{by}
         \\[.1em]
         \Large\scshape
-        {\Large\scshape\bfseries\color{uboBlue}\thesisauthor}\\
-        \ifthenelse{\equal{\thesistype}{project}}{}{\normalsize\thesismatrikel}
+        {\Large\scshape\bfseries\color{uboBlue}Felix Betke}\\
+        \ifthenelse{\equal{\thesistype}{project}}{}{\normalsize 3099892}
+        \\[.1em]
+        \Large\scshape
+        {\Large\scshape\bfseries\color{uboBlue}Lennart Hein}\\
+        \ifthenelse{\equal{\thesistype}{project}}{}{\normalsize 3012079}
+        \\[.1em]
+        \Large\scshape
+        {\Large\scshape\bfseries\color{uboBlue}Melina Hoffmann}\\
+        \ifthenelse{\equal{\thesistype}{project}}{}{\normalsize 2824792}
+        \\[.1em]
+        \Large\scshape
+        {\Large\scshape\bfseries\color{uboBlue}Jan-Niklas Sohn}\\
+        \ifthenelse{\equal{\thesistype}{project}}{}{\normalsize 3121407}
 
         \ifthenelse{\equal{\thesistype}{project}}{\vspace{1em}}{}
         \normalsize\normalfont
@@ -83,13 +95,9 @@
         \ifthenelse{\equal{\thesistype}{project}}{}{%
         \vspace*{2em}
         \begin{tabular}{rl}
-            \ifthenelse{\equal{\thesislanguage}{german}}{Erstprüfer:}{First Supervisor:}
+            \ifthenelse{\equal{\thesislanguage}{german}}{Erstprüfer:}{Supervisor:}
             &  \thesissupervisorone\\[-.3em]
             &  \small \ifthenelse{\equal{\thesissupervisoroneaffiliation}{}}{\ifthenelse{\equal{\thesislanguage}{german}}{Universität Bonn}{University of Bonn}}{\thesissupervisoroneaffiliation} \\[.3em]
-
-            \ifthenelse{\equal{\thesislanguage}{german}}{Zweitprüfer:}{Second Supervisor:}
-            &  \thesissupervisortwo\\[-.3em]
-            &  \small \ifthenelse{\equal{\thesissupervisortwoaffiliation}{}}{\ifthenelse{\equal{\thesislanguage}{german}}{Universität Bonn}{University of Bonn}}{\thesissupervisortwoaffiliation} \\[.3em]
 
             \ifthenelse{\equal{\thesissponsor}{}}{}{
                 \ifthenelse{\equal{\thesislanguage}{german}}{Betreuer:}{Sponsor:}
