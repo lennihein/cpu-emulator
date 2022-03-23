@@ -11,7 +11,7 @@ class AttacksTest(TestCase):
         """Test a simple Meltdown attack."""
         # Create CPU and load program
         cpu = CPU(bd.from_yaml("config.yml"))
-        cpu.load_program_from_file("tests/meltdown.tea")
+        cpu.load_program_from_file("demo/meltdown.tea")
 
         # Execute program to the end
         while True:
@@ -28,7 +28,7 @@ class AttacksTest(TestCase):
         """Test a simple Spectre attack."""
         # Create CPU and load program
         cpu = CPU(bd.from_yaml("config.yml"))
-        cpu.load_program_from_file("tests/spectre.tea")
+        cpu.load_program_from_file("demo/spectre.tea")
 
         # Execute program to the end
         while True:
