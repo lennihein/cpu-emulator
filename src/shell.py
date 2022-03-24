@@ -244,20 +244,21 @@ def exec(cpu: CPU, steps=-1, break_at_retire=False) -> CPU:
                 print(f"{ui.RED + ui.BOLD}Memory access error at {info.fault_info.pc}:{ui.ENDC} {info.fault_info.instr.ty.name} r{ops[0]}, r{ops[1]}, {ui.hex_str(ops[2], fixed_width=False)}")
             else:
                 print(ui.RED + "Unknown fault" + ui.ENDC)
-            break
+            return cpu
         if set(active_breakpoints) & set(info.issued_instructions):
             ui.all_headers(cpu, breakpoints)
             ui.print_color(ui.RED, 'BREAKPOINT', newline=True)
-            break
+            return cpu
         if not info.executing_program:
             ui.all_headers(cpu, breakpoints)
             print(ui.BLUE + ui.BOLD + "Program finished" + ui.ENDC)
-            break
+            return cpu
         if break_at_retire and len(info.issued_instructions) + cpu.get_exec_engine().occupied_slots() < inflights_before:
             ui.all_headers(cpu, breakpoints)
             ui.print_color(ui.RED, 'RETIRE', newline=True)
-            break
+            return cpu
         i += 1
+    ui.all_headers(cpu, breakpoints)
     return cpu
 
 
