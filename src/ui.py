@@ -334,7 +334,7 @@ def rs_str(engine: ExecutionEngine, show_empty=True, reg_capitalisation: bool = 
         instr_str, instr_length = instruction_str(slot.instr, reg_capitalisation)
         instructions.append(instr_str)
 
-        pcs.append(str(slot.pc))
+        pcs.append(str(slot.pc if slot.pc != -1 else "μ"))
         indices.append(str(i))
         status.append(f"{'☐' if slot.executing else '☑'}")
 
