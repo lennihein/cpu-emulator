@@ -204,7 +204,7 @@ def print_cache(mem: MemorySubsystem, show_empty_sets: bool, show_empty_ways: bo
 
 def instruction_str(instr: Instruction, reg_capitalisation: bool = False) -> tuple[str, int]:
     instr_str = f"{YELLOW}{instr.ty.name}{ENDC}{' ' * (6 - len(instr.ty.name))}"
-    length = 6
+    length = 6 if len(instr.ty.name) <= 6 else len(instr.ty.name)
     op_str = ""
 
     reg_symbol = "R" if reg_capitalisation else "r"
@@ -455,7 +455,7 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict,
             print(arrow[i], end="") if len(front.instr_queue) else print(" " * max_arrow, end="")
         if i < len(q):
             print(q[i], end="")
-        print("    ", end="") if i != (len(rs) - 2) // 2 - 1 else print(" " + "─►" + " ", end="")
+        print("    ", end="") if i != 0 or len(front.instr_queue) == 0 else print(" " + "─►" + " ", end="")
         if i < len(rs) - 1:
             print(rs[i + 1], end="")
         print("")
