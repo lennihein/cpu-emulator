@@ -204,7 +204,7 @@ def print_cache(mem: MemorySubsystem, show_empty_sets: bool, show_empty_ways: bo
 
 def instruction_str(instr: Instruction, reg_capitalisation: bool = False) -> tuple[str, int]:
     instr_str = f"{YELLOW}{instr.ty.name}{ENDC}{' ' * (6 - len(instr.ty.name))}"
-    length = 6
+    length = 6 if len(instr.ty.name) <= 6 else len(instr.ty.name)
     op_str = ""
 
     reg_symbol = "R" if reg_capitalisation else "r"
