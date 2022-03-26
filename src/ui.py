@@ -455,7 +455,7 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict,
             print(arrow[i], end="") if len(front.instr_queue) else print(" " * max_arrow, end="")
         if i < len(q):
             print(q[i], end="")
-        print("    ", end="") if i != (len(rs) - 2) // 2 - 1 else print(" " + "─►" + " ", end="")
+        print("    ", end="") if i != 0 or len(front.instr_queue) == 0 else print(" " + "─►" + " ", end="")
         if i < len(rs) - 1:
             print(rs[i + 1], end="")
         print("")
