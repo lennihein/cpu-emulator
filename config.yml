@@ -30,3 +30,8 @@ UX:
 
 Mitigations:
     illegal_read_return_zero: False
+
+Microprograms:
+    InstrLoad: None
+    InstrStore: None
+    InstrBranch: None
