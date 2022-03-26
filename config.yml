@@ -27,3 +27,6 @@ UX:
     show_empty_sets: False
     show_empty_slots: True
     reg_capitalisation: False
+
+Mitigations:
+    illegal_read_return_zero: False

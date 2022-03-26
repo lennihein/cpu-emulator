@@ -5,8 +5,8 @@ from src.word import Word
 from src.byte import Byte
 
 
-class MMUTests(unittest.TestCase):
-    def test_mmu(self):
+class MemoryTests(unittest.TestCase):
+    def test_memory(self):
         conf = {
             "Cache":
             {
@@ -34,6 +34,10 @@ class MMUTests(unittest.TestCase):
                 ],
                 "num_fault_cycles": 8,
                 "num_write_cycles": 5
+            },
+            "Mitigations":
+            {
+                "illegal_read_return_zero": False
             }
         }
         memory = MemorySubsystem(conf)
@@ -85,3 +89,9 @@ class MMUTests(unittest.TestCase):
         # Accesing non-protected memory should be fine.
         mem_result = memory.read_byte(Word(2 ** (Word.WIDTH - 2)))
         self.assertIs(mem_result.fault, False)
+
+        # Mitigation Test: Return 0 for illegal writes
+        conf["Mitigations"]["illegal_read_return_zero"] = True
+        memory = MemorySubsystem(conf)
+        mem_result = memory.read_byte(Word(2 ** (Word.WIDTH - 1)))
+        self.assertIs(mem_result.value.value, 0)

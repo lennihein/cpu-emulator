@@ -42,6 +42,8 @@ class MemorySubsystem:
     cache: Cache
     cache_replacement_policy: str
 
+    _config: dict
+
     def __init__(self, config: dict):
         """
         A class representing the memory management unit of a CPU.
@@ -63,6 +65,8 @@ class MemorySubsystem:
                 by the cache. Options are: RR (random replacement), LRU (least
                 recently used), and FIFO (first-in-first-out). (default = "RR")
         """
+        self._config = config
+
         cache_conf = config["Cache"]
         mem_conf = config["Memory"]
 
@@ -124,6 +128,13 @@ class MemorySubsystem:
         # to the execution even though the address should be inaccessible
         # is precisely what enables the meltdown vulnerability.
         fault = self.is_illegal_access(address)
+
+        # Implementation of Intel's mitigation that quietly zeros out
+        # the data that was illegaly read.
+        # Note that 'data' is still cached. This is fine though, as the
+        # attacker never gets access to 'data' at all now.
+        if fault and self._config["Mitigations"]["illegal_read_return_zero"]:
+            data = 0
 
         return MemResult(Byte(data), fault, cycles, self.num_fault_cycles)
 

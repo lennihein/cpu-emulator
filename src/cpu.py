@@ -49,7 +49,7 @@ class CPU:
 
     _config: dict
 
-    def __init__(self, config):
+    def __init__(self, config: dict):
 
         self._config = config
 
