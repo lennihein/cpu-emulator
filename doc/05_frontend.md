@@ -4,11 +4,11 @@ This chapter focuses on the usage of the application. The user interface and the
 
 ## Purpose and Inspiration
 
-In order to demonstrate Meltdown and Spectre attacks, this program is designed to visualise the execution of a modern CPU on a microarchitectural level. We impement a simplified model of a CPU to keep focus on the essential parts to understand the demonstrated attacks. At the same time, the CPU needs to show all information required to follow the attack, and offer convenient features to the user.
+In order to demonstrate Meltdown and Spectre attacks, this program is designed to visualize the execution of a modern CPU on a microarchitectural level. We implement a simplified model of a CPU to keep focus on the essential parts to understand the demonstrated attacks. At the same time, the CPU needs to show all information required to follow the attack, and offer convenient features to the user.
 
 The emulator follows the rough structure of the GNU Debugger GNU [@GDB] and more specifically the extension Pwndbg [@pwndbg]. The assumption is that many members of the target audience are already well familiar with the GNU Debugger and the Pwndbg extension. GDB and Pwndbg can be interacted with via the command line. Different to other similar solutions, GDB can only be interacted with using commands. Most notable is the 'context' screen, which is issued after execution is paused. The context screen prints out the current state of the CPU, including the registers, the stack, a backtrace, and the disassembly.
 
-As with GDB, the emulator can only be interacted with using commands. We further implement auto-completion and auto-suggestion using the \texttt{python-prompt-toolkit} [@prompt]. This should lower the difficulty of getting started with a new tool. The emulator also implements a Pwndbg-style context-visualisation, albeit with different elements shown to adapt to the different goal compared to GDB. This ensures most of the relevant information is on the screen at all times.
+As with GDB, the emulator can only be interacted with using commands. We further implement auto-completion and auto-suggestion using the \texttt{python-prompt-toolkit} [@prompt]. This should lower the difficulty of getting started with a new tool. The emulator also implements a Pwndbg-style context-visualization, albeit with different elements shown to adapt to the different goal compared to GDB. This ensures most of the relevant information is on the screen at all times.
 
 ## System Requirements and installation
 
@@ -42,16 +42,16 @@ The syntax for running the emulator from the root folder of the repository is:
 
     python -m src.shell <path_to_target_program>
 
-If no target program is supplied, the emulator will print system information, along with a help message. The target program may contain instructions as specified in [@sec:ISA](#sec:ISA), seperated by linebreaks. Comments can be added to the target program by preceding them with \texttt{//}. Furthermore, the \texttt{config.yml} file in the root folder can be modified to configure the emulator, see [@sec:config].
+If no target program is supplied, the emulator will print system information, along with a help message. The target program may contain instructions as specified in [@sec:ISA](#sec:ISA), separated by linebreaks. Comments can be added to the target program by preceding them with \texttt{//}. Furthermore, the \texttt{config.yml} file in the root folder can be modified to configure the emulator, see [@sec:config].
 
 
 ## The Context Screen
 
-The core of the visualisation is the context screen. Here most of the relevant information is shown. The context screen is printed out every time the execution is paused. Alternatively, pressing enter with an empty input will also print the context screen. [@fig:context] shows an example output of the context screen.
+The core of the visualization is the context screen. Here most of the relevant information is shown. The context screen is printed out every time the execution is paused. Alternatively, pressing enter with an empty input will also print the context screen. [@fig:context] shows an example output of the context screen.
 
 ![Example output of the context screen](fig/context.png){#fig:context width=470px height=317px shortcaption='Example output of the context screen'}
 
-The context screen is divided into three sections: first, the registers are being shown, as if the \texttt{show regs} command was issued (for details on the commands, refer to the following [@sec:commands). The second section shows the Memory, also analoguous to the \texttt{show mem} command. The third section shows the whole pipeline, itself being devided into visualisation of the Program, the Instruction Queue and finally the Reservation Stations. By default only a part of the Program is printed - all in-flight instructions as well as one further instruction each before and after will be displayed. Further, arrows connect the different stages of the pipeline. These arrows show the location of the instruction that will be issued next into the Reservation Station in both the Program, as well as the Instruction Queue.
+The context screen is divided into three sections: first, the registers are being shown, as if the \texttt{show regs} command was issued (for details on the commands, refer to the following [@sec:commands). The second section shows the Memory, also analogous to the \texttt{show mem} command. The third section shows the whole pipeline, itself being divided into visualization of the Program, the Instruction Queue and finally the Reservation Stations. By default only a part of the Program is printed - all in-flight instructions as well as one further instruction each before and after will be displayed. Further, arrows connect the different stages of the pipeline. These arrows show the location of the instruction that will be issued next into the Reservation Station in both the Program, as well as the Instruction Queue.
 
 ## Commands
 
@@ -69,15 +69,15 @@ The following subcommands are available:
 
 #### show mem
 
-Show the memory of the CPU, visualised as words in hexadecimal.
+Show the memory of the CPU, visualized as words in hexadecimal.
 
     show mem <start in hex> <words in hex>
 
-The first parametre is the start address of the memory to be shown, the second is the number of words to be shown. The parametres are optional, the emulator defaults to showing memory starting at address \texttt{0x0000} until 8 lines of the terminal are printed. Displaying contents from the memory does neither load the memory into the cache if not already present, nor does it change the order of future eviction from the cache. The subcommand is thus side effect free.
+The first parameter is the start address of the memory to be shown, the second is the number of words to be shown. The parameters are optional, the emulator defaults to showing memory starting at address \texttt{0x0000} until 8 lines of the terminal are printed. Displaying contents from the memory does neither load the memory into the cache if not already present, nor does it change the order of future eviction from the cache. The subcommand is thus side effect free.
 
 #### show cache
 
-Show the cache. The visualisation is configurable in the \texttt{config.yml} file, see [@sec:config].
+Show the cache. The visualization is configurable in the \texttt{config.yml} file, see [@sec:config].
 
     show cache
 
@@ -103,7 +103,7 @@ Should the user select to use a microcode in case a fault is encountered (see [@
 
 #### show prog
 
-Displays a visualisation of the source program. Further, there are icons indicating which instructions are currently in-flight, as well as which instruction is marked as a breakpoint. 
+Displays a visualization of the source program. Further, there are icons indicating which instructions are currently in-flight, as well as which instruction is marked as a breakpoint. 
 
     show prog
 
@@ -137,7 +137,7 @@ Takes and address and a value in hexadecimal, and overwrites the byte at that ad
 
     edit byte <address in hex> <value in hex>
 
-This command is analoguous to the \texttt{edit word} command, but operates on a byte instead of a word.
+This command is analogous to the \texttt{edit word} command, but operates on a byte instead of a word.
 
 #### edit flush 
 
