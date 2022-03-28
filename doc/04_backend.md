@@ -287,7 +287,7 @@ In each clock cycle only a single instruction may finish execution or retirement
 Besides the Reservation Station, the Execution Engine also contains the Register File, with one entry for each register. Each register entry either contains the concrete value of the register or references a slot of the Reservation Station that will produce the register's value.
 Since instructions are issued in program order, the state of the register file at a single point in time represents the architectural register state at that point in time, with yet-unknown register values present as slot references.
 
-## Out of Order Execution (2 pages) {#sec:Tomasulo}
+## Out of Order Execution {#sec:Tomasulo}
 \marginpar{Melina Hoffmann}
 
 Our emulator implements out-of-order execution.
@@ -404,7 +404,7 @@ This effectively suspends the out-of-order execution with regards to the fence i
 This can be used to model mitigations against µ-architectural attacks [ref_mitigations_eval].
 
 
-## Exception- and Fault-Handling (2-3 pages) {#sec:rollback}
+## Exception- and Fault-Handling {#sec:rollback}
 
 <!-- Exceptions: -->
 
@@ -566,7 +566,7 @@ Thus, Spectre-type attacks are possible in our CPU simulation.
 
 TODO: Reference to Meltdown and Spectre demos performed in the evaluation
 
-## ISA (2 pages) {#sec:ISA}
+## ISA {#sec:ISA}
 \marginpar{Melina Hoffmann}
 <!--
 todo: decide should we move this subchapter to the frontend?
