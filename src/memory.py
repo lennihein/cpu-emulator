@@ -20,13 +20,13 @@ class MemResult:
     cycles_fault: int
 
 
-class MMU:
+class MemorySubsystem:
     """
-    The memory management unit (MMU).
+    The memory subsystem (MS).
 
-    In our model, the MMU includes the main memory and
+    In our model, the MS includes the main memory and
     cache. Contrary  to the Skylake architecture, our
-    MMU does not contain load- and store-buffers, and
+    MS does not contain load- and store-buffers, and
     for the sake of simplicity, there is one cache only.
     Therefore, whether our cache is an L3 or L1 cache
     does not matter.
@@ -41,6 +41,8 @@ class MMU:
     mem_size: int
     cache: Cache
     cache_replacement_policy: str
+
+    _config: dict
 
     def __init__(self, config: dict):
         """
@@ -63,6 +65,8 @@ class MMU:
                 by the cache. Options are: RR (random replacement), LRU (least
                 recently used), and FIFO (first-in-first-out). (default = "RR")
         """
+        self._config = config
+
         cache_conf = config["Cache"]
         mem_conf = config["Memory"]
 
@@ -89,27 +93,35 @@ class MMU:
             self.cache = CacheLRU(*cache_config)
         elif self.cache_replacement_policy == "FIFO":
             self.cache = CacheFIFO(*cache_config)
+        else:
+            raise Exception("Unknown cache replacement policy. Check the config.yml file.")
 
-    def read_byte(self, address: Word) -> MemResult:
+    def read_byte(self, address: Word, cache_side_effects: bool = True) -> MemResult:
         """
         Reads one byte from memory and returns it along with
         the number of cycles it takes to load it.
 
         Parameters:
             address (Word) -- the memory address from which to read
+            cache_side_effects (bool) -- whether this operation should
+                have side effects on the cache. True by default
 
         Returns:
             MemResult: Class containing the results of the memory
                 operation.
         """
 
-        data = self.cache.read(address.value)
+        data = None
+        if cache_side_effects:
+            data = self.cache.read(address.value)
         cycles = self.cache_hit_cycles
 
         if data is None:
             data = self.memory[address.value]
             cycles = self.cache_miss_cycles
-            self._load_line(address)
+
+            if cache_side_effects or self.is_addr_cached(address):
+                self._load_line(address)
 
         # Notice this check is done after the data was already read from
         # memory and written to the cache. Doing so and returning the data
@@ -117,32 +129,41 @@ class MMU:
         # is precisely what enables the meltdown vulnerability.
         fault = self.is_illegal_access(address)
 
+        # Implementation of Intel's mitigation that quietly zeros out
+        # the data that was illegaly read.
+        # Note that 'data' is still cached. This is fine though, as the
+        # attacker never gets access to 'data' at all now.
+        if fault and self._config["Mitigations"]["illegal_read_return_zero"]:
+            data = 0
+
         return MemResult(Byte(data), fault, cycles, self.num_fault_cycles)
 
-    def write_byte(self, address: Word, data: Byte) -> MemResult:
+    def write_byte(self, address: Word, data: Byte, cache_side_effects: bool = True) -> MemResult:
         """
         Writes a byte to memory.
 
         Parameters:
             address (Word) -- the memory address to which to write
             data (Byte) -- the Byte to write to this address
+            cache_side_effects (bool) -- whether this operation should
+                have side effects on the cache. True by default
 
         Returns:
             This function does not have a return value.
         """
 
-        # value = data.value % 256
         value = data.value
         self.memory[address.value] = value
 
-        self._load_line(address)
+        if cache_side_effects or self.is_addr_cached(address):
+            self._load_line(address)
 
         # See self.read_byte() for comments on this check.
         fault = self.is_illegal_access(address)
 
         return MemResult(Byte(0), fault, self.num_write_cycles, self.num_fault_cycles)
 
-    def read_word(self, address: Word) -> MemResult:
+    def read_word(self, address: Word, cache_side_effects: bool = True) -> MemResult:
         """
         Reads one word from memory and returns it along with
         the number of cycles it takes to load it.
@@ -150,6 +171,8 @@ class MMU:
 
         Parameters:
             address (Word) -- the memory address from which to read
+            cache_side_effects (bool) -- whether this operation should
+                have side effects on the cache. True by default
 
         Returns:
             MemResult: Class containing the results of the memory
@@ -162,7 +185,7 @@ class MMU:
         cycles_value = 0
         cycles_fault = 0
         for i in range(Word.WIDTH_BYTES):
-            byte = self.read_byte(address + Word(i))
+            byte = self.read_byte(address + Word(i), cache_side_effects)
             assert isinstance(byte.value, Byte)
 
             bytes_read.append(byte.value)
@@ -173,46 +196,15 @@ class MMU:
 
         return MemResult(Word.from_bytes(bytes_read), fault, cycles_value, cycles_fault)
 
-    def edit_word(self, address: Word, data: Word) -> None:
-        """
-        Edits a word in memory WITHOUT affecting the cache.
-        The architecture is assumed to be little-endian.
-
-        Parameters:
-            address (Word) -- the memory address to which to edit
-            data (Word) -- the Word the address shall be overwritten with
-
-        Returns:
-            This function does not have a return value.
-        """
-
-        # Write individual bytes
-        for i, byte in enumerate(data.as_bytes()):
-            self.edit_byte(address + Word(i), byte)
-
-    def edit_byte(self, address: Word, data: Byte) -> None:
-        """
-        Edits a byte in memory WITHOUT affecting the cache.
-
-        Parameters:
-            address (Word) -- the memory address to which to edit
-            data (Byte) -- the Byte the address shall be overwritten with
-
-        Returns:
-            This function does not have a return value.
-        """
-
-        # value = data.value % 256
-        value = data.value
-        self.memory[address.value] = value
-
-    def write_word(self, address: Word, data: Word) -> MemResult:
+    def write_word(self, address: Word, data: Word, cache_side_effects: bool = True) -> MemResult:
         """
         Writes a word to memory. The architecture is assumed to be little-endian.
 
         Parameters:
             address (Word) -- the memory address to which to write
             data (Word) -- the Word to write to this address
+            cache_side_effects (bool) -- whether this operation should
+                have side effects on the cache. True by default
 
         Returns:
             This function does not have a return value.
@@ -223,7 +215,7 @@ class MMU:
         cycles_value = 0
         cycles_fault = 0
         for i, byte in enumerate(data.as_bytes()):
-            result = self.write_byte(address + Word(i), byte)
+            result = self.write_byte(address + Word(i), byte, cache_side_effects)
 
             if result.fault:
                 fault = True
@@ -288,7 +280,7 @@ class MMU:
         Returns:
             bool: True if data at address is cached
         """
-        return self.cache.read(address.value, side_effects = False) is not None
+        return self.cache.read(address.value, side_effects=False) is not None
 
     def write_cycles(self) -> int:
         """

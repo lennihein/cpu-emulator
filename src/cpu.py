@@ -5,8 +5,8 @@ import copy
 from .bpu import BPU, SimpleBPU
 from .execution import ExecutionEngine, FaultInfo
 from .frontend import Frontend, InstrFrontendInfo
-from .instructions import InstrBranch, InstrFlush, InstrLoad, InstrStore
-from .mmu import MMU
+from .instructions import InstructionKind, InstrBranch, InstrFlush, InstrLoad, InstrStore
+from .memory import MemorySubsystem
 from .parser import Parser
 
 from dataclasses import dataclass
@@ -22,12 +22,17 @@ class CPUStatus:
     # FaultInfo as provided by the execution engine if the
     # last tick caused an exception.
     fault_info: FaultInfo
+    # If a fault has occurred , this variable contains the
+    # corresponding microprogram that will be run.
+    fault_microprog: str
 
     # List of program counters of instructions that have
     # been issued this tick.
     issued_instructions: list[int]
 
+
 _snapshots: list[CPU] = []
+
 
 class CPU:
 
@@ -37,25 +42,25 @@ class CPU:
 
     _bpu: BPU
 
-    _mmu: MMU
+    _mem: MemorySubsystem
 
     # Execution engine.
     _exec_engine: ExecutionEngine
 
-    # Snapshots. Intended for usage by the UI to allow users to
-    # step forward/backwards freely.
-    _snapshots: list[CPU] = []
+    # Index for snapshot list.
     _snapshot_index: int
 
     _config: dict
 
-    def __init__(self, config):
+    _microprograms: dict[str, list]
+
+    def __init__(self, config: dict):
 
         self._config = config
 
         self._parser = Parser.from_default()
 
-        self._mmu = MMU(config)
+        self._mem = MemorySubsystem(config)
 
         if config["BPU"]["advanced"]:
             self._bpu = BPU(config)
@@ -67,7 +72,18 @@ class CPU:
         self._frontend = None
 
         # Reservation stations
-        self._exec_engine = ExecutionEngine(self._mmu, self._bpu, config)
+        self._exec_engine = ExecutionEngine(self._mem, self._bpu, config)
+
+        # Microprograms
+        self._microprograms = {}
+        for instr_type, filename in config["Microprograms"].items():
+            if filename.lower() == "none":
+                continue
+
+            with open(filename, "r") as f:
+                source = f.read()
+
+            self._microprograms[instr_type.lower()] = (filename, self._parser.parse(source))
 
         # Snapshots
         global _snapshots
@@ -86,7 +102,7 @@ class CPU:
         # Initialize frontend
         self._frontend = Frontend(self._bpu, instructions, self._config)
         # Reset reservation stations?
-        self._exec_engine = ExecutionEngine(self._mmu, self._bpu, self._config)
+        self._exec_engine = ExecutionEngine(self._mem, self._bpu, self._config)
 
         # take snapshot
         self._take_snapshot()
@@ -95,12 +111,12 @@ class CPU:
 
         # check if any program is being executed
         if self._frontend is None:
-            return CPUStatus(False, None, [])
+            return CPUStatus(False, None, None, [])
 
         if self._frontend.is_done() and self._exec_engine.is_done():
-            return CPUStatus(False, None, [])
+            return CPUStatus(False, None, None, [])
 
-        cpu_status: CPUStatus = CPUStatus(True, None, [])
+        cpu_status: CPUStatus = CPUStatus(True, None, None, [])
 
         # fill execution units
         while self._frontend.get_instr_queue_size() > 0:
@@ -129,8 +145,16 @@ class CPU:
                 self._frontend.set_pc(resume_at_pc)
             except IndexError:
                 # program has ended
-                return CPUStatus(False, None, [])
+                return CPUStatus(False, None, None, [])
+
             self._frontend.flush_instruction_queue()
+
+            # If configured, pick the instruction type's corresponding microprogram
+            # and run it.
+            filename, microprogram = self._pick_microprogram(fault_info.instr.ty)
+            if microprogram is not None:
+                self._frontend.add_micro_program(microprogram)
+                cpu_status.fault_microprog = filename
 
             # If the instruction that caused the rollback is a branch
             # instruction, we notify the front end which makes sure
@@ -140,7 +164,7 @@ class CPU:
                     not fault_info.prediction, fault_info.pc
                 )
 
-        # fill up instruction queue / reorder buffer
+        # fill up instruction queue
         self._frontend.add_instructions_to_queue()
 
         # create snapshot
@@ -148,9 +172,9 @@ class CPU:
 
         return cpu_status
 
-    def get_mmu(self) -> MMU:
-        """Returns an instance of the MMU class."""
-        return self._mmu
+    def get_memory_subsystem(self) -> MemorySubsystem:
+        """Returns an instance of the MS class."""
+        return self._mem
 
     def get_frontend(self) -> Frontend:
         """
@@ -170,6 +194,11 @@ class CPU:
         return self._exec_engine
 
     def _take_snapshot(self) -> None:
+        """
+        This function creates a snapshot of the current CPU instance by deepcopying
+        it and adding an entry to the global snapshot list. Note that the snapshot
+        list is not part of the CPU class.
+        """
         global _snapshots
 
         if self._snapshot_index < len(_snapshots) - 1:
@@ -199,16 +228,46 @@ class CPU:
         _snapshots.append(cpu_copy)
 
     def get_snapshots(self) -> list[CPU]:
+        """ Returns the current snapshots. """
         global _snapshots
         return _snapshots
 
     @staticmethod
     def restore_snapshot(cpu: CPU, steps: int) -> CPU:
+        """
+        Given a CPU instance, this function returns a snapshot from 'steps' cycles
+        in the future or past.
+
+        Paremters:
+            cpu (CPU) -- The CPU instance relative to which the snapshot should be chosen.
+            steps (int) -- How many time steps away the desired snapshot is.
+
+        Returns:
+            CPU: A deepcopy of the corresponding CPU instance from the snapshot list.
+        """
         global _snapshots
         if cpu._snapshot_index + steps < 1 or cpu._snapshot_index + steps >= len(_snapshots):
             return None
 
-        # Returning copies are is important, as otherwise a manipulation
+        # Returning copies is important, as otherwise a manipulation
         # of the returned cpu instance (for example, calling tick),
         # changes the class that is stored in the snapshot list.
         return copy.deepcopy(_snapshots[cpu._snapshot_index + steps])
+
+    def _pick_microprogram(self, instr_type: InstructionKind) -> tuple(str, list):
+        """
+        Returns the filename and set of instructions of a microprogram given
+        an instruction type.
+
+        Parameters:
+            instr_type (InstructionKind) -- The instruction for which to pick
+                the corresponding microprogram.
+
+        Returns:
+            tuple[str, list]: A filename of the microprogram and its instructions.
+                None if no microprogram could be found.
+        """
+        key = instr_type.__class__.__name__.lower()
+        if key in self._microprograms:
+            return self._microprograms[key]
+        return None, None

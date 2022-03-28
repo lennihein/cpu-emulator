@@ -77,7 +77,7 @@ def __show(input: list[str], cpu: CPU):
             try:
                 start = int(input[1], base=16)
                 start = max(start, 0)
-                ui.print_memory(cpu.get_mmu(), base=start)
+                ui.print_memory(cpu.get_memory_subsystem(), base=start)
             except ValueError:
                 print("Usage: show mem <start in hex> <words in hex>")
                 return cpu
@@ -89,14 +89,14 @@ def __show(input: list[str], cpu: CPU):
                 words = int(input[2], base=16)
                 fits_per_line = (ui.columns - 8) // 7
                 lines = ceil(words / fits_per_line)
-                ui.print_memory(cpu.get_mmu(), base=start, lines=lines)
+                ui.print_memory(cpu.get_memory_subsystem(), base=start, lines=lines)
             except ValueError:
                 print("Usage: show mem <start in hex> <words in hex>")
                 return cpu
         else:
-            ui.print_memory(cpu.get_mmu())
+            ui.print_memory(cpu.get_memory_subsystem())
     elif subcmd == 'cache':
-        ui.print_cache(cpu.get_mmu())
+        ui.print_cache(cpu.get_memory_subsystem(), cpu._config["UX"]["show_empty_sets"], cpu._config["UX"]["show_empty_ways"])
     elif subcmd == 'regs':
         ui.print_regs(cpu.get_exec_engine(), reg_capitalisation=cpu._config["UX"]["reg_capitalisation"])
     elif subcmd == 'queue':
@@ -125,7 +125,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
             try:
                 addr = int(input[1], base=16)
                 val = int(input[2], base=16)
-                cpu.get_mmu().edit_word(Word(addr), Word(val))
+                cpu.get_memory_subsystem().write_word(Word(addr), Word(val), cache_side_effects=False)
             except ValueError:
                 print("Usage: edit word <address in hex> <value in hex>")
                 return cpu
@@ -136,7 +136,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
             try:
                 addr = int(input[1], base=16)
                 val = int(input[2], base=16)
-                cpu.get_mmu().edit_byte(Word(addr), Byte(val))
+                cpu.get_memory_subsystem().write_byte(Word(addr), Byte(val), cache_side_effects=False)
             except ValueError:
                 print("Usage: edit byte <address in hex> <value in hex>")
                 return cpu
@@ -144,11 +144,11 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
             print("Usage: edit word <address in hex> <value in hex>")
     elif subcmd == 'flush':
         if len(input) == 1:
-            cpu.get_mmu().flush_all()
+            cpu.get_memory_subsystem().flush_all()
         elif len(input) == 2:
             try:
                 addr = int(input[1], base=16)
-                cpu.get_mmu().flush_line(Word(addr))
+                cpu.get_memory_subsystem().flush_line(Word(addr))
             except ValueError:
                 print("Usage: edit flush <address in hex>")
                 return cpu
@@ -158,7 +158,7 @@ def __edit(input: list[str], cpu: CPU) -> CPU:
         if len(input) == 2:
             try:
                 addr = int(input[1], base=16)
-                cpu.get_mmu()._load_line(Word(addr))
+                cpu.get_memory_subsystem()._load_line(Word(addr))
             except ValueError:
                 print("Usage: edit load <address in hex>")
                 return cpu
@@ -233,17 +233,30 @@ def exec(cpu: CPU, steps=-1, break_at_retire=False) -> CPU:
         inflights_before = cpu.get_exec_engine().occupied_slots()
         info: CPUStatus = cpu.tick()
         if info.fault_info is not None:
-            print(ui.BOLD + ui.RED + f"FAULT at {info.fault_info.pc}: " + str(info.fault_info.instr) + ui.ENDC + "\n", end="")
-            break
+            ui.all_headers(cpu, breakpoints)
+            if info.fault_info.prediction is not None:
+                # branch prediction error
+                ops = info.fault_info.instr.ops
+                print(f"{ui.RED + ui.BOLD}Prediction error at {info.fault_info.pc}:{ui.ENDC} {info.fault_info.instr.ty.name} r{ops[0]}, r{ops[1]}, {abs(ops[2])} (predicted branch {'' if info.fault_info.prediction else 'not '}taken{ui.ENDC})")
+            elif info.fault_info.address is not None:
+                # address error
+                ops = info.fault_info.instr.ops
+                print(f"{ui.RED + ui.BOLD}Memory access error at {info.fault_info.pc}:{ui.ENDC} {info.fault_info.instr.ty.name} r{ops[0]}, r{ops[1]}, {ui.hex_str(ops[2], fixed_width=False)}")
+            else:
+                print(ui.RED + "Unknown fault" + ui.ENDC)
+            return cpu
         if set(active_breakpoints) & set(info.issued_instructions):
+            ui.all_headers(cpu, breakpoints)
             ui.print_color(ui.RED, 'BREAKPOINT', newline=True)
-            break
+            return cpu
         if not info.executing_program:
-            print("Program finished")
-            break
+            ui.all_headers(cpu, breakpoints)
+            print(ui.BLUE + ui.BOLD + "Program finished" + ui.ENDC)
+            return cpu
         if break_at_retire and len(info.issued_instructions) + cpu.get_exec_engine().occupied_slots() < inflights_before:
+            ui.all_headers(cpu, breakpoints)
             ui.print_color(ui.RED, 'RETIRE', newline=True)
-            break
+            return cpu
         i += 1
     ui.all_headers(cpu, breakpoints)
     return cpu
@@ -295,7 +308,7 @@ def __break(input: list[str], cpu: CPU):
         print("Breakpoints:")
         for addr in breakpoints:
             print(
-                "\t0x{:04x} {}".format(
+                "\t{:04} {}".format(
                     addr,
                     "(disabled)" if not breakpoints[addr] else ""))
     elif subcmd == 'toggle':

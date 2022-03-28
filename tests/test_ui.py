@@ -1,6 +1,6 @@
 from src.ui import *
 from src.word import Word
-from src.mmu import MMU
+from src.memory import MemorySubsystem
 from src.bpu import BPU
 from src.execution import ExecutionEngine
 from benedict import benedict as bd
@@ -72,38 +72,38 @@ class UITest(TestCase):
                 "num_write_cycles": 5
             }
         }
-        mmu = MMU(conf)
+        memory = MemorySubsystem(conf)
         from random import randrange
         for _ in range(5000):
-            mmu.write_byte(
+            memory.write_byte(
                 Word(
                     randrange(
-                        0, mmu.mem_size)), Word(
+                        0, memory.mem_size)), Word(
                     randrange(
                         0, 0xFF)))
-        header_memory(mmu)
+        header_memory(memory)
 
     def test_registers(self):
         print()
-        mmu = MMU(bd.from_yaml('config.yml'))
+        memory = MemorySubsystem(bd.from_yaml('config.yml'))
         bpu = BPU(bd.from_yaml('config.yml'))
-        engine = ExecutionEngine(mmu, bpu, bd.from_yaml('config.yml'))
+        engine = ExecutionEngine(memory, bpu, bd.from_yaml('config.yml'))
         header_regs(engine)
 
     def test_cache(self):
         print()
-        mmu = MMU(bd.from_yaml('config.yml'))
+        memory = MemorySubsystem(bd.from_yaml('config.yml'))
         from random import randrange
         for _ in range(50000):
-            mmu.write_byte(
+            memory.write_byte(
                 Word(
                     randrange(
-                        0, mmu.mem_size)), Word(
+                        0, memory.mem_size)), Word(
                     randrange(
                         0, 0xFF)))
         print_header("Cache", ENDC)
         print()
-        print_cache(mmu)
+        print_cache(memory, False, False)
         print()
 
     def test_end(self):

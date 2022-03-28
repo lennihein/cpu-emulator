@@ -42,6 +42,7 @@ class Parser:
     @staticmethod
     def _split_instructions(src: str) -> Iterable[str]:
         """Split assembly code into instructions and labels."""
+        src = src.replace(":", ":\n")
         for line in src.splitlines():
             strip = line.strip()
 

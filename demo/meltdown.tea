@@ -8,10 +8,10 @@ lb r2, r1, 0x1000
 addi r1, r0, 0
 // Time of shortest access
 addi r2, r0, -1
-// Current index times 0x10, begin at index 0x40
-addi r3, r0, 0x400
-// Probe array length times 0x10, end at index 0x4f
-addi r4, r0, 0x500
+// Current index times 0x10, begin at index 0x41
+addi r3, r0, 0x410
+// Probe array length times 0x10, end at index 0x43
+addi r4, r0, 0x440
 probe:
 
 // Perform timed access

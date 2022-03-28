@@ -17,7 +17,7 @@ class CacheLine:
     access, is needed by the replacement policy, this
     class should be extended accordingly.
     """
-    data: list
+    data: list[int]
     tag: int
     line_size: int
 
@@ -58,16 +58,6 @@ class CacheLine:
         """
         self.tag = tag
 
-    def clear_data(self) -> None:
-        """
-        Removes all data of this cache line and clears
-        the tag.
-        """
-        for i in range(self.line_size):
-            self.data[i] = None
-
-        self.set_tag(None)
-
     def read(self, offset: int, side_effects: bool = True) -> int:
         """
         Reads from the cache line at index 'offset'.
@@ -103,18 +93,8 @@ class CacheLine:
 
     def flush(self) -> None:
         """
-        Flushes the data written at the index 'offset'.
-        This means that further reads to this index
-        return 'None'.
-
-        If no more data is saved in this cache line,
-        the tag will be cleared as well.
-
-        Parameters:
-            offset (int) -- the offset at which to flush
-
-        Returns:
-            This function does not have a return value.
+        Flushes the data held by this cache line
+        and clears its tag.
         """
         for i in range(len(self.data)):
             self.data[i] = None
@@ -196,7 +176,7 @@ class Cache:
         """
         raise Exception("Cache Replacement Policy not implemented.")
 
-    def read(self, addr: int, side_effects = True) -> int:
+    def read(self, addr: int, side_effects=True) -> int:
         """
         Returns the data at address addr as an integer.
         If no data is cached for this address, None is returned.
@@ -329,7 +309,7 @@ class CacheRR(Cache):
         tag, index, offset = self.parse_addr(addr)
 
         replaceIndex = random.randrange(self.num_lines)
-        self.sets[index][replaceIndex].clear_data()
+        self.sets[index][replaceIndex].flush()
         self.sets[index][replaceIndex].set_tag(tag)
         self.sets[index][replaceIndex].write(offset, data)
 
@@ -360,12 +340,6 @@ class CacheLineLRU(CacheLine):
     def get_lru_time(self):
         return self.lru_timestamp
 
-    # Should flushing count as an access to a cache line?
-    # If not, remove the following method:
-    def flush(self) -> None:
-        super().flush()
-        self.lru_timestamp = time()
-
 
 class CacheLRU(Cache):
     """A cache implementing the least-recently-used replacement policy."""
@@ -390,7 +364,7 @@ class CacheLRU(Cache):
                 lru_index = i
                 lru_time = self.sets[index][i].get_lru_time()
 
-        self.sets[index][lru_index].clear_data()
+        self.sets[index][lru_index].flush()
         self.sets[index][lru_index].set_tag(tag)
         self.sets[index][lru_index].write(offset, data)
 
@@ -447,6 +421,6 @@ class CacheFIFO(Cache):
                 fifo_index = i
                 fifo_time = self.sets[index][i].get_fifo_time()
 
-        self.sets[index][fifo_index].clear_data()
+        self.sets[index][fifo_index].flush()
         self.sets[index][fifo_index].set_tag(tag)
         self.sets[index][fifo_index].write(offset, data)

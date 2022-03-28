@@ -8,8 +8,8 @@ Memory:
     num_fault_cycles: 8
 
 Cache:
-    sets: 32
-    ways: 32
+    sets: 4
+    ways: 4
     line_size: 4
     replacement_policy: LRU
     cache_hit_cycles: 2
@@ -23,5 +23,15 @@ ExecutionEngine:
     regs: 32
 
 UX:
+    show_empty_ways: True
+    show_empty_sets: False
     show_empty_slots: True
     reg_capitalisation: False
+
+Mitigations:
+    illegal_read_return_zero: False
+
+Microprograms:
+    InstrLoad: None
+    InstrStore: None
+    InstrBranch: None

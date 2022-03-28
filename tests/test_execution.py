@@ -4,7 +4,7 @@ from benedict import benedict as bd
 from src.bpu import BPU
 from src.execution import ExecutionEngine
 from src.instructions import InstrReg
-from src.mmu import MMU
+from src.memory import MemorySubsystem
 from src.parser import Parser
 from src.word import Word
 
@@ -38,13 +38,9 @@ class ExecutionTest(TestCase):
             // Execute fence and query cycle counter
             fence
             rdtsc r10
-//          // Set r7 to 3 and count it down to 1
-//          addi r7, r0, 3
-//      loop:
-//          subi r7, r7, 1
-//          bne r7, r1, loop
-            // Flush address 0
+            // Flush address 0, flush all
             flush r0, 0
+            flushall
         """
 
         # Instruction that takes a long time
@@ -54,11 +50,9 @@ class ExecutionTest(TestCase):
         p = Parser.from_default()
         p.add_instruction(mul)
 
-        # TODO: Use frontend, to be able to execute the loop
-
-        # Create execution engine with MMU and BPU
+        # Create execution engine with MS and BPU
         config = bd.from_yaml("config.yml")
-        exe = ExecutionEngine(MMU(config), BPU(config), config)
+        exe = ExecutionEngine(MemorySubsystem(config), BPU(config), config)
 
         # Issue all instructions in the code
         for pc, instr in enumerate(p.parse(code)):
@@ -71,6 +65,4 @@ class ExecutionTest(TestCase):
 
         # Check that the registers have the correct values
         target = (0, 1, 2, 3, 4, 5, 0x105)
-        # TODO: Enable when branches work
-        # target = (0, 1, 2, 3, 4, 5, 0x105, 1)
         self.assertEqual(exe._registers[: len(target)], [Word(x) for x in target])

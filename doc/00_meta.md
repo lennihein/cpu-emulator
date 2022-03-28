@@ -1,19 +1,13 @@
 ---
-title: "TODO"
-subtitle: "TODO"
-author: "TODO"
-date: "TODO"
+title: "Much Shorter Title"
+subtitle: "Subtitle"
+date: "2022-03-31"
 lang: "en"
-thesis-type: "bachelor"
-thesis-type-custom: ""
-thesis-matrikel: ""
+thesis-type: "report"
 thesis-degree-course: "Computer Science (M.Sc.)"
-thesis-submission: "TODO"
-thesis-supervisor-one: "TODO"
-thesis-supervisor-two:
-    name: "TODO"
-    affiliation: "TODO"
-thesis-sponsor: "TODO"
+thesis-submission: "Bonn, 31. March 2022"
+thesis-supervisor-one: "Prof. Dr. Michael Maier"
+thesis-sponsor: "Dr. Felix Jonathan Boes"
 thesis-affiliation: |
     Rheinische Friedrich-Wilhelms-Universität Bonn \
     Institut für Informatik IV \

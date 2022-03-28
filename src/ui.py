@@ -1,12 +1,12 @@
 import os
 from src.bpu import BPU
 from src.frontend import Frontend
-from src.mmu import MMU
+from src.memory import MemorySubsystem
 from src.execution import ExecutionEngine
 from math import ceil, floor
 from src.word import Word
 from src.cpu import CPU
-from src.instructions import Instruction, InstrReg, InstrImm, InstrLoad, InstrStore, InstrFlush, InstrCyclecount, InstrBranch, InstrFence
+from src.instructions import Instruction, InstrReg, InstrImm, InstrLoad, InstrStore, InstrFlush, InstrFlushAll, InstrCyclecount, InstrBranch, InstrFence
 
 HEADER = '\033[95m'
 BLUE = '\033[94m'
@@ -103,24 +103,34 @@ def hex_str(num: int, p_end=" ", base=True, fixed_width=True,
     return base_str + num_str + p_end
 
 
-def print_memory(mmu: MMU, lines=8, base=0x0000):
+def print_memory(memory: MemorySubsystem, lines=8, base=0x0000):
     fits = (columns - 8) // 5
     fits = fits - (fits % 8)
     i = base
     for _ in range(lines):
-        if i >= mmu.mem_size:
+        if i >= memory.mem_size:
             return
         print_hex(i, p_end=": ", base_style=BOLD + YELLOW, style=BOLD + YELLOW)
         for _ in range(fits):
-            if i >= mmu.mem_size:
+            if i >= memory.mem_size:
                 return
-            if(mmu.is_addr_cached(Word(i))):
-                print_hex(mmu.memory[i + 1] * 256 + mmu.memory[i],
+            if(memory.is_addr_cached(Word(i))):
+                print_hex(memory.memory[i + 1] * 256 + memory.memory[i],
                           base_style=FAINT + RED, style=RED, base=False)
             else:
-                print_hex(mmu.memory[i + 1] * 256 + mmu.memory[i], base=False)
+                print_hex(memory.memory[i + 1] * 256 + memory.memory[i], base=False)
             i += 2
         print()
+
+
+def reg_str(val) -> str:
+    if isinstance(val, Word):
+        return hex_str(val.value, p_end="", base_style=ENDC + FAINT)
+    elif isinstance(val, int):
+        return ENDC + "RS {:03}".format(val) + ENDC
+    else:
+        return BOLD + RED + "ERR"
+        exit(1)
 
 
 def print_regs(engine: ExecutionEngine, reg_capitalisation: bool = False):
@@ -137,43 +147,69 @@ def print_regs(engine: ExecutionEngine, reg_capitalisation: bool = False):
             print(BOLD + GREEN + reg_symbol + str(i)
                   + (" : " if i < 10 else ": "), end="")
             val = regs[i]
-            if isinstance(val, Word):
-                print_hex(val.value, p_end="", base_style=ENDC + FAINT)
-            elif isinstance(val, int):
-                print(ENDC + FAINT + "RS {:03}".format(val) + ENDC, end="")
-            else:
-                print(BOLD + RED + "ERR", end="")
-                exit(1)
+            print(reg_str(val), end="")
             print(" │" if j != fits - 1 else "\n", end="")
             i += 1
     print()
 
 
-def print_cache(mmu: MMU) -> None:
-    """Prints the cache. Only to be used during development."""
-    for i in range(len(mmu.cache.sets)):
-        print(i, end=' ')
-        for j in range(len(mmu.cache.sets[i])):
-            if mmu.cache.sets[i][j].is_in_use():
-                print("*", end='')
-            for a in range(len(mmu.cache.sets[i][j].data)):
-                val = mmu.cache.sets[i][j].data[a]
-                print(
-                    '{:04x}'.format(val) if val is not None else "none",
-                    end='│')
-            # print(mmu.cache.sets[i][j].data)
-            print(' ', end='')
-        print('')
+def print_cache(mem: MemorySubsystem, show_empty_sets: bool, show_empty_ways: bool) -> None:
+    # TODO: make compatible with more than 12 bits for tag or index
+    # long_index = True if num_index_bits > 12 else False
+    # long_tag = True if num_tag_bits > 12 else False
+
+    data_length = 1 + 7 * mem.cache.line_size
+
+    data_header = ('─' * floor((data_length - 4) / 2)) + "Data" + ('─' * ceil((data_length - 4) / 2))
+    print(f"╭─Index─┬──Tag──┬{data_header}╮")
+
+    for i, set in enumerate(mem.cache.sets):
+
+        if len([entry for entry in set if entry.is_in_use()]) == 0 and show_empty_sets is False:
+            print(f"├{'─' * 7}┼{'─'*7}┼{'─' * data_length}┤")
+            print(f"│ {FAINT}0x{ENDC}{'{:03x}'.format(i)} │ empty │{' ' * (data_length-0)}│")
+            continue
+
+        if i != 0:
+            print(f"├{'─'*7}┼{'─'*7}┼{'─' * data_length}┤")
+
+        if show_empty_ways is False:
+            set = [entry for entry in set if entry.is_in_use()]
+
+        for j, entry in enumerate(set):
+
+            if (j + 1) == ceil(len(set) / 2) and len(set) % 2 == 1:
+                index_gap = f" {FAINT}0x{ENDC}{'{:03x}'.format(i)} "
+            else:
+                index_gap = f"{' '*7}"
+
+            if entry.is_in_use():
+                print(f"│{index_gap}│ {FAINT}0x{ENDC}{'{:03x}'.format(entry.tag)} │ ", end="")
+                for a, val in enumerate(entry.data):
+                    print(f"{hex_str(val, p_end=' ')}", end='')
+                print("│")
+            else:
+                print(f"│{index_gap}│{' '*7}│{' '*data_length}│")
+
+            if (j + 1) == ceil(len(set) / 2) and len(set) % 2 == 0:
+                index_gap = f" {FAINT}0x{ENDC}{'{:03x}'.format(i)} "
+            else:
+                index_gap = f"{' '*7}"
+
+            if j != len(set) - 1:
+                print(f"│{index_gap}├{'─'*7}┼{'─' * data_length}┤")
+
+    print(f"╰{'─'*7}┴{'─'*7}┴{'─' * data_length}╯")
 
 
 def instruction_str(instr: Instruction, reg_capitalisation: bool = False) -> tuple[str, int]:
     instr_str = f"{YELLOW}{instr.ty.name}{ENDC}{' ' * (6 - len(instr.ty.name))}"
-    length = 6
+    length = 6 if len(instr.ty.name) <= 6 else len(instr.ty.name)
     op_str = ""
 
     reg_symbol = "R" if reg_capitalisation else "r"
 
-    if isinstance(instr.ty, InstrReg):
+    if isinstance(instr.ty, (InstrReg, InstrCyclecount)):
         for index, op in enumerate(instr.ops):
             op_str += f"{reg_symbol}{op}"
             length += 1 + len(str(op))
@@ -181,7 +217,7 @@ def instruction_str(instr: Instruction, reg_capitalisation: bool = False) -> tup
                 op_str += ", "
                 length += 2
 
-    elif isinstance(instr.ty, (InstrStore, InstrLoad, InstrImm, InstrFlush, InstrCyclecount, InstrFence)):
+    elif isinstance(instr.ty, (InstrStore, InstrLoad, InstrImm, InstrFlush, InstrFlushAll, InstrFence)):
         for index, op in enumerate(instr.ops):
             if index == len(instr.ops) - 1:
                 op_str += hex_str(Word(op).value, p_end="", fixed_width=False)
@@ -298,7 +334,7 @@ def rs_str(engine: ExecutionEngine, show_empty=True, reg_capitalisation: bool = 
         instr_str, instr_length = instruction_str(slot.instr, reg_capitalisation)
         instructions.append(instr_str)
 
-        pcs.append(str(slot.pc))
+        pcs.append(str(slot.pc if slot.pc != -1 else "μ"))
         indices.append(str(i))
         status.append(f"{'☐' if slot.executing else '☑'}")
 
@@ -312,7 +348,8 @@ def rs_str(engine: ExecutionEngine, show_empty=True, reg_capitalisation: bool = 
     max_pc_length = max(max_pc_length, 1)
     max_index_length = max(max_index_length, 1)
 
-    rs_length = max_instr_length + max_pc_length + 1 + 3 + 3 + 4
+    rs_length = max_instr_length + max_pc_length + 1 + 3 + 3 + 14 + 4
+
     if not show_empty:
         rs_length += max_index_length + 3
 
@@ -321,13 +358,13 @@ def rs_str(engine: ExecutionEngine, show_empty=True, reg_capitalisation: bool = 
     line_top = '╭'
     if not show_empty:
         line_top += '─' * (max_index_length + 2) + '┬'
-    line_top += '─' * (max_pc_length + 2) + '┬' + '─' * (max_instr_length + 2) + '┬' + '─' * 3 + '╮'
+    line_top += '─' * (max_pc_length + 2) + '┬' + '─' * (max_instr_length + 2) + '┬────────┬────────┬' + '─' * 3 + '╮'
     rs_str.append(line_top)
 
     for i, slot in enumerate(engine.slots()):
         if slot is None:
             if show_empty:
-                rs_str.append('│' + ' ' * (max_pc_length + 2) + '│' + ' ' * (max_instr_length + 2) + '│' + ' ' * 3 + '│')
+                rs_str.append('│' + ' ' * (max_pc_length + 2) + '│' + ' ' * (max_instr_length + 2) + '│        │        │' + ' ' * 3 + '│')
             continue
         else:
             line = '│ '
@@ -335,13 +372,15 @@ def rs_str(engine: ExecutionEngine, show_empty=True, reg_capitalisation: bool = 
                 line += ' ' * (max_index_length - len(indices[i])) + indices[i] + ' │ '
             line += ' ' * (max_pc_length - len(pcs[i])) + pcs[i] + ' │ '
             line += instructions[i] + ' ' * (max_instr_length - instr_lengths[i]) + ' │'
+            line += f" {reg_str(slot.source_operands[0]) if len(slot.source_operands) >= 1 else ' ' * 6} │"
+            line += f" {reg_str(slot.source_operands[1]) if len(slot.source_operands) >= 2 else ' ' * 6} │"
             line += f" {status[i]} │"
             rs_str.append(line)
 
     line_bot = '╰'
     if not show_empty:
         line_bot += '─' * (max_index_length + 2) + '┴'
-    line_bot += '─' * (max_pc_length + 2) + '┴' + '─' * (max_instr_length + 2) + '┴' + '─' * 3 + '╯'
+    line_bot += '─' * (max_pc_length + 2) + '┴' + '─' * (max_instr_length + 2) + '┴────────┴────────┴' + '─' * 3 + '╯'
     rs_str.append(line_bot)
 
     return rs_str, rs_length
@@ -355,10 +394,10 @@ def print_info(cpu: CPU) -> None:
     print("PC: ", cpu.get_frontend().get_pc(), end="")
 
 
-def header_memory(mmu: MMU):
+def header_memory(memory: MemorySubsystem):
     print_header("Memory", BOLD + YELLOW + ENDC)
     print()
-    print_memory(mmu, lines=8, base=0x0000)
+    print_memory(memory, lines=8, base=0x0000)
     print()
 
 
@@ -416,7 +455,7 @@ def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict,
             print(arrow[i], end="") if len(front.instr_queue) else print(" " * max_arrow, end="")
         if i < len(q):
             print(q[i], end="")
-        print("    ", end="") if i != (len(rs) - 2) // 2 - 1 else print(" " + "─►" + " ", end="")
+        print("    ", end="") if i != 0 or len(front.instr_queue) == 0 else print(" " + "─►" + " ", end="")
         if i < len(rs) - 1:
             print(rs[i + 1], end="")
         print("")
@@ -439,5 +478,5 @@ def header_rs(engine: ExecutionEngine, reg_capitalisation: bool = False):
 
 def all_headers(cpu: CPU, breakpoints: dict):
     header_regs(cpu.get_exec_engine(), cpu._config["UX"]["reg_capitalisation"])
-    header_memory(cpu.get_mmu())
+    header_memory(cpu.get_memory_subsystem())
     header_pipeline(cpu.get_frontend(), cpu.get_exec_engine(), breakpoints, cpu._config["UX"]["show_empty_slots"], cpu._config["UX"]["reg_capitalisation"])
