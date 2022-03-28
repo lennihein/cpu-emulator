@@ -1,6 +1,6 @@
 ---
-title: "Much Shorter Title"
-subtitle: "Subtitle"
+title: "Transient Execution Emulator"
+subtitle: "Meltdown and Spectre Behind the Scenes"
 date: "2022-03-31"
 lang: "en"
 thesis-type: "report"

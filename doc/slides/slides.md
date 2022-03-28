@@ -1,13 +1,24 @@
 ---
-title: "Funktionsweise und Evaluation von modernen Spectre-Angriffen"
-subtitle: "Abschlussvortrag zur Bachelorarbeit"
-author: "Jan-Niklas Sohn, Betreuer: Dr. Felix Jonathan Boes"
+title: "Transient Execution Emulator"
+subtitle: "Final Presentation Master Lab"
+author: "Felix Betke, Lennart Hein, Melina Hoffmann, Jan-Niklas Sohn"
 institute: "Rheinische Friedrich-Wilhelms-Universität Bonn"
-date: "24. Juni 2021"
+date: "1. April 2021"
 titlegraphic: "unilogo.pdf"
-lang: "de"
+lang: "en"
 theme: "metropolis"
 ---
+
+<!--
+Aufteilung:
+
+- Einleitung (Felix)
+- Backend (Melina)
+- Demo: Meltdown (Lenni)
+  - Mitigation: Return zero
+- Demo: Spectre (Jan)
+  - Mitigation: Flush cache
+-->
 
 ## Gliederung
 

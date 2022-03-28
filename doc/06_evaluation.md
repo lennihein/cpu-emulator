@@ -46,6 +46,7 @@ todo
                             flush IQ -> passiert eh schon, ist das überhaupt eine echte mitigation?
                             disable speculation (nice to have, lassen wir weg)-> config
                             out of order -> in config RS mit nur einem Slot
+                            zero mem load result
 
             is our meltdown/ spectre variant still possible?
             ggf. how does this affect the performance?

@@ -36,6 +36,8 @@ The second purpose of the _CPU_ class is to provide the snapshot functionality, 
 
 ### Instructions and Parser {#sec:parser}
 
+TODO
+
 <!-- - General instruction format: mnemonic followed by comma-separated operands, as is common in assembly languages
 - Instruction mnemonic already determines the exact instruction, including the types of its operands
 - Possible operand types: reg, imm, label -->
@@ -248,6 +250,8 @@ We also have no concept of Execution Units that instructions need to be dispatch
 
 All instructions pass through two phases during execution: In the first phase the instruction is said to be *executing*. It waits for any source operands to become available and computes its result. Once the result is computed, it is made available to waiting instructions, and the instruction transitions to the second phase.
 
+TODO: Instructions wait for fixed amount of cycles before finishing execution or retirement
+
   <!-- - Retiring: Determine if instruction causes a fault
     - Fault means microarchitectural fault; both architecturally visible faults like memory protection violations and architecturally invisible faults like branch mispredictions are handled in the same way in the Execution Engine
     - Once the instruction finishes retiring its slot becomes available and may execute a new instruction -->
@@ -374,6 +378,7 @@ Additionally, no other instructions can be issued to the Reservation Station whi
   - In our case: Mispredicted branches -->
 
 *Exceptions* in general are certain conditions that can occur during execution and require handling before execution can be continued. We distinguish between *architectural* and *microarchitectural* exceptions.
+
 Architectural exceptions are visible to the program being executed and are usually handled by that program or the underlying operating system.
 In our CPU simulation there is no operating system that could handle architectural exceptions, and requiring the program to handle these would increase the complexity of both our CPU and user programs.
 For this reason architectural exceptions are handled implicitly, by skipping execution of the instruction that caused the exception. After an exception occurred, execution continues with the following instruction instead.
