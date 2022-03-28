@@ -1,4 +1,4 @@
-# User Interface and Usage
+# User Interface and Usage {#sec:UI}
 
 This chapter focuses on the usage of the application. The user interface and the design choices are described. An instruction on how to prepare the system and how to run the program is given. Furthermore, the application and it's features are explained in detail. Finally, we showcase the application in action.
 
