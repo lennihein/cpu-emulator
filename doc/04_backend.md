@@ -657,13 +657,13 @@ fence&none& add execution fixpoint at this code position\\
 ## Config File {#sec:config}
 <!--todo: should we move this to the frontend? more like a manual? -->
 <!---
-TODO: Microprograms
+TODO: Microprograms, config given to all components
 -->
 \marginpar{Felix Betke}
-To allow users to change certain parameters of the presented emulator, a configuration file is available. It can be found in the root folder of the project and edited with a regular text editor. This section briefly mentions which parts of the demonstrated emulator can be configured, and why which default values have been chosen.
+To allow users to change certain parameters of the presented emulator, a configuration file is available. It can be found in the root folder of the project and edited with a regular text editor. Internally, a dictionary containing the entire configuration is passed to each individual component. This section briefly mentions which parts of the demonstrated emulator can be configured, and why which default values have been chosen.
 
 ### Memory {#sec:config-memory}
-In the "Memory" section, the users may configure how many cycles write operations should take (_num\_write\_cycles_), and how many cycles should be between a faulting memory operation and the corresponding instruction raising a fault (_num\_fault\_cycles_). By default, the former is set to $5$ cycles, the latter to $8$. While the specific values are not as important, the difference between the number of cycles it takes to perform any faulting memory operation and the number of cycles it takes to raise the fault should be at least $1$. Otherwise, the rollback is initiated before dependend instructions can encode the data into the cache for the attacker to retrieve. During our testing, we decided that a difference of at most $3$ on a cache miss is sufficient for Meltdown-US-L1 and Spectre v1 to work.
+In the "Memory" section, the users may configure how many cycles write operations should take (_num\_write\_cycles_), and how many cycles should be between a faulting memory operation and the corresponding instruction raising a fault (_num\_fault\_cycles_). By default, the former is set to $5$ cycles, the latter to $8$. While the specific values are not as important, the difference between the number of cycles it takes to perform any faulting memory operation and the number of cycles it takes to raise the fault should be at least $1$. Otherwise, the rollback is initiated before dependent instructions can encode the data into the cache for the attacker to retrieve. During our testing, we decided that a difference of at most $3$ on a cache miss is sufficient for our versions of Meltdown and Spectre to work. It is important to note that with this configuration, attackers are able to steal secrets even if they are not cached and have to be loaded from the system's memory first. If one were to model the Meltdown-US-L1 attack more accurately, a cache miss would have to take more cycles to retrieve the data than the CPU takes to initiate the rollback. We believe that this difference does not negatively impact the user's ability to understand the basics of the Meltdown vulnerability as long as it is clearly communicated to them. In the more realistic scenario, attackers would have to perform two illegal reads, one to cache the secret, and one to steal it. By default, the first read is not necessary.
 
 ### Cache
 In the "Cache" section, users may configure the size of the cache by setting the number of sets, ways, and entries per cache line. For readbility when printing, the default value we chose for all values is $4$. However, it is important to note that if one were to peform the full Meltdown/Spectre attacks by measuring access times to each oracle entry, a sufficient cache size that ensures accessing an oracle entry does not evict another is required.
@@ -684,6 +684,14 @@ The execution engine allows the configuration of the number of available slots i
 ### UX
 The UX can be configured to omit display of certain elements. When selecting to use a large cache, it may be desirable to hide empty cache ways and sets to prevent clutter. By default, we chose to show the empty cache ways so the user can easily can see whether or not a cache set is full. We also chose to show the empty cache sets so there is a visual representation of which addresses correspond to certain sets. Another option is to hide the unused reservation station slots. In this case every entry in the reservation station will be numbered. Showing the unused slots may help the user to keep track of bottlenecks in the execution, and is therefore chosen per default. Finally, the user may choose between capitalised or lowercase letters for the registers. By default, we chose to use lowercase letters.
 
-<!---
-TODO: Wir modellieren Meltdown-US-L1 nicht richtig. das secret muss eigentlich erst im Cache sein.
+### Microprograms
+This section allows users to configure microprograms that are run once a rollback has completed and before regular program execution is resumed. For each instruction type, the user can provide the path to a file containing the microprogram. If no microprogram should be run after a specific instruction type faults, the user can either set the file path to _None_, or simply not include it in the config. The instruction types must be their corresponding class names as they are given in the _execution.py_ file. We expect users to mostly use microprograms for faulting _InstrLoad_ and _InstrBranch_ instructions. By default, no microprograms are configured, but one that flushes the entire cache can be found in _demo/flushall.tea_.
+
+### Mitigations
+This section allows users to toggle Intel's Meltdown mitigation that overwrites the illegally read value with $0$ (see [@sec:meltdown-and-spectre-mitigations]) on or off. By default, it is disabled.
+
+Further, mitigations that are implemented in microcode, such as flushing the entire cache after a rollback (see [@sec:meltdown-and-spectre-mitigations]), can be enabled by users using microprograms in the Microprograms section of the config file.
+
+<!--
+TODO: Haben wir irgendwo genau die Angriffe definiert, die wir nehmen?
 -->
