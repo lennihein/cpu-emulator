@@ -308,7 +308,7 @@ def __break(input: list[str], cpu: CPU):
         print("Breakpoints:")
         for addr in breakpoints:
             print(
-                "\t0x{:04x} {}".format(
+                "\t{:04} {}".format(
                     addr,
                     "(disabled)" if not breakpoints[addr] else ""))
     elif subcmd == 'toggle':
