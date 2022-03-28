@@ -142,8 +142,8 @@ We further forgo the GHT because it is not strictly necessary to execute a Meltd
 Additionally, our emulator and its behavior are easier to understand and predict without it, which is important when implementing microarchitectural attacks for didactic purposes.
 The BPU of our emulator only consists of a PHT, which is enough for simple Spectre-PHT variants [@sec:evaluation_spectre].
 
-The default PHT used in our emulator holds an array called *counter* of configurable length to store several predictions.
-The instructions are assigned to different prediction slots by the last bits of their index in the instruction list.
+The default PHT used in our emulator holds an array called `counter` of configurable length $2^n$ to store several predictions.
+The instructions are assigned to different prediction slots by the last $n$ bits of their index in the instruction list.
 For each of the slots, the prediction can take the four different values from zero to three, where zero and one indicate that the branch will probably not be taken and two and three indicate that the branch is likely to be taken.
 
 The source code for our emulator also contains a more simple BPU with only one slot for all instructions.
@@ -308,7 +308,7 @@ To resolve the register operands, the current content of the respective register
 As described below, *slotIDs* in the operand list will be replaced by the result of the instruction which produces the value when it finishes executing.
 
 Resolving the register operands this way ensures that data dependencies between instructions that use the same registers are adhered to.
-To increase performance, real life CPUs practice register renaming in order to further eliminate data dependency hazards [@gruss-habil].
+To increase performance, real life CPUs practice register renaming in order to further eliminate data dependency hazards [@gruss-habil, p. 226].
 (Some) modern CPUs rename registers by assigning ISA level registers to different µ-architectural registers [@SCA].
 <!--todo: add source for register renaming by assigning macro to µ (info from SCA)-->
 Since we do not differentiate between the ISA and µ-architectural level [@sec:ISA], and aim to keep our emulator easy to comprehend, we do not implement register renaming.

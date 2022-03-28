@@ -1,4 +1,4 @@
-# Evaluation {#sec:evaluation}
+# Demonstration and Evaluation {#sec:evaluation}
 
 todo
 
