@@ -1,12 +1,13 @@
 import os
-from src.bpu import BPU
-from src.frontend import Frontend
-from src.memory import MemorySubsystem
-from src.execution import ExecutionEngine
 from math import ceil, floor
-from src.word import Word
-from src.cpu import CPU
-from src.instructions import Instruction, InstrReg, InstrImm, InstrLoad, InstrStore, InstrFlush, InstrFlushAll, InstrCyclecount, InstrBranch, InstrFence
+
+from .bpu import BPU
+from .frontend import Frontend
+from .memory import MemorySubsystem
+from .execution import ExecutionEngine
+from .word import Word
+from .cpu import CPU
+from .instructions import Instruction, InstrReg, InstrImm, InstrLoad, InstrStore, InstrFlush, InstrFlushAll, InstrCyclecount, InstrBranch, InstrFence
 
 HEADER = '\033[95m'
 BLUE = '\033[94m'

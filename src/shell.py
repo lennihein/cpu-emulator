@@ -11,11 +11,11 @@ import platform
 import subprocess
 
 
-from src.instructions import InstrReg
-from src.word import Word
-from src.byte import Byte
-from src import ui
-from src.cpu import CPU, CPUStatus
+from .instructions import InstrReg
+from .word import Word
+from .byte import Byte
+from . import ui
+from .cpu import CPU, CPUStatus
 
 PROMPT = ui.BOW_ARROW_FILLED + " "
 
@@ -350,7 +350,8 @@ def __(input: list[str], cpu: CPU):
 
 completer = NestedCompleter.from_nested_dict(completions)
 
-if __name__ == "__main__":
+
+def main():
     # grab arguments
     args = sys.argv[1:]
 
@@ -373,7 +374,7 @@ if __name__ == "__main__":
         print_version()
         ui.get_terminal_size()
         ui.print_div()
-        print(f"{ui.RED + ui.BOLD}Usage: py -m src.shell <program>{ui.ENDC}\n")
+        print(f"{ui.RED + ui.BOLD}Usage: python main.py <program>{ui.ENDC}\n")
         exit()
 
     ui.get_terminal_size()
@@ -397,3 +398,7 @@ if __name__ == "__main__":
             n_cpu = fn(params, cpu)
             if n_cpu is not None:
                 cpu = n_cpu
+
+
+if __name__ == "__main__":
+    main()
