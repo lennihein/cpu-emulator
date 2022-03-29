@@ -1,5 +1,7 @@
 """All the instructions in our instruction set, and the types used to describe them."""
 
+from __future__ import annotations
+
 import operator
 from abc import ABC, abstractmethod
 from dataclasses import dataclass

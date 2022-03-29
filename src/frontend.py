@@ -9,6 +9,8 @@ Supports flushing the queue and adding a micro program directly to the queue.
 """
 
 
+from __future__ import annotations
+
 from . import bpu
 from . import instructions
 from collections import deque

@@ -1,5 +1,7 @@
 """Execution Engine that executes instructions out-of-order."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import NewType, Optional, TypeVar, Union, cast, final
 
