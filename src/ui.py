@@ -413,8 +413,8 @@ def header_regs(engine: ExecutionEngine, reg_capitalisation: bool = False):
 
 def header_pipeline(front: Frontend, engine: ExecutionEngine, breakpoints: dict, show_rs_empty: bool = True, reg_capitalisation: bool = False):
     # calculate prog start and end
-    lowest_inflight = min([slot.pc for slot in engine.slots() if slot is not None], default=0)
-    highest_inflight = max([slot.pc for slot in engine.slots() if slot is not None], default=len(front.instr_list))
+    lowest_inflight = min([slot.pc for slot in engine.slots() if slot is not None and slot.pc >= 0], default=0)
+    highest_inflight = max([slot.pc for slot in engine.slots() if slot is not None and slot.pc >= 0], default=len(front.instr_list))
 
     prog, prog_lengths = prog_str(front, engine, breakpoints, start=lowest_inflight - 1, end=highest_inflight + 2, reg_capitalisation=reg_capitalisation)
     arrow = ["  ╭─► "] + ["  │   "] * (len(prog) - 2) + [" ─╯   "]
