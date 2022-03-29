@@ -7,16 +7,16 @@ class BPUTests(unittest.TestCase):
 
     def test_simple_bpu(self):
         predictor = bpu.SimpleBPU(bd.from_yaml('config.yml'))
-        predictor.update(True)
-        self.assertIs(predictor.predict(), True)
-        predictor.update(False)
-        self.assertIs(predictor.predict(), True)
-        predictor.update(False)
-        self.assertIs(predictor.predict(), False)
-        predictor.update(True)
-        self.assertIs(predictor.predict(), False)
-        predictor.update(True)
-        self.assertIs(predictor.predict(), True)
+        predictor.update(None, True)
+        self.assertIs(predictor.predict(None), True)
+        predictor.update(None, False)
+        self.assertIs(predictor.predict(None), True)
+        predictor.update(None, False)
+        self.assertIs(predictor.predict(None), False)
+        predictor.update(None, True)
+        self.assertIs(predictor.predict(None), False)
+        predictor.update(None, True)
+        self.assertIs(predictor.predict(None), True)
         print(predictor)
 
     def test_bpu(self):

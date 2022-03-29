@@ -21,7 +21,6 @@ class BPU:
         return res
 
 
-# TODO: SimpleBPU should have the same interface as BPU
 class SimpleBPU:
     def __init__(self, config) -> None:
         try:
@@ -29,11 +28,14 @@ class SimpleBPU:
         except KeyError:
             self.counter: int = 2
 
-    def update(self, taken: bool) -> None:
+    def update(self, pc, taken: bool) -> None:
         self.counter = bimodal_update(self.counter, taken)
 
-    def predict(self) -> bool:
+    def predict(self, pc) -> bool:
         return self.counter >= 2
+
+    def set_counter(self, pc, val: int) -> None:
+        self.counter = val
 
     def __str__(self) -> str:
         return str(self.counter)

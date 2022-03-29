@@ -44,8 +44,8 @@ class MemoryTests(unittest.TestCase):
         import random
 
         # Make sure we do not pick the highest address and try to write a Word (> 1 byte) to this
-        # address.
-        address = max(0, random.randint(0, 2**Word.WIDTH) - Word.WIDTH_BYTES)
+        # address. Also don't pick an address from the upper half of memory.
+        address = max(0, random.randint(0, 2**(Word.WIDTH - 1) - 1) - Word.WIDTH_BYTES)
         address = Word(address)
 
         # Reading / Writing bytes

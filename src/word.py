@@ -1,5 +1,7 @@
 """`Byte` and `Word` classes to represent 8- and 16-bit values."""
 
+from __future__ import annotations
+
 from typing import Iterable, Sequence
 
 
