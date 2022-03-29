@@ -15,7 +15,7 @@ thesis-affiliation: |
 thesis-twosided: false
 thesis-monochrome: false
 thesis-table-position: "end"
-thesis-print-declaration: true
+thesis-print-declaration: false
 thesis-reference-style: ""
 abstract: |
     TODO
