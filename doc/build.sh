@@ -14,7 +14,7 @@ BUILD="build"
 # options for pandoc
 FLAGS_PANDOC=(--template tpl/pandoc_template.tex \
     --listings --top-level-division chapter --columns 1000 \
-    --filter pandoc-crossref --metadata autoSectionLabels \
+    --filter pandoc-crossref \
     --metadata listings --metadata codeBlockCaptions \
     --bibliography bibliography.bib --biblatex)
 # options for latexmk

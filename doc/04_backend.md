@@ -26,10 +26,10 @@ Lastly we show how our emulator can be adapted for different demonstrations and 
 This section describes the individual components of our CPU emulator and various interactions between them. Each component is modelled after one or multiple components found in typical modern x86 CPUs.
 The main *CPU* component described in [@sec:CPU] initializes all other components and interfaces between them.
 The parser component described in [@sec:parser] parses users' program code into a sequence of instruction objects.
-[@sec:data] introduces the data representation used throughout the CPU, in particular with respect to memory accesses.
+[@Sec:data] introduces the data representation used throughout the CPU, in particular with respect to memory accesses.
 The CPU frontend described in [@sec:CPU_frontend] supplies the execution engine with a stream of instructions.
 The memory subsystem is detailed in [@sec:memory] and manages main memory and the cache.
-[@sec:execution] describes the execution engine, which is responsible for actually performing computations.
+[@Sec:execution] describes the execution engine, which is responsible for actually performing computations.
 
 ### CPU {#sec:CPU}
 \marginpar{Felix Betke}
