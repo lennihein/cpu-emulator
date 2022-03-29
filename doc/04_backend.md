@@ -21,7 +21,15 @@ Lastly we show how our emulator can be adapted for different demonstrations and 
 
 ## CPU Components and our equivalents/ models {#sec:components}
 
-todo
+\marginpar{Jan-Niklas Sohn}
+
+This section describes the individual components of our CPU emulator and various interactions between them. Each component is modelled after one or multiple components found in typical modern x86 CPUs.
+The main *CPU* component described in [@sec:CPU] initializes all other components and interfaces between them.
+The parser component described in [@sec:parser] parses users' program code into a sequence of instruction objects.
+[@Sec:data] introduces the data representation used throughout the CPU, in particular with respect to memory accesses.
+The CPU frontend described in [@sec:CPU_frontend] supplies the execution engine with a stream of instructions.
+The memory subsystem is detailed in [@sec:memory] and manages main memory and the cache.
+[@Sec:execution] describes the execution engine, which is responsible for actually performing computations.
 
 ### CPU {#sec:CPU}
 \marginpar{Felix Betke}
@@ -38,7 +46,17 @@ Other functions exist to load programs from files and initialize the frontend an
 
 ### Instructions and Parser {#sec:parser}
 
-TODO
+\marginpar{Jan-Niklas Sohn}
+
+<!-- - Users provide assembly-like source code
+- Parsed and provided to the rest of the CPU
+- This is in contrast to real x86 CPUs, which read and decode instructions from memory -->
+
+Users of our CPU emulator provide programs as an assembly-like source code.
+This source code is parsed by the `parser` module into a sequence of `Instruction` objects. Information about individual instructions is provided by the `instructions` module.
+The parsed instruction sequence is used throughout the rest of our CPU, indexed by the current program counter.
+This is in contrast to real x86 CPUs, which read and decode instructions from memory.
+However, parsing the program code once and from a textual representation simplifies the design of our CPU emulator, and for instance allows us to completely omit instruction memory from our memory model.
 
 <!-- - General instruction format: mnemonic followed by comma-separated operands, as is common in assembly languages
 - Instruction mnemonic already determines the exact instruction, including the types of its operands
@@ -228,12 +246,14 @@ Even though more complex replacement policies exist, the exact way in which they
 
 ### Execution Engine {#sec:execution}
 
+\marginpar{Jan-Niklas Sohn}
+
 <!-- - Executes instructions out-of-order
   - Ofc data dependencies have to be honored to guarantee correctness
   - We use a modified version of Tomasulo's Algorithm described in sec:tomasulo -->
 
 The execution engine is the central component of a CPU. It is the component responsible for actually performing computations, by executing the stream of instructions provided by the frontend.
-Just like the execution engine of modern x86 processors, our execution engine executes instructions out-of-order, i.e. not necessarily in the order of the incoming instruction stream. In order to preserve the semantics of the program, any data dependencies have to be honored during reordering. For this we use a modified version of Tomasulo's Algorithm, that is described in detail in [@sec:Tomasulo].
+Just like the execution engine of modern x86 processors, our execution engine executes instructions out-of-order, i.e. not necessarily in the order of the incoming instruction stream [@gruss-habil, p. 15]. In order to preserve the semantics of the program, any data dependencies have to be honored during reordering. For this we use a modified version of Tomasulo's Algorithm, that is described in detail in [@sec:Tomasulo].
 <!-- although the frontend passes instructions in program order to the execution engine, the order in which these instructions are actually executed usually differs. -->
 
 <!-- - Contains Reservation Station with a fixed number of slots
@@ -242,7 +262,7 @@ Just like the execution engine of modern x86 processors, our execution engine ex
   - Instructions' ability to execute concurrently only limited by available slots, no concept of Execution Units that instructions need to be dispatched to; instructions execute in slots directly -->
 
 The execution engine contains the Reservation Station with a fixed number of instruction slots. Each slot contains an instruction that is currently being executed. We call such instructions *in-flight*.
-Our Reservation Station is unified, i.e. each slot can contain any kind of instruction. The same is often found in modern CPUs TODO citation.
+Our Reservation Station is unified, i.e. each slot can contain any kind of instruction. The same is often found in modern CPUs [@skylake].
 The slots of our Reservation Station are also used to model Load Buffers and Store Buffers; the specifics of executing memory accesses are handled by the slots directly instead of separate components.
 We also have no concept of Execution Units that instructions need to be dispatched to, which means that instructions' ability to execute concurrently is only limited by the number of available slots.
 
@@ -251,9 +271,9 @@ We also have no concept of Execution Units that instructions need to be dispatch
     - Wait for source operands to become available and compute result
     - Once result is computed: Make it available to other instructions (or the register file), transition to retiring -->
 
-All instructions pass through two phases during execution: In the first phase the instruction is said to be *executing*. It waits for any source operands to become available and computes its result. Once the result is computed, it is made available to waiting instructions, and the instruction transitions to the second phase.
-
-TODO: Instructions wait for fixed amount of cycles before finishing execution or retirement
+All instructions pass through two phases during execution: In the first phase the instruction is said to be *executing*. It waits for any source operands to become available and computes its result.
+Once the result is computed, the instruction waits for a specific amount of CPU cycles. This delay is introduced to mimic the latency of real execution units, which may take several CPU cycles to compute a result.
+After this delay expires, the instruction's result is made available to waiting instructions, and the instruction transitions to the second phase.
 
   <!-- - Retiring: Determine if instruction causes a fault
     - Fault means microarchitectural fault; both architecturally visible faults like memory protection violations and architecturally invisible faults like branch mispredictions are handled in the same way in the Execution Engine
@@ -261,8 +281,6 @@ TODO: Instructions wait for fixed amount of cycles before finishing execution or
 
 In the second phase the instruction is said to be *retiring*. The instruction determines if it causes a *fault*, which in this case means a *microarchitectural* fault. These can be architecturally visible faults like memory protection violations or architecturally invisible faults like branch mispredictions; both are handled the same way in the Execution Engine.
 Once the instruction finishes retiring its slot becomes available again and may be used to execute a new instruction.
-
-TODO: Describe concrete execution/retirement behavior for each instruction category?
 
 <!-- - In each clock cycle only one instruction is able to finish execution or retirement
   - Models contention of the common data bus, and improves debugging experience -->
@@ -332,9 +350,6 @@ Instead, the tick function goes through the occupied slots in the Reservation St
 This follows the order of the slots in the Reservation Station, regardless of when the instruction in each slot was issued, i.e. regardless of their order in the program.
 
 If the operands of the current instruction are not ready yet, i.e. there are still *slotIDs* in the operand list, the instruction is skipped.
-To mimic the latency of real world execution units and memory accesses, each instruction type additionally waits a specific amount of CPU cycles after all operands are ready until producing its result.
-These waiting instructions are also skipped.
-<!-- todo: wait time not really appropriate here, but I would like to have it mentioned; maybe move to execution engine chapter?-->
 
 Once the instruction is executed and produces a result, i.e. all operands are available and the wait time is over, according to Tomasulos algorithm this result has to be broadcasted via the CDB to the other slots and the registers [@sec:background-out-of-order-execution].
 In our emulator, the CDB is modelled by the *_notify_result* function.
@@ -369,6 +384,8 @@ Similar to the memory instructions, it waits for all the instructions in the lis
 Additionally, no other instructions can be issued to the Reservation Station while it contains a *fence* instruction.
 
 ## Exception- and Fault-Handling {#sec:rollback}
+
+\marginpar{Jan-Niklas Sohn}
 
 <!-- Exceptions: -->
 
@@ -443,7 +460,7 @@ and returns information about the fault to the main CPU component. The main CPU 
 There are two possible approaches to performing rollbacks.
 The first approach tracks any changes that executed instructions make to the architectural state. When a fault occurs, these tracked changes can be performed in reverse in order to recover the target architectural state.
 The second approach records a snapshot of the architectural state when the faulting instruction is issued. When a fault occurs, this snapshot can be restored in order to recover the target architectural state.
-It is not publicly documented what approach real x86 CPUs take to performing rollbacks. Our implementation follows the snapshot-based approach, since it is judged to be easier to implement in a software-based simulator.
+It is not publicly documented what approach real x86 CPUs take to performing rollbacks. Our implementation follows the snapshot-based approach, since it is judged to be easier to implement in a software-based emulator.
 
 In our case, the architectural state that needs to be restored includes the register state and the contents of memory.
 The state of the cache and the BPU are not considered part of the architectural state and are not restored when performing a rollback.
@@ -678,7 +695,7 @@ flushall  &  - &flush whole cache\\
 
 All branch instructions compare the values of two source registers. If the comparison evaluates to true, the execution of the program is resumed at the given label in the assembler code.
 If it evaluates to false, the next instruction in the program is executed.
-Depending on the instruction, the register values are interpreted as signed or unsigned integers.
+Depending on the instruction, the register values are interpreted as signed (s) or unsigned (u) integers.
 Labels in the assembler code are automatically resolved by the parser [@sec:parser], [@sec:evaluation_example].
 <!-- There are different options for the branch condition so the students can choose which one suits their program best. -->
 

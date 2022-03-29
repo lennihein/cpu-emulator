@@ -226,21 +226,21 @@ class FrontendTest(unittest.TestCase):
 
         next_instr_four = front.pop_refill()
 
-        self.assertIs(next_instr_four.instr, instrs[2])
+        self.assertIs(next_instr_four.instr, instrs[0])
         self.assertEqual(len(front.instr_queue), 3)
-        self.assertIs(front.instr_queue[0].instr, instrs[0])
-        self.assertIs(front.instr_queue[1].instr, instrs[1])
-        self.assertIs(front.instr_queue[2].instr, instrs[2])
+        self.assertIs(front.instr_queue[0].instr, instrs[1])
+        self.assertIs(front.instr_queue[1].instr, instrs[2])
+        self.assertIs(front.instr_queue[2].instr, instrs[3])
 
-        self.assertIs(next_instr_four.instr_index, 2)
-        self.assertIs(front.instr_queue[0].instr_index, 0)
-        self.assertIs(front.instr_queue[1].instr_index, 1)
-        self.assertIs(front.instr_queue[2].instr_index, 2)
+        self.assertIs(next_instr_four.instr_index, 0)
+        self.assertIs(front.instr_queue[0].instr_index, 1)
+        self.assertIs(front.instr_queue[1].instr_index, 2)
+        self.assertIs(front.instr_queue[2].instr_index, 3)
 
-        self.assertIs(next_instr_four.prediction, True)
+        self.assertIs(next_instr_four.prediction, None)
         self.assertIs(front.instr_queue[0].prediction, None)
-        self.assertIs(front.instr_queue[1].prediction, None)
-        self.assertIs(front.instr_queue[2].prediction, False)
+        self.assertIs(front.instr_queue[1].prediction, False)
+        self.assertIs(front.instr_queue[2].prediction, None)
 
         # check pc setter
         front.flush_instruction_queue()

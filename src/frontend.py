@@ -146,9 +146,8 @@ class Frontend:
         '''
         Takes the index of a branch instruction in the instruction list
         and a boolen whether or not this branch should be taken as arguments.
-        Adds the given branch instruction to the queue with the correct boolean
-        instead of the respective BPU prediction.
-        Fills the rest of the instruction queue accordingly.
+        Fills the rest of the instruction queue accordingly
+        without adding the branch instruction again.
         Does not automatically flush the queue beforehand.
         '''
 
@@ -172,10 +171,6 @@ class Frontend:
 
                 raise TypeError(
                     f"index {instr_index!r} does not point to a branch instruction")
-
-            current_instr_info = InstrFrontendInfo(
-                current_instr, instr_index, taken)
-            self.instr_queue.append(current_instr_info)
 
             self.add_instructions_to_queue()
 
