@@ -152,14 +152,15 @@ class MemorySubsystem:
             This function does not have a return value.
         """
 
-        value = data.value
-        self.memory[address.value] = value
-
-        if cache_side_effects or self.is_addr_cached(address):
-            self._load_line(address)
-
         # See self.read_byte() for comments on this check.
         fault = self.is_illegal_access(address)
+
+        if not fault:
+            value = data.value
+            self.memory[address.value] = value
+
+            if cache_side_effects or self.is_addr_cached(address):
+                self._load_line(address)
 
         return MemResult(Byte(0), fault, self.num_write_cycles, self.num_fault_cycles)
 

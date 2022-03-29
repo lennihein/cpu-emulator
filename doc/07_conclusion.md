@@ -1,6 +1,9 @@
 # Conclusion
 \marginpar{Felix Betke}
 Our goal is to create an emulator that allows users to experiment with simplified versions of select Meltdown and Spectre type attacks without access to vulnerable hardware. The choice of Python as the programming language and a limited number of UI libraries ensure our emulator can be used on anything that runs Python, regardless of operating system or architecture. Further, the evaluation (see [@sec:evaluation]) shows that Meltdown-US-L1 and Spectre v1 attacks are possible given the default configuration and example programs. We document our implementation and provide a user manual in the previous chapters.
+<!---
+Our emulator works on simple programs, Meltdown/Spectre works, presented Mitigations work
+-->
 
 ## Limitations
 While we reached our goals, some limitations of our emulator exist. Firstly, due to not running an operating system, we lack virtual addresses and paging, therefore not fully modelling the Meltdown-US-L1 attack and how exceptions can be forced by user space processes. Secondly, our current implementation of read operations behaves differently than Intel's CPUs are believed to behave. In our version, if needed data is not present in the cache, instructions stall until the data is available, rather than computing on values taken from other microarchitectural buffers [@ridl]. As a result, our version of Meltdown-US-L1 is still possible, but in the event the data to be stolen is not cached, users will observe a stall, not a read from other buffers (see [@sec:config-memory]). The reason for this simplification is that the Meltdown-US-L1 attack does not strictly rely on any of those buffers, which we have therefore not modelled. Thus, we are still confident our simplified emulator allows users to better understand the chosen attacks.

@@ -1,6 +1,7 @@
 # Background {#sec:background}
 \marginpar{Felix Betke}
 This chapter briefly covers the theoretical background needed to use the presented emulator and continue its development. The reader is assumed to have an understanding of elementary CPU concepts, such as pipelining and caching.
+Firstly, \ref{sec:background-cpu} introduces the three main components of a CPU and sections \ref{sec:background-out-of-order-execution} and \ref{sec:background-speculative-execution} explain the optimization techniques out-of-order and speculative execution, respectively. Lastly, \ref{sec:meltdown-and-spectre} gives a short overview of the Meltdown and Spectre vulnerabilities relevant for the emulator and presents some mitigations.
 
 ## CPU {#sec:background-cpu}
 \marginpar{Felix Betke}
@@ -18,10 +19,7 @@ A visualization of the aforementioned components can be found in [@fig:backgroun
 \marginpar{Felix Betke}
 As the name implies, out-of-order execution refers to the idea of executing instructions in a different order than the one in which they are given [@gruss-habil]. With multiple execution units that run in parallel (as described in [@sec:background-cpu]), CPUs can take advantage of mutually independent instructions and execute them at the same time.
 
-The basic realization of this concept is provided by Tomasulo's algorithm [@tomasulo]. It introduces two components, the first of which is the reservation station, which collects the operands of instructions until they are ready to be executed by the execution units. Crucially, the corresponding execution units do not need to wait until all operands are present and can instead compute other instructions. The second component of Tomasulo's algorithm is the Common Data Bus (CDB), which connects all reservation stations and execution units. Whenever a result is computed by an execution unit, the result is broadcast onto the CDB and thus made available to all reservation stations that are waiting for it. This important step ensures that results are not written to registers first, just to be read again by other instructions that need them as operands.
-<!---
-Do we need an image here? We already have one in the CPU section.
--->
+The basic realization of this concept is provided by Tomasulo's algorithm [@tomasulo]. It introduces two components, the first of which is the reservation station, which collects the operands of instructions until they are ready to be executed by the execution units. Crucially, the corresponding execution units do not need to wait until all operands are present and can instead compute other instructions. The second component of Tomasulo's algorithm is the Common Data Bus (CDB), which connects all reservation stations and execution units. Whenever a result is computed by an execution unit, the result is broadcast onto the CDB and thus made available to all reservation stations that are waiting for it. This important step ensures that results are not needed to be written to registers first, just to be read again by other instructions that need them as operands.
 
 Initially, according to Tomasulo, each set of execution units needed its own reservation station, however, more modern implementations by Intel use a single unified reservation station, called scheduler, that handles all types of instructions, rather than just one [@tomasulo] [@skylake] [@gruss-habil]. This can also be seen in [@fig:background-cpu].
 

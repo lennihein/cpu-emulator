@@ -1,4 +1,4 @@
-# Introduction
+# Introduction {#sec:introduction}
 \marginpar{Felix Betke}
 As an advancement over older processors, modern Intel CPUs implement a number of optimization techniques that increase their efficiency. One of which is the concept of out-of-order execution, which takes advantage of the mutual independence of instructions that would normally be executed sequentially. A second optimization technique is called speculative execution and involves the prediction of whether or not a given branch is taken. With either technique, the CPU might encounter cases where the current CPU state must be rolled back to a previous one to ensure correct execution. For out-of-order execution this happens when an instruction raises an exception (e.g. accessing inaccessible memory). For speculative execution, this happens when a branch is mispredicted. An initiated rollback allows some instructions that are currently being executed (in-flight) to continue execution for a short amount of time.
 

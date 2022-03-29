@@ -1,3 +1,10 @@
-# Specification of our task
+# Specification of our task {#sec:task}
+\marginpar{Felix Betke}
+This chapter briefly specifies our task and defines our target audience.
+As motivated in the introduction ([@sec:introduction]), exploiting Meltdown or Spectre for educational purposes on personal hardware can be challenging. Therefore, our goal is to develop a CPU emulator that is vulnerable to select variants of the two vulnerabilities and runs on most operating systems and architectures. To achieve this, it must support out-of-order and speculative execution.
 
-todo
+Our target audience includes anyone that wants to gain a better understanding of these vulnerabilities. We assume the user of our emulator is attending the SCA lecture (or similar) or already knows about some of the theoretical background regarding transient execution attacks.
+
+Since numerous variants of Meltdown and Spectre exist, the emulator should be vulnerable to only two of them in its initial version. For Meltdown, users can run a slightly modified version of the Meltdown-US-L1 attack. This is the version that was published as the original Meltdown vulnerability [@meltdown] and the one presented to students first in the SCA lecture. Given the default configuration of our emulator, we allow users to steal secrets even if they are currently not in the cache. This modification does not impact the way Meltdown works and should simplify the users' programs. As mentioned in [@sec:config], this can be changed to more closely model the real Meltdown-US-L1 attack. For Spectre, the emulator is vulnerable to Spectre v1, which is one of variants initially published [@spectre] and, again, first to be introduced in the SCA lecture.
+
+A graphical user interface is required to visualize the current state of the components of the emulator. Additionally, the UI should allow users to step through the execution one step at a time and also to go back.
