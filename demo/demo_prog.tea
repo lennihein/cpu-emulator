@@ -29,16 +29,19 @@
 //	rdtsc to show how long this took
 	
 	
-	
-	addi r1, r0, 1
-	slli r2, r1, 8
-	addi r2, r2, 42
-	addi r3, r0, 32766 //32768 -2
-	sw r2, r0, 4
-	lb r4, r0, 4
-	add r3, r3, r1 // 32766 + 1 = 32767
-	flush r0, 4
-	fence
+// set register 1 to 1
+addi r1, r0, 1
+// shift it to 256 in r2
+slli r2, r1, 8
+// add 0x42 in r2
+addi r2, r2, 66
+// set r3 to 32766
+addi r3, r0, 32766 //32768 -2
+sw r2, r0, 4
+lb r4, r0, 4
+add r3, r3, r1 // 32766 + 1 = 32767
+flush r0, 4
+fence
 loop_label:
 	sb r4, r3, 0
 	add r3, r3, r1
