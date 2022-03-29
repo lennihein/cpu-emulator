@@ -246,6 +246,8 @@ def exec(cpu: CPU, steps=-1, break_at_retire=False) -> CPU:
                 print(f"{ui.RED + ui.BOLD}Memory access error at {info.fault_info.pc}:{ui.ENDC} {info.fault_info.instr.ty.name} r{ops[0]}, r{ops[1]}, {ui.hex_str(ops[2], fixed_width=False)}")
             else:
                 print(ui.RED + "Unknown fault" + ui.ENDC)
+            if info.fault_microprog is not None:
+                print(f"{ui.YELLOW}Microprogram injected: {info.fault_microprog}{ui.ENDC}")
             return cpu
         if set(active_breakpoints) & set(info.issued_instructions):
             ui.all_headers(cpu, breakpoints)
