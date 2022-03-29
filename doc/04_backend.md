@@ -675,7 +675,7 @@ flushall  &  - &flush whole cache\\
 
 All branch instructions compare the values of two source registers. If the comparison evaluates to true, the execution of the program is resumed at the given label in the assembler code.
 If it evaluates to false, the next instruction in the program is executed.
-Depending on the instruction, the register values are interpreted as signed or unsigned integers.
+Depending on the instruction, the register values are interpreted as signed (s) or unsigned (u) integers.
 Labels in the assembler code are automatically resolved by the parser [@sec:parser], [@sec:evaluation_example].
 <!-- There are different options for the branch condition so the students can choose which one suits their program best. -->
 

@@ -1,0 +1,53 @@
+// add somtheing
+//add/ shift something with immediate?
+//maybe use this in address calculation later 
+//multiple arithmetic operations to show occupation and data dependencies in Reservation Station
+//maybe sw, sb sequence aas in test.tea to show addressing?
+//might be overkill
+// loop over something and eventually fault
+// faulting memory in loop?
+//first without fault, then with fault
+//flush cache line at some point
+// show rtdsc at the end, to show how many cycles this took?
+//fence already chapter in mitigations -> maybe not necessary here
+
+
+//	a -> 1 in Register
+//	arith. abhängig von a maybe with immediate -> um Word size shiften
+//	arith. abhängig von a -> 42 drauf addieren -> spätestens hier dann auch explizit Registerinhalt zeigen
+//	b für Adresse später
+//	Speicher store word size mit a ausreichend groß, um über ein Byte hinaus zu schreiben z.B. sd. im oben Byte nur "1" steht und im Rest "42"; der Einfachheit halber an Adresse 0
+//	Speicher load byte size mit a (von Adresse 0?) um zu zeigen, dass nur das obere Byte geladen wird
+//	b für Adresse später
+//	cacheline die wir in 20 beschrieben haben flushen -> Cache und Speichervisualisierung vorher und nachher zeigen
+//	fence
+//loop_label:
+//	Speicherzugriff mit b normal (vllt store von dem, was wir in 20 ausgelesen haben)
+//	b verändern sodass der nächste Speicherzugriff failt (vllt. in Dokument in Memsection schauen, welche Adressen wir unerreichbar gemacht haben; sicher gehen dass auch stores dorthin failen upper half of the address space (32768 to 65535, by default) inaccessible)
+//	a verändern sodass es erst beim zweiten Mal failt
+//	in Abhängigkeit von a zu loop_label springen	
+//	rdtsc to show how long this took
+	
+	
+	
+	addi r1, r0, 1
+	slli r2, r1, 8
+	addi r2, r2, 42
+	addi r3, r0, 32766 //32768 -2
+	sw r2, r0, 4
+	lb r4, r0, 4
+	add r3, r3, r1 // 32766 + 1 = 32767
+	flush r0, 4
+	fence
+loop_label:
+	sb r4, r3, 0
+	add r3, r3, r1
+	sub r4, r4, r1
+	blts r4, r0, loop_label //mention when speculative branching/ execution opccurs
+	rdtsc r0
+	
+
+	
+	
+
+
