@@ -11,7 +11,7 @@ Supports flushing the queue and adding a micro program directly to the queue.
 
 from __future__ import annotations
 
-from . import bpu
+from .bpu import BPU
 from . import instructions
 from collections import deque
 from dataclasses import dataclass
@@ -49,9 +49,9 @@ class Frontend:
 
     max_length: int
     pc: int
-    bpu: bpu.BPU
+    bpu: BPU
 
-    def __init__(self, cpu_bpu: bpu.BPU, cpu_instr_list, config: dict) -> None:
+    def __init__(self, cpu_bpu: BPU, cpu_instr_list, config: dict) -> None:
 
         self.max_length = config["InstrQ"]["size"]
         self.current_length = 0
