@@ -8,6 +8,16 @@ titlegraphic: "unilogo.pdf"
 lang: "en"
 theme: "metropolis"
 ---
+<!--
+Aufteilung:
+
+- Einleitung (Felix)
+- Backend (Melina)
+- Demo: Meltdown (Lenni)
+  - Mitigation: Return zero
+- Demo: Spectre (Jan)
+  - Mitigation: Flush cache
+-->
 
 ## Structure
 - Topic

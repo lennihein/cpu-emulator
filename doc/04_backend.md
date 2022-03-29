@@ -1,23 +1,25 @@
 # CPU emulator/ backend {#sec:backend}
 \marginpar{Melina Hoffmann}
 
-In this chapte, we introduce the backend of our emulator program.
+In this chapter, we introduce the backend of our emulator program.
 It contains the elements of our program that emulate actual CPU components.
 Our emulator is based on information about modern real life CPUs, especially the x86 Intel Skylake architecture [@skylake].
 <!--todo: gute Begründung außer "war so in SCA" dass wir eine relativ alte CPU nehmen. Einfacher zu verstehen als neuere aber trotzdem alle für die Angriffe relevanten features? oder mit Absicht etwas älter, da hier noch die für Meltdown und Spectre interessanten features vorhanden sind. -->
 
-<!--todo: add which exact python variant and special tools and libraries, if applicable -->
+<!--todo: add which exact python variant and special tools and libraries, if applicable
+already mentioned in the UI chapter-->
 In our program, we model the distinct components of a real life CPU with a modular setup making use of the object oriented functionalities of Python3. 
-Breaking up the source code into individual CPU components also makes it easier to understand and maintain. <!--todo: best practice anyways, maybe leave out -->
-Additionally, we have made simplifications and modifications in comparison to a real life CPU, so the emulator is as clear and easy to understand as possible while still implementing an actual out of order execution and providing the necessary functionality for Meltdown and Spectre attacks.
+Breaking up the source code into individual CPU components also makes it easier to understand and maintain. 
+<!--todo: best practice anyways, maybe leave out -->
+Additionally, we have made simplifications and modifications in comparison to a real life CPU, so the emulator is as clear and easy to understand as possible while still implementing an actual out-of-order execution and providing the necessary functionality for Meltdown and Spectre attacks.
 
-In this chapter we firstly introduce the components of our CPU emulator, how they work (together) and which part of a real life CPU they emulate [@sec:components].
+In this chapter we firstly introduce the components of our CPU emulator, how they work and interact and which part of a real life CPU they emulate [@sec:components].
 Then we explain how our emulator provides out of order execution and how it may differ from the general Tomasulo algorithm introduced in [@sec:background-out-of-order-execution, @sec:Tomasulo].
 Subsequently, we show how we implemented rollbacks and exception handling, especially with regards to how out the implementation allows for Meltdown and Spetre attacks [@sec:rollback].
 Then we give an overview over our instruction set architecture [@sec:ISA].
 Lastly we show how our emulator can be adapted for different demonstrations and attacks without changing the source code via a config file [@sec:config].
 
-## CPU Components and our equivalents/ models (10-11 pages) {#sec:components}
+## CPU Components and our equivalents/ models {#sec:components}
 
 todo
 
@@ -33,6 +35,8 @@ Other functions exist to load programs from files and initialize the frontend an
 The second purpose of the _CPU_ class is to provide the snapshot functionality, which allows a user of the emulator to step back to previous cycles. The snapshot list is simply a list that grows at each cycles, where ech entry is a deepcopy of the _CPU_ instance. To simply be able to deepcopy the CPU class, the snapshot list is held separately and not one of its members. Instead, the CPU class, and therefore each snapshot, maintains an index to its own entry in the snapshot list. This reference makes traversing the snapshot list one step at a time easier. Due to the low complexity of the programs we expect our users to run, at the moment, no maximum number of available snapshots is configured. To restore snapshots, a static _restore\_snapshot_ function exists in the _CPU_ class. Crucially, this function returns the deepcopy of an entry of the snapshot list relative to the value of _\_snapshot\_index_ of the current instance. This allows users to step back and forth between snapshots. However, manipulating a restored snapshot by calling the _tick_ function, for example, discards all more recent snapshots.
 
 ### Instructions and Parser {#sec:parser}
+
+TODO
 
 <!-- - General instruction format: mnemonic followed by comma-separated operands, as is common in assembly languages
 - Instruction mnemonic already determines the exact instruction, including the types of its operands
@@ -66,9 +70,9 @@ We do not support reading or writing instruction memory. Thus, instructions have
 The instructions of our instruction set are further distinguished based on their *instruction category*. The possible instruction categories are *register-register* instructions, *register-immediate* instructions, *branch* instructions, *load* instructions, *store* instructions, *flush* instructions, and three special categories for the individual *rdtsc*, *fence*, and *flushall* instructions.
 Our implementation uses `InstructionKind` objects to model the individual instructions of our instruction set. Each such object defines an instruction by its mnemonic, the number and types of its operands, the instruction category it belongs to, as well as some category-specific information. For register-register and register-immediate instructions, this is the concrete computation performed. For branch instructions, this is the branch condition. And for load and store instructions, this is the width of the memory access.
 
-Grouping similar instructions into categories allows the Execution Engine to handle executed instructions based solely on their instruction category; the Execution Engine does not need to handle every concrete instruction separately.
-New instructions that match an existing instruction category can be added easily by users, without having to modify the Execution Engine.
-The mechanisms involved in the Execution Engine are described in detail in [@sec:execution].
+Grouping similar instructions into categories allows the execution engine to handle executed instructions based solely on their instruction category; the execution engine does not need to handle every concrete instruction separately.
+New instructions that match an existing instruction category can be added easily by users, without having to modify the execution engine.
+The mechanisms involved in the execution engine are described in detail in [@sec:execution].
 
 <!-- - Parser consumes abstract description of instructions, only mnemonic and operand types
   - Doesn't need to know about every concrete instruction
@@ -124,64 +128,46 @@ It stores information about previously executed conditional branch instructions 
 The rest of the CPU can then speculatively execute further instructions at an address based on the predicted outcome of the branch instead of stalling until the branch instruction is processed by the execution engine.
 If the prediction was false, a rollback is performed on the speculatively executed instruction [@sec:rollback].
 If the prediction was true, the execution is overall faster than without speculative execution.
-<!--todo: source? -->
+<!--todo: source needed? -->
 
 Detailed information about the BPU of our modern base CPU is not widely available [@skylake]. 
 In general, the Gshare BPU of modern CPU consists of multiple components.
-It contains a branch target buffer (BTB) that holds the predicted target addresses for conditional branches.
-It also uses a pattern history table (PTH), that can be implemented as a 2-bit-saturating counter, and a global history register (GHT) to predict whether a conditional jump will be taken or not.
-[@SCA]
-<!-- todo: ordentliche Quelle finden
-        vllt. BPU, Gshare BPU, die einzelnen Komponenten etc. oder direkt Skylake nochmal googlen-->
-<!--  wikichip skylake: The intimate improvements done in the branch predictor were not further disclosed by Intel. -->
+It contains a branch target buffer (BTB) that holds the predicted target addresses for conditional branches [@spectre].
+It also uses a pattern history table (PHT), that can be implemented as a 2-bit-saturating counter, and a global history register (GHT) to predict whether a conditional jump will be taken or not [@Evtyushkin].
 
 In our emulator, we forgo the BTB entirely.
 Real life CPUs benefit from stored target addresses since they have to expensively decode each branch instruction before they can work with the target address [@skylake].
 In our emulator, the parser decodes the jump labels from the assembler code and directly provides them to the frontend, so storing them in an additional buffer is unnecessary [@sec:parser].
 We further forgo the GHT because it is not strictly necessary to execute a Meltdown or Spectre attack.
-Additionally, our emulator and its behaviour are easier to understand and predict without it, which is important when implementing microarchitectural attacks for didactic purposes.
-The BPU of our emulator only consists of a PHT, which is enough for simple Spectre-PHT variants [@reference-eval-spectre].
-<!--todo: add correct reference for last sentence -->
+Additionally, our emulator and its behavior are easier to understand and predict without it, which is important when implementing microarchitectural attacks for didactic purposes.
+The BPU of our emulator only consists of a PHT, which is enough for simple Spectre-PHT variants [@sec:evaluation_spectre].
 
-The default PHT used in our emulator holds an array called counter of configurable length to store several predictions.
-The instructions are assigned to different prediction slots by the last bits of their index in the instruction list.
+The default PHT used in our emulator holds an array called `counter` of configurable length $2^n$ to store several predictions.
+The instructions are assigned to different prediction slots by the last $n$ bits of their index in the instruction list.
 For each of the slots, the prediction can take the four different values from zero to three, where zero and one indicate that the branch will probably not be taken and two and three indicate that the branch is likely to be taken.
 
-<!--todo: maybe remove the Simple BPU and this paragraph with it. -->
 The source code for our emulator also contains a more simple BPU with only one slot for all instructions.
-Since the number of slots in the default BPU is freely configurable by the user, this simple BPU is now obsolete.
+While the more advanced BPU is used by default, the simple BPU can be chosen in the config file [@sec:config].
 
-<!-- Todo: Hier noch ergänzen, wo die BPU wann geupdated wird.-->
 <!-- Todo: Ggf. Begründung überlegen, wieso 2-bit statt 2-bit-sat.-->
 <!-- Todo: Nochmal überarbeiten, wenn bimodal_update klarer ist.-->
-When the BPU is updated with an actual branch outcome from the execution engine, the prediction in the PHT is updated by a 2-bit counter.
+When the execution engine executes a branch instruction, the BPU is updated with the actual branch outcome for the instruction and the prediction in the PHT is updated by a 2-bit counter.
 This means, that if the prediction was right, the counter remains at or updates to zero (strongly not taken) or three (strongly taken) respectively.
 If the prediction counter is at zero but the branch is actually taken, the counter is updated to one (weakly not taken).
 If it is at a one when the branch is taken, it is directly updated to three.
-The counter behaves similarly when it has tha value two or three and the branch is not actually taken.
+The counter behaves similarly when it has the value two or three and the branch is not actually taken.
         
 #### Instruction Queue {#sec:iq}
 
 In a real life CPU, the overall purpose of the frontend is to provide the execution unit with a steady strean of instructions so the backend is busy as much as possible and therefore efficient.
-In a modern x86 CPu, the frontend has to fetch x86 macro-instructions from a cache and decode, optimize and queue them repeatedly to provide the backend with a queue of µ-instructions ready for issuing in the execution engine.
+In a modern x86 CPU, the frontend has to fetch x86 macro-instructions from a cache and decode, optimize and queue them repeatedly to provide the backend with a queue of µ-instructions ready for issuing in the execution engine.
 [@skylake]
-<!---
-workflow decoding and queue filling in CPU:
-     fetch complex x86 macro instructions from cache
-     pre-decoded instructions are delivered to the Instruction Queue
-     fusing of macro ops
-     decoding in multiple decoders: input macro op, emit regular, fixed length µOPs
-        even more complicated for more complex macro ops (microcode sequencer)
-    µ-op cache b.c. all of this is resource intensive
-    Allocation Queue acts as the interface between the front-end (in-order) and the back-end (out-of-order)
-    additional optimizations
--->
 
-In our emulator, except for the BPU, the functionality of the CPU frontend is bundled in frontend.py.
+In our emulator, except for the BPU, the functionality of the CPU frontend is bundled in *frontend.py*.
 It is significantly simplified compared to a real life x86 CPU, especially since the we use only one type of instructions instead of distinguishing between macro- and µ-instructions [@sec:ISA].
 They are already provided as a list by the parser, which renders the decoding and optimization steps in the frontend unnecessary [@sec:parser].
 
-The main task of our frontend is to acts as interface between instruction list provided by the parser and the execution engine [@sec:execution].
+The main task of our frontend is to act as an interface between instruction list provided by the parser and the execution engine [@sec:execution].
 It provides and manages the instruction queue, which holds the instructions that the execution engine should issue next.
 Conditional branches with their respective BPU predictions are taken into account when filling the queue.
 This enables speculative execution which is needed for Spectre attacks [@sec:meltdown-and-spectre].
@@ -192,24 +178,22 @@ For branch instructions it also holds the respective branch prediction from the 
 This additional information is needed by the execution engine to handle mispredictions and other exceptions [@sec:execution].
 
 When adding instructions to the queue, the frontend selects them from the instruction list, adds the additional information for the execution engine and places them into the instruction queue until the queue's maximum capacity is reached.
-The frontend maintains a program counter (pc) that points to the next instruction in the list that should be added to the queue.
+The frontend maintains a program counter (*pc*) that points to the next instruction in the list that should be added to the queue.
 When the frontend encounters a branch instruction and the branch is predicted to be taken, the frontend adjusts the pc to resume adding instructions at the branch target.
 If a branch was mispredicted, the frontend provides a special function to reset the pc and refill the instruction queue with the correct instructions.
 
 Additionally, the frontend provides a function to add a µ-program to the queue.
 It consists of a list of instructions separate from the parser instruction list.
 When adding the µ-program to the queue, the frontend may exceed the maximum queue capacity.
-This functionality can be used to implement mitigations against microarchitectural attacks, e.g. by adding a µ-program as part of the exception handling after an illegal load [@reference-eval-mitigations].
-<!--todo: add correct reference for last sentence -->
+This functionality can be used to implement mitigations against microarchitectural attacks, e.g. by adding a µ-program as part of the exception handling after an illegal load [@sec:evaluation_mitigations].
 
-<!--todo: add correct reference for second sentence -->
 The frontend provides interfaces to both read and take instructions from the queue.
-It also provides a function that combines taking an instruction from the queue and refilling it, .
+It also provides a function that combines taking an instruction from the queue and refilling it.
 Additionally, the frontend has an interface for flushing the whole queue at once without taking the instructions from the queue.
-This can be used when demonstrating mitigations against microarchitectural attacks [@reference-eval-mitigations].
+The latter can be used when demonstrating mitigations against microarchitectural attacks [@sec:evaluation_mitigations].
 
-The frontend provides further basic interfaces, e.g. for reading the size the instruction queue and reading and setting the pc.
-These are used by the other components during regular execution, e.g. when issuing instructions to the execution engine, but also to reset the queue to a certain point in the program after an exception has occured [@sec:rollback].
+The frontend provides further basic interfaces, e.g. for reading the size the *instruction queue* and reading and setting the *pc*.
+These are used by the other components during regular execution, e.g. when issuing instructions to the execution engine, but also to reset the queue to a certain point in the program after an exception has occurred [@sec:rollback].
 Since our emulator only executes one program at a time, the other components can check via another interface whether the frontend has reached the end of the program.
 
 ### Memory {#sec:memory}
@@ -227,7 +211,7 @@ Other functions that allow the UI to visualize the memory contents are provided.
 As explained in [@sec:meltdown-and-spectre-mitigations], one of the mitigations implemented by Intel is believed to zero out data illegally read during transient execution. To model this, both the _read\_byte_ functions still perform the read operation, but provide $0$ as the data in the returned _MemResult_, if the mitigation is enabled. As of now, the read operation still changes the cache, but since only the contents of the inaccessible memory address are cached and not the corresponding oracle entry of the attacker, the mitigation still works. The reason for this is that we believe a consequence of the CPU still performing the illegal read operation but zeroing out the result should have side effects on the cache. If desired, this behavior can be changed easily in the _read\_byte_ functions.
 
 #### Cache {#sec:cache}
-To enable tattackers to encode transiently read data, the MS maintains a single cache. The number of sets, ways, and entries per line can be configured via the config file (see [@sec:config]). The base _Cache_ class firstly initializes all cache sets as an array with each entry holding an array of instances of the _CacheLine_ class. There are functions that allow components using the cache to _read_, _write_, and _flush_ data given an address and data, if applicable. The _parse\_addr_ can be used to obtain the index, tag, and offset of an address. Lastly, the _Cache_ class includes functions that allow the UI to visualize its state (_get\_num\_sets_, _get\_num\_lines_, _get\_line\_size_, and _get\_cache\_dump_). Note that the base _Cache_ class cannot be used directly, as it does not implement the _\_apply\_replacement\_policy_ function.
+To enable attackers to encode transiently read data, the MS maintains a single cache. The number of sets, ways, and entries per line can be configured via the config file (see [@sec:config]). The base _Cache_ class firstly initializes all cache sets as an array with each entry holding an array of instances of the _CacheLine_ class. There are functions that allow components using the cache to _read_, _write_, and _flush_ data given an address and data, if applicable. The _parse\_addr_ can be used to obtain the index, tag, and offset of an address. Lastly, the _Cache_ class includes functions that allow the UI to visualize its state (_get\_num\_sets_, _get\_num\_lines_, _get\_line\_size_, and _get\_cache\_dump_). Note that the base _Cache_ class cannot be used directly, as it does not implement the _\_apply\_replacement\_policy_ function.
 
 The _CacheLine_ class holds an integer array for the data, a tag, and its own size. Further, functions to _read_, _write_, and _flush_ are provided. Lastly, there are functions that set the tag (_set\_tag_) and return whether or not the cache line is currently in use by checking if the tag is set. Contrary to the _Cache_ class, the _CacheLine_ class can be used directly.
 
@@ -245,17 +229,17 @@ Even though more complex replacement policies exist, the exact way in which they
   - Ofc data dependencies have to be honored to guarantee correctness
   - We use a modified version of Tomasulo's Algorithm described in sec:tomasulo -->
 
-The Execution Engine is the central component of a CPU. It is the component responsible for actually performing computations, by executing the stream of instructions provided by the frontend.
-Just like the Execution Engine of modern x86 processors, our Execution Engine executes instructions out-of-order, i.e. not necessarily in the order of the incoming instruction stream. In order to preserve the semantics of the program, any data dependencies have to be honored during reordering. For this we use a modified version of Tomasulo's Algorithm, that is described in detail in [@sec:Tomasulo].
-<!-- although the frontend passes instructions in program order to the Execution Engine, the order in which these instructions are actually executed usually differs. -->
+The execution engine is the central component of a CPU. It is the component responsible for actually performing computations, by executing the stream of instructions provided by the frontend.
+Just like the execution engine of modern x86 processors, our execution engine executes instructions out-of-order, i.e. not necessarily in the order of the incoming instruction stream. In order to preserve the semantics of the program, any data dependencies have to be honored during reordering. For this we use a modified version of Tomasulo's Algorithm, that is described in detail in [@sec:Tomasulo].
+<!-- although the frontend passes instructions in program order to the execution engine, the order in which these instructions are actually executed usually differs. -->
 
 <!-- - Contains Reservation Station with a fixed number of slots
   - Unified, i.e. each slot can contain any instruction (same as in modern CPUs)
   - Also used to model Load Buffer and Store Buffer, specifics of memory accesses are handled by the slots directly
   - Instructions' ability to execute concurrently only limited by available slots, no concept of Execution Units that instructions need to be dispatched to; instructions execute in slots directly -->
 
-The Execution Engine contains the Reservation Station with a fixed number of instruction slots. Each slot contains an instruction that is currently being executed. We call such instructions *in-flight*.
-Our Reservation Station is unified, i.e. each slot can contain any kind of instruction. The same is often found in modern CPUs.
+The execution engine contains the Reservation Station with a fixed number of instruction slots. Each slot contains an instruction that is currently being executed. We call such instructions *in-flight*.
+Our Reservation Station is unified, i.e. each slot can contain any kind of instruction. The same is often found in modern CPUs TODO citation.
 The slots of our Reservation Station are also used to model Load Buffers and Store Buffers; the specifics of executing memory accesses are handled by the slots directly instead of separate components.
 We also have no concept of Execution Units that instructions need to be dispatched to, which means that instructions' ability to execute concurrently is only limited by the number of available slots.
 
@@ -266,11 +250,13 @@ We also have no concept of Execution Units that instructions need to be dispatch
 
 All instructions pass through two phases during execution: In the first phase the instruction is said to be *executing*. It waits for any source operands to become available and computes its result. Once the result is computed, it is made available to waiting instructions, and the instruction transitions to the second phase.
 
+TODO: Instructions wait for fixed amount of cycles before finishing execution or retirement
+
   <!-- - Retiring: Determine if instruction causes a fault
     - Fault means microarchitectural fault; both architecturally visible faults like memory protection violations and architecturally invisible faults like branch mispredictions are handled in the same way in the Execution Engine
     - Once the instruction finishes retiring its slot becomes available and may execute a new instruction -->
 
-In the second phase the instruction is said to be *retiring*. It determines if it causes a *fault*, which in this case means a *microarchitectural* fault. These can be architecturally visible faults like memory protection violations or architecturally invisible faults like branch mispredictions; both are handled the same way in the Execution Engine.
+In the second phase the instruction is said to be *retiring*. The instruction determines if it causes a *fault*, which in this case means a *microarchitectural* fault. These can be architecturally visible faults like memory protection violations or architecturally invisible faults like branch mispredictions; both are handled the same way in the Execution Engine.
 Once the instruction finishes retiring its slot becomes available again and may be used to execute a new instruction.
 
 TODO: Describe concrete execution/retirement behavior for each instruction category?
@@ -293,116 +279,91 @@ Since instructions are issued in program order, the state of the register file a
 Our emulator implements out-of-order execution.
 This allows transient execution of instructions before the fault handling of previous instructions is finalized, which is essential for Meltdown type attacks [@sec:meltdown-and-spectre].
 Our version of out-of-order execution is based on Tomasulos algorithm [@sec:background-out-of-order-execution].
-Since the goal of our out-of-order execution is to enable Meltdown attacks and make them easy to understand, not quick performance, we use a basic/ simple version of Tomasulos algorithm.
-In our emulator, the components necessary for Tomasulos algorithm are located in the Execution Engine [@sec:background-out-of-order-execution], [@sec:execution].
+Since the goal of our out-of-order execution is to enable and clearly illustrate microarchitectural attacks, not optimal performance, we use a simple version of Tomasulos algorithm.
+In our emulator, the components necessary for Tomasulos algorithm are located in the Execution Engine [@sec:execution].
 Below, we provide a detailed look at our version of out-of-order execution and the components involved in its implementation.
-
-<!--
-in restliche Absätze integrieren
-The common data bus (CDB) is modelled by a function int the Execution Engine class that notifies the registers and slots about instruction results.
-
--->
 
 ### Issuing instructions
 
 Since we implement out-of-order execution according to Tomasulos algorithm, our Execution Engine does not try to execute instructions directly when it receives them from the frontend [@sec:CPU_frontend], [@sec:execution].
 Instead, it issues them to the Reservation Station where multiple instructions can wait until all their operands are ready.
 If all operands of an instruction are ready, the Execution Engine can execute it.
-This does not generally happen in the order of instructions provided by the program, but will always lead to the right effect in that each instruction is executed with the right operands as determined by the program.
-<!--todo: wording last sentence!! -->
-<!--todo: maybe add that mnore efficient and less stalls, but should already be clear from ooe -->
+This does not generally happen in the order of instructions as provided by the program, but will always lead to the expected effect in that each instruction is executed with the right operands as determined by the program.
 
 The instructions are provided by the frontend in program order [@sec:CPU_frontend]. 
 The Execution Engine issues them into the Reservation Station, if it is not yet fully occupied.
-The Reservation Station is modelled as a list of slots which can each hold an instruction together with additional information about the instruction.
+The Reservation Station is modelled as a list of *slots* which can each hold an instruction together with additional information about the instruction.
 It is unified in that each spot in the list can hold slots for all types of instructions.
+This models the unified reservation stations of modern Intel CPUs [@sec:background-out-of-order-execution].
 
-To issue an instruction, the Execution Engine creates a slot object that fits the type of the instruction and puts it into the Reservation Station.
-Besides the instruction itself, it holds additional information, including a list of the operands.
+To issue an instruction, the Execution Engine creates a *slot* object that fits the type of the instruction and puts it into the Reservation Station.
+Besides the instruction itself, it holds additional information, including a list of the instructions operands.
 <!--todo: instruction kind, pc, executing?, retired?, operands additional information -> maybe come back later and add as needed -->
-While immediate operands can be directly converted to a Word, register operands have to be resolved during the issueing process.
+While immediate operands can be directly converted to a Word, register operands have to be resolved during the issuing process.
 
-The registers are modelled by a list in which each entry can either be a Word value or the ID of the slot in the Reservation Station which produces the next register value.
-Since the instructions are issued in program order, this reflects the expected register state at the point of issuing the current instruction if the program was exectuted in order.
-The only difference being, that the results of yet unexecuted instructions are being represented by the respective slot ID.
-[@sec:execution]
-To resolve the register operands, the current content of the respective register is added to the operand list, so the operand list can contain both Words and slotIDs.
-As described below, slotIDs in the operand list will be replaced by the result of the instruction producing the value when it finishes executing.
+The registers are modelled by a list in which each entry can either be a *Word* value or the ID of the slot in the Reservation Station which holds the instruction that will produce the next register value as its result.
+Since the instructions are issued in program order, this reflects the expected register state at the point of issuing the current instruction, if the program was executed in order [@sec:execution].
+The only difference being, that the results of yet unexecuted instructions are being represented by the respective *slotID*.
+To resolve the register operands, the current content of the respective register is added to the operand list, so the operand list can contain both *Words* and *slotIDs*.
+As described below, *slotIDs* in the operand list will be replaced by the result of the instruction which produces the value when it finishes executing.
 
 Resolving the register operands this way ensures that data dependencies between instructions that use the same registers are adhered to.
-To increase performance, real life CPUs practice register renaming by assigning ISA level registers to different µ-architectural registers in order to further eliminate data dependency hazards [@Gru20].
-<!--todo: add source for register renaming by assigning macro to µ -->
-Since we do not differentiate between the ISA and µ-architectural level [@sec:ISA] and aim to kepp our emulator easy to comprehend, we do not implement register renaming.
+To increase performance, real life CPUs practice register renaming in order to further eliminate data dependency hazards [@gruss-habil, p. 226].
+(Some) modern CPUs rename registers by assigning ISA level registers to different µ-architectural registers [@SCA].
+<!--todo: add source for register renaming by assigning macro to µ (info from SCA)-->
+Since we do not differentiate between the ISA and µ-architectural level [@sec:ISA], and aim to keep our emulator easy to comprehend, we do not implement register renaming.
 
-Once the slot with the new instruction is placed into the Reservation Station, if the instruction has a target register for its result, the slotID of the instruction is put into this target register.
+Once the slot with the new instruction is placed into the Reservation Station, if the instruction will produce a result for a target register, the *slotID* of the instruction is put into this target register.
 This ensures, that when the next instruction is issued, the register state again represents the expected register state if the instructions where executed in-order.
-Note that placing the slotID into the target register cannot only overwrite a Word value but also a slotID, if the previous sintruction that uses this register as its target register is not yet fully executed.
-This is not a problem, since every instruction that may need the result of the respective instruction for the previous slotID as an operand, already hold this slotID in their own operands list.
-It will be notified of the result when it is ready, regardless of whether the slotID is still present in the register or not.
+Note that placing the *slotID* into the target register cannot only overwrite a Word value but also a *slotID*, if the previous instruction that uses this register as its target register is not yet fully executed.
+This is not a problem, since every instruction, that may need the result of the respective instruction of the previous *slotID* as an operand, already holds this *slotID* in its own operand list.
+It will be notified of the result when it is ready, regardless of whether the *slotID* is still present in the register or not.
 
 
 ### Executing instructions
 
-In a real life CPU/ basic Tomasulo, when all operands of an instruction in the Reservation Station are ready, it is transfered to a free execution unit and executed.
-<!--todo: quelle -->
-In our emulator, execution of the instructions is triggered by the tick function of the Execution Engine, which is executed once per CPU cycle.
+In basic Tomasulo, when all operands of an instruction in the Reservation Station are ready, it is transferred to a free execution unit and executed [@sec:background-out-of-order-execution].
+In our emulator, execution of the instructions is triggered by the *tick* function of the Execution Engine, which is executed once per CPU cycle.
 We do not model a finite number of execution units as separate components [@sec:execution].
-Instead, the tick function goes through the occupied slots in the Reservation Station and tries to execute each instruction by calling the tick_execute function of its respective slot.
+Instead, the tick function goes through the occupied slots in the Reservation Station and tries to execute each instruction by calling the *tick_execute* function of its respective slot.
 This follows the order of the slots in the Reservation Station, regardless of when the instruction in each slot was issued, i.e. regardless of their order in the program.
 
-If the operands of the current instruction are not ready yet, i.e. there are still slotIDs in the operand list, the instruction is skipped.
-To mimic the latency of real worls execution units and memory accesses, each instruction type waits a specific amount of ticks after all operands are ready until producing its result.
+If the operands of the current instruction are not ready yet, i.e. there are still *slotIDs* in the operand list, the instruction is skipped.
+To mimic the latency of real world execution units and memory accesses, each instruction type additionally waits a specific amount of CPU cycles after all operands are ready until producing its result.
 These waiting instructions are also skipped.
-<!-- todo: wait time not really approbriate here, but I would like to have it mentioned in the execution engine chapter-->
+<!-- todo: wait time not really appropriate here, but I would like to have it mentioned; maybe move to execution engine chapter?-->
 
-Once the instruction is executed and produces a result, i.e. all operands are available and the wait time is over, according to Tomasulos algorithm this result has to be broadcasted via the CDB to the other slots and the registers.
-In our emulator, the CDB is modelled by the _notify_result function.
-It goes through all registers and replaces all ocurrances of the slotID of the instruction with the result it just produced.
-It also notifies all occupied slots of the result together with the slotID of the instruction which produced it, so they can replace the slotID in their operands list if it occurs.
-If a result is produced like this, the tick function returns without executing further slots.
+Once the instruction is executed and produces a result, i.e. all operands are available and the wait time is over, according to Tomasulos algorithm this result has to be broadcasted via the CDB to the other slots and the registers [@sec:background-out-of-order-execution].
+In our emulator, the CDB is modelled by the *_notify_result* function.
+It goes through all registers and replaces all occurrences of the *slotID* of the instruction with the result it just produced.
+It also notifies all occupied slots of the result together with the *slotID* of the instruction which produced it, so they can replace the *slotID* in their operands list, if it occurs.
+If a result is produced like this, the *tick* function returns without executing further slots.
 This mimicks that a real life CDB can only broadcast one result each cycle.
-It has the side effect that instructions do not necessarily execute in the same number of ticks, depending on where they sit in the list of slots.
-The tick function also return before all slots have been executed if the instruction in a slot retires, in order to properly handle potentially faulting instruction [@sec:rollback].
-
-<!--todo: check how much the rollback section talks about this 
-if slot can be retired
-                    in rollback Kapitel schauen, und vllt. einfach darauf verweisen -> ja, eh schon wieder recht lang
-                    check for fault
-                    notify other potentially faulting slots
-                    return -> only one instructions retires per cycle, not generally in program order
-                    trigger rollback if fault
-
--->
+It has the side effect that instructions do not necessarily execute in the same number of ticks, depending on where they sit in the reservation station.
+The *tick* function also returns before all slots have been executed if the instruction in a slot retires, in order to properly handle potentially faulting instruction [@sec:rollback].
                     
 ### Memory hazards
 
-
-As described above we handle data dependencies between instructions that use the same registers by using slotIDs as placeholders for as yet uncomputed results.
+As described above, we handle data dependencies between instructions that use the same registers by using *slotIDs* as placeholders for as yet uncomputed results.
 We also need to handle data dependencies between memory accesses.
-For this, each slot that contains a memory instruction also holds set of slotIDs of other memory instructions that potentially lead to a memory hazard together with the current instruction.
-The memory instruction is only executed when all other instructions from its list of potential hazards have finished executing.
+For this, each slot that contains a memory instruction also holds set of *slotIDs* of other memory instructions that potentially lead to a memory hazard together with the current instruction.
+The memory instruction is only executed when all other instructions from its list of potential hazards have retired.
 
 This list is filled when the memory address the instruction will access is computed, beforehand it is set to the placeholder value *none*.
-To fill the list, the *_tick_execute* function of the slot goes through its list that contains all in-flight memory instructions that precede the current instruction in program order, and includes them if they access the same address.
-<!--todo: actually:   goes through faulting-preceding which includes all memory instruction-->
+To fill the list, the *_tick_execute* function of the slot goes through its *faulting-preceding* list that i.a. contains all in-flight memory instructions that precede the current instruction in program order, and includes them if they access the same address.
 If there is a previously issued memory instructions for which the memory address is not yet available, the instruction waits until the hazard list can be completed.
 
-By adding all instructions to the hazard list that access the same memory address, we potentially generate false positves in the case that two *load* operations read from the same memory address right one after the other.
+By adding all instructions to the hazard list that access the same memory address, we potentially generate false positives in the case that two *load* operations read from the same memory address one after the other.
 Since efficiency is not our priority, we accept this in order to keep our emulator simple.
-Additionally, to simplify fault handling, *store* instructions wait until all other possibly faulting instructions are executed.
-
-<!--todo: ggf. executed mit retired ersetzen -->
+Additionally, to simplify fault handling, *store* instructions wait until all other possibly faulting instructions have retired.
 
 ### Fence instruction
 
 The *fence* instruction is a special instruction in that it does not produce a result or a lasting side effect in the other components of the emulator.
-It creates a fixed point in the execution of the program [@sec:ISA].
-It holds a list of all instructions that where already in the Reservation Station when itself was issued.
+It creates a fixed point in the execution of the program, effectively suspending the out-of-order execution with regards to the fence instruction [@sec:ISA].
+It holds a list of all instructions that were already in the Reservation Station when itself was issued.
 Similar to the memory instructions, it waits for all the instructions in the list to be retired before executing itself.
-Additionally, no other instructions can be issued to the Reservation Station while it contains a fence instruction.
-This effectively suspends the out-of-order execution with regards to the fence instruction, since all previous instructions in the program order are executed before the fence and all following instructions are only issued, and therefore executed, after the fence was executed.
-This can be used to model mitigations against µ-architectural attacks [ref_mitigations_eval].
-
+Additionally, no other instructions can be issued to the Reservation Station while it contains a *fence* instruction.
 
 ## Exception- and Fault-Handling {#sec:rollback}
 
@@ -417,6 +378,7 @@ This can be used to model mitigations against µ-architectural attacks [ref_miti
   - In our case: Mispredicted branches -->
 
 *Exceptions* in general are certain conditions that can occur during execution and require handling before execution can be continued. We distinguish between *architectural* and *microarchitectural* exceptions.
+
 Architectural exceptions are visible to the program being executed and are usually handled by that program or the underlying operating system.
 In our CPU simulation there is no operating system that could handle architectural exceptions, and requiring the program to handle these would increase the complexity of both our CPU and user programs.
 For this reason architectural exceptions are handled implicitly, by skipping execution of the instruction that caused the exception. After an exception occurred, execution continues with the following instruction instead.
@@ -446,9 +408,9 @@ the difference in behavior between architectural exceptions and microarchitectur
 
 As discussed in [@sec:Tomasulo], our CPU executes instructions out-of-order. Because of this, special care must be taken when handling microarchitectural faults. In particular, the following effects need to be considered:
 
-- Instructions preceding the faulting instruction in program order might have not yet been executed
+- Instructions preceding the faulting instruction in program order might have not yet been executed.
 
-- Instructions following the faulting instruction in program order might already have been executed
+- Instructions following the faulting instruction in program order might already have been executed.
 
 The abstraction that, from an architectural point of view, instructions are executed in program order has to be preserved.
 Thus, we have to restore the architectural state from the time the faulting instruction was issued before we can properly handle the fault.
@@ -478,7 +440,7 @@ and returns information about the fault to the main CPU component. The main CPU 
 There are two possible approaches to performing rollbacks.
 The first approach tracks any changes that executed instructions make to the architectural state. When a fault occurs, these tracked changes can be performed in reverse in order to recover the target architectural state.
 The second approach records a snapshot of the architectural state when the faulting instruction is issued. When a fault occurs, this snapshot can be restored in order to recover the target architectural state.
-It is not publicly documented what approach real x86 CPUs take to performing rollbacks. Our implementation follows the snapshot-based approach, since it was judged to be easier to implement in a software-based simulator.
+It is not publicly documented what approach real x86 CPUs take to performing rollbacks. Our implementation follows the snapshot-based approach, since it is judged to be easier to implement in a software-based simulator.
 
 In our case, the architectural state that needs to be restored includes the register state and the contents of memory.
 The state of the cache and the BPU are not considered part of the architectural state and are not restored when performing a rollback.
@@ -574,15 +536,13 @@ todo: decide should we move this subchapter to the frontend?
     ISA itself is more of a manual
 -->
 
-<!--todo: nochmal drübergehen, ob ich instructions und operations noch besser auseinanderhalten muss -->
-
-Real life Intel x86 CPUs differenciate between two types of instructions or operations. 
+Real life Intel x86 CPUs differentiate between two types of instructions or operations. 
 Macro-operations refer to the relatively easily human readable and convenient but complex instructions that are described by the x86 ISA.
 Their length differs between the instructions.
 Internally, in the execution units, the CPU works on µ-operations, which are small operations of a fixed length.
 One macro-operation contains one or multiple µ-operations.
 The CPU frontend has to decode the macro-operations into µ-operations in an expensive multi step process.
-sources: [@skylake], https://en.wikichip.org/wiki/macro-operation, https://en.wikichip.org/wiki/micro-operation
+[@skylake], [@macro_op], [@micro_op]
 <!--todo: get a better source. Intel directly? Gruss habille? -->
 <!--
     erstmal weg lassen und auf x86 konzentrieren, weil die das aus der VL kennen
@@ -593,28 +553,25 @@ pseudo instructions: can encapsulate more than one base instruction or can be a 
 
 Our CPU emulator only uses one type of instructions.
 They are directly read from our assembler code by the parser and passed to the execution engine without further decoding, splitting or replacing [@sec:parser], [@sec:CPU_frontend].
-To show basic Meltdown and Spectre variants, we do not need overly complex instructions, e.g. instructions that contain multiple memory accesses in one or that are used to perform encryption in hardware [ref_evaluation_meltdown], [ref_evaluation_spectre].
+To show basic Meltdown and Spectre variants, we do not need overly complex instructions, e.g. instructions that contain multiple memory accesses in one or that are used to perform encryption in hardware [@sec:evaluation_meltdown], [@sec:evaluation_spectre].
 Basic arithmetic operations, memory accesses, branches and a few special operations are sufficient for the demonstrated attacks and are both easy to implement as single instructions and to use in assembler code that should be well understood by the author. 
-Using the same operations throughout the emulator also makes the visualization more clear and easier to follow, e.g. when the same operations appear, one after the other, in the visualization of the assembler code, the instruction queue and the reservation stations [ref_ui].
-<!--todo: am Endeeinzelne UI Komponenten referenzieren -->
-<!--todo: Formulierungen überarbeiten -->
+Using the same operations throughout the emulator also makes the visualization more clear and easier to follow, e.g. when the same operations appear, one after the other, in the visualization of the assembler code, the instruction queue and the reservation stations [@sec:UI].
 
 ### Default Instruction Set {#sec:default_instr} 
 
 In order that our CPU emulator can recognize and work with an instruction, it has to be registered with the parser [@sec:parser].
-<!--todo: maybe adjust time they need to execute/ in MMU -> maybe sufficiently summarized by "register with the parser" -->
-In our default setting default, we register a basic set of instructions with the parser so students can start writing assembler code and using the emulator right away.
-This basic instruction set is also used in our example programs in [ref_UI].
+In our default setting, we register a basic set of instructions with the parser so students can start writing assembler code and using the emulator right away.
+This basic instruction set is also used in our example programs in [@sec:UI].
 
-Our relatively small instruction set is based on a subset of the RISC-V ISA.
-It offers a selection of instructions that is sufficient to implement Meltdown and Spectre attacks as well as other small assembler programs while still being of a manageable size so students can start to write assembler code quickly without spending much time to get to  know our ISA.
+Our relatively small instruction set is based on a subset of the RISC-V ISA [@riscv].
+It offers a selection of instructions that is sufficient to implement Meltdown and Spectre attacks as well as other small assembler programs, while still being of a manageable size so students can start to write assembler code quickly without spending much time to get to  know our ISA.
 <!--todo: add this?  (still turing complete, vgl. vllt. TI-Folien wegen konkreter min. Instruktionssets...) -->
-The syntax of the assembler representation is also based on RISC-V (as introduced in the "RISC-V Assembly Programmer’s Handbook" chapter of the RISC-V ISA) [ref_RISC-V]. 
+The syntax of the assembler representation is also based on RISC-V (as introduced in the "RISC-V Assembly Programmer’s Handbook" chapter of the RISC-V ISA) [@riscv]. 
 If needed, students can add further instructions by registering them with the parser [@sec:parser].
 
 In the following subchapters we introduce the instructions of our default ISA.
 They are grouped according to their respective instruction type in the emulator except for the special instructions which are grouped together [@sec:parser].
-All default instructions are summarized in the appendix into a quick reference sheet [@ref_appendix]. 
+All default instructions are summarized in the appendix into a quick reference sheet [ref_appendix]. 
 <!--
 todo: cheat sheet in Anhang
 vllt. referenz in Fussnote verschieben
@@ -622,9 +579,6 @@ ggf. auf Cheat Sheet im Anhang verweisen
     maybe put information like address calculation in table description so everyone has all the information
 adjust cheat sheet and table snippets so the wording is nice and the table is as non-redundant as possible
 -->
-
-<!--todo: hier der Vollständigkeit halber einfügen, dass unser Parser Kommentare kann? -->
-
 <!--
 try inline LAtex and the option to place tables "here" \h! , needs some additional LaTex package
 if that does not work, maybe table descritions? but that would be a bad formatting choice
@@ -635,9 +589,9 @@ if that does not work, maybe table descritions? but that would be a bad formatti
 These are basic arithmetic and logical instructions that operate solely on register values, i.e. both source operands and the destination operand reference registers.
 For simplicity, we write, for example, Reg1 when referring to the value read from or stored in the register referenced by the first register operand.
 
-Each of these default operations uses the respective python standard operator on our Word class to compute the result, except for the right shifts.
+Each of these default instructions uses the respective python standard operator on our *Word* class to compute the result, except for the right shifts.
 For the logical and the arithmetic right shift, the python standard right shift operator is used on the unsigned and the signed version of the register value respectively.
-When returning the result as a Word, it is truncated to the maximal word length by a modulo operation, if necessary [@sec:data]. 
+When returning the result as a *Word*, it is truncated to the maximal word length by a modulo operation, if necessary. 
 This means, that any potential carry bits or overflows are effectively ignored.
 <!--
     weg lassen, eh schon wieder sehr lang:
@@ -672,8 +626,8 @@ and& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 and Reg3\\
 #### Arithmetic and Logical Instructions with Immediate {#sec:instr_alui}
 
 These are basically the same instructions as in [@sec:instr_alu].
-The main difference is, that the second source register is replaced by an immediate operand which is set directly in the Assembler code.
-This immediate is used as the value of a Word in the execution engine, so it is truncated by a modulo operation to be in the appropriate range [@sec:data], [@sec:execution].
+The main difference is, that the second source register is replaced by an immediate operand which is set directly in the assembler code.
+This immediate is used as the value of a *Word*, so it is truncated by a modulo operation to be in the appropriate range.
 
 \begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
 \hline
@@ -691,14 +645,13 @@ ori& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 or Imm\\
 andi& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 and Imm\\
 \hline
 \end{tabular} 
-
-
     
 #### Memory Instructions {#sec:instr_mem}
 
 These instructions provide basic interactions with the emulated memory [@sec:memory].
-Load and store instructions exist in two versions, one that operates on Word length data chunks, for convenience, and one that operates on Byte length data chunks, for the fine granular access needed in micro architectural attacks.
+Load and store instructions exist in two versions, one that operates on *Word* length data chunks, for convenience, and one that operates on *Byte* length data chunks, for the fine granular access needed in micro architectural attacks.
 The flush instruction flushes the cache line for the given address [@sec:memory].
+The flushall instruction flushes the whole cache.
 <!--todo: maybe be more precise about what the flush instruction does -->
 The address is calculated in the same way for all memory instructions: addr:=Reg2+Imm, and addr:=Reg+Imm for the flush instruction respectively.
 <!--with Reg2 acting as the base and Imm acting as an offset -->
@@ -714,6 +667,7 @@ lb& Reg1, Reg2, Imm   &Reg1$:=$Mem\_byte[addr]\\
 sw& Reg1, Reg2, Imm  &Mem\_word[addr]$:=$Reg1\\
 sb& Reg1, Reg2, Imm  &Mem\_byte[addr]$:=$Reg1\\
 flush  & Reg, Imm&flush cache line of addr\\
+flushall  &  - &flush whole cache\\
 \hline
 \end{tabular} 
 
@@ -722,7 +676,7 @@ flush  & Reg, Imm&flush cache line of addr\\
 All branch instructions compare the values of two source registers. If the comparison evaluates to true, the execution of the program is resumed at the given label in the assembler code.
 If it evaluates to false, the next instruction in the program is executed.
 Depending on the instruction, the register values are interpreted as signed or unsigned integers.
-Labels in the assembler code are automatically resolved by the parser [@sec:parser], [rev_eval_and_example_code].
+Labels in the assembler code are automatically resolved by the parser [@sec:parser], [@sec:evaluation_example].
 <!-- There are different options for the branch condition so the students can choose which one suits their program best. -->
 
 
@@ -748,13 +702,14 @@ bges& Reg1, Reg2, Label&jump to Label if s(Reg1)$>=$s(Reg2)\\
 #### Special Instructions {#sec:instr_special}
 
 Rdtsc acts like a basic timing instruction.
-It returns the number of ticks the execution unit has executed so far in the given register.
+It returns the number of *ticks* the execution unit has executed so far into the given register.
 <!-- not reset when called-->
 <!--todo: This kind of information is used in real life micro architectural attacks [@source]. -->
 
 The fence instruction acts as a fixed point in the out of order execution.
-All instructions that are already issued in the execution unit at the point of issueing the fence instruction are executed before the fence is executed.
+All instructions that are already issued in the execution unit at the point of issuing the fence instruction are executed before the fence is executed.
 No new instructions are issued before the execution of the fence instruction is complete.
+This can be used to model mitigations against µ-architectural attacks [@sec:evaluation_mitigations].
 
 \begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
 \hline
@@ -777,12 +732,12 @@ TODO: Microprograms, config given to all components
 To allow users to change certain parameters of the presented emulator, a configuration file is available. It can be found in the root folder of the project and edited with a regular text editor. Internally, a dictionary containing the entire configuration is passed to each individual component. This section briefly mentions which parts of the demonstrated emulator can be configured, and why which default values have been chosen.
 
 ### Memory {#sec:config-memory}
-In the "Memory" section, the users may configure how many cycles write operations should take (_num\_write\_cycles_), and how many cycles should be between a faulting memory operation and the corresponding instruction raising a fault (_num\_fault\_cycles_). By default, the former is set to $5$ cycles, the latter to $8$. While the specific values are not as important, the difference between the number of cycles it takes to perform any faulting memory operation and the number of cycles it takes to raise the fault should be at least $1$. Otherwise, the rollback is initiated before dependent instructions can encode the data into the cache for the attacker to retrieve. During our testing, we decided that a difference of at most $3$ on a cache miss is sufficient for our versions of Meltdown and Spectre to work. It is important to note that with this configuration, attackers are able to steal secrets even if they are not cached and have to be loaded from the system's memory first. If one were to model the Meltdown-US-L1 attack more accurately, a cache miss would have to take more cycles to retrieve the data than the CPU takes to initiate the rollback. We believe that this difference does not negatively impact the user's ability to understand the basics of the Meltdown vulnerability as long as it is clearly communicated to them. In the more realistic scenario, attackers would have to perform two illegal reads, one to cache the secret, and one to steal it. By default, the first read is not necessary.
+In the "Memory" section, the users may configure how many cycles write operations should take (_num\_write\_cycles_), and how many cycles should be between a faulting memory operation and the corresponding instruction raising a fault (_num\_fault\_cycles_). By default, the former is set to $5$ cycles, the latter to $8$. While the specific values are not as important, the difference between the number of cycles it takes to perform any faulting memory operation and the number of cycles it takes to raise the fault should be at least $1$. Otherwise, the rollback is initiated before dependent instructions can encode the data into the cache for the attacker to retrieve. During our testing, we decided that a difference of at most $3$ on a cache miss is sufficient for our versions of Meltdown-US-L1 and Spectre v1 to work. It is important to note that with this configuration, attackers are able to steal secrets even if they are not cached and have to be loaded from the system's memory first. If one were to model the Meltdown-US-L1 attack more accurately, a cache miss would have to take more cycles to retrieve the data than the CPU takes to initiate the rollback. We believe that this difference does not negatively impact the user's ability to understand the basics of the Meltdown vulnerability as long as it is clearly communicated to them. In the more realistic scenario, attackers would have to perform two illegal reads, one to cache the secret, and one to steal it. By default, the first read is not necessary.
 
 ### Cache
-In the "Cache" section, users may configure the size of the cache by setting the number of sets, ways, and entries per cache line. For readbility when printing, the default value we chose for all values is $4$. However, it is important to note that if one were to peform the full Meltdown/Spectre attacks by measuring access times to each oracle entry, a sufficient cache size that ensures accessing an oracle entry does not evict another is required.
+In the "Cache" section, users may configure the size of the cache by setting the number of sets, ways, and entries per cache line. For readability when printing, the default value we chose for all values is $4$. However, it is important to note that if one were to perform the full Meltdown/Spectre attacks by measuring access times to each oracle entry, a sufficient cache size that ensures accessing an oracle entry does not evict another is required.
 
-Further, the cache replacement policy can be set to either "RR", for random replacement, "LRU", for least-recently-used, and "FIFO", for first-in-first-out. Each polciy is explained in [@sec:cache]. As RR introduces noise, we have decided against using it as the default. Although widely undocumented, Intel's Skylake architecture is believed to use some kind of specialized version of LRU [@find_eviction_sets]. For that reason, and since our choice is largely irrelevant as long as users clearly understand how it works, we chose the LRU policy.
+Further, the cache replacement policy can be set to either "RR", for random replacement, "LRU", for least-recently-used, and "FIFO", for first-in-first-out. Each policy is explained in [@sec:cache]. As RR introduces noise, we have decided against using it as the default. Although widely undocumented, Intel's Skylake architecture is believed to use some kind of specialized version of LRU [@find_eviction_sets]. For that reason, and since our choice is largely irrelevant as long as users clearly understand how it works, we chose the LRU policy.
 
 The other two values that can be configured are the number of cycles cache hits and misses take. As mentioned in [@sec:config-memory], the specific values are not as important as their differences.
 
@@ -796,7 +751,7 @@ Here, the user may configure whether to use the simple BPU, or the advanced one.
 The execution engine allows the configuration of the number of available slots in the reservation station. In part, this value determines the width of the transient execution window. We found that with $8$ slots, Meltdown and Spectre attacks are possible. Additionally, the number of registers can be configured. Since our instruction set is based on the RISC-V ISA, we chose to offer the same number of registers by default, which is $32$ [@riscv].
 
 ### UX
-The UX can be configured to omit display of certain elements. When selecting to use a large cache, it may be desirable to hide empty cache ways and sets to prevent clutter. By default, we choose to show the empty cache ways so the user can easily can see whether or not a cache set is full. We also choose to show the empty cache sets so there is a visual representation of which addresses correspond to certain sets. Another option is to hide the unused reservation station slots. In this case every entry in the reservation station will be numbered. Showing the unused slots may help the user to keep track of bottlenecks in the execution, and is therefore chosen per default. Finally, the user may choose between capitalised or lowercase letters for the registers. By default, we choose to use lowercase letters.
+The UX can be configured to omit display of certain elements. When selecting to use a large cache, it may be desirable to hide empty cache ways and sets to prevent clutter. By default, we choose to show the empty cache ways so the user can easily can see whether or not a cache set is full. We also choose to show the empty cache sets so there is a visual representation of which addresses correspond to certain sets. Another option is to hide the unused reservation station slots. In this case every entry in the reservation station will be numbered. Showing the unused slots may help the user to keep track of bottlenecks in the execution, and is therefore chosen per default. Finally, the user may choose between capitalized or lowercase letters for the registers. By default, we choose to use lowercase letters.
 
 ### Microprograms
 This section allows users to configure microprograms that are run once a rollback has completed and before regular program execution is resumed. For each instruction type, the user can provide the path to a file containing the microprogram. If no microprogram should be run after a specific instruction type faults, the user can either set the file path to _None_, or simply not include it in the config. The instruction types must be their corresponding class names as they are given in the _execution.py_ file. We expect users to mostly use microprograms for faulting _InstrLoad_ and _InstrBranch_ instructions. By default, no microprograms are configured, but one that flushes the entire cache can be found in _demo/flushall.tea_.
