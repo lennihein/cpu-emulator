@@ -1,5 +1,5 @@
 ---
-title: "Trusted Execution Emulator"
+title: "Transient Execution Emulator"
 subtitle: "Meltdown and Spectre Behind the Scenes"
 author: "Felix Betke, Lennart Hein, Melina Hoffmann, Jan-Niklas Sohn"
 institute: "Rheinische Friedrich-Wilhelms-Universität Bonn"
@@ -46,6 +46,17 @@ Aufteilung:
 
 ## CPU
 
+- Frontend:
+  - Fetches/Decodes instructions, maintains queue
+  - Branch prediction
+
+- Execution Engine:
+  - Multiple sets of execution units
+
+- Memory Subsystem:
+  - Handles memory operations
+  - Maintains L1 cache
+
 ## Out-of-order execution
 
 - Independent instruction streams
@@ -62,9 +73,12 @@ Aufteilung:
 
 ## Mitigations
 
-# Our task
+## Our task
 
 # Our approach
+
+## Our version
+![](../fig/our_cpu.png){ style="margin: auto;" }
 
 ## References
 
