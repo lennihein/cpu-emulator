@@ -1,22 +1,14 @@
 # Demonstration and Evaluation {#sec:evaluation}
+\marginpar{Melina Hoffmann}
 
-todo
-
-    already covered by Lenni: 
-    maybe just reference to Lennis cahpter
-    what kind of system do we need/ did we use to run this?
-        which python Version?
-        which program version ? git commit
-        other dependencies?
-        
-    what do we want in this chapter?
-        demonstrate the functionality of our emulator
-            read Specification of task to check what the goal was anyway
-        firstly, general program and introduction/ examples of the visualization
-        demonstration of Meltdown and Spectre attacks (which ones? maybe read from Niklas' text)
-        demonstration of mitigations against microarchitectural attacks, and how these can be implemented in our emulator
+As specified in [chapter @sec:task], our goal is to implement a CPU emulator that offers out-of-order and speculative exection in order to demonstrate a Meltdown and a Spectre attack.
+In this chapter we demonstrate that our emulator allows the user to execute both a Meltdown and a Spectre attack, with the use of basic example programs. 
+Firstly, we introduce the general functionality and visualization of our emulator on a simple example program that does not yet implement microarchitectural attacks in [@sec:evaluation_example].
+Then, we demonstrate both the Meltdown and the Spectre variant which are possible on our emulator in [@sec:evaluation_meltdown] and [@sec:evaluation_spectre] respectively.
+Lastly, we show different mitigations against these microarchitectural attacks on our emulator, which are based on mitigations gainst real life microarchitectural attacks in [@sec:evaluation_mitigations].
 
 ## Example Program {#sec:evaluation_example}
+\marginpar{Melina Hoffmann}
 
 <!--
 brief example program showing all the features in a "normal" execution, e.g. adding stuff
