@@ -41,8 +41,15 @@ Bilder erstmal reinwerfen wie sie kommen, evtl. am Donnerstag oder heute Abend w
 Demoprogramm ausführen und schauen ob es sich verhält wie erwartet
 ggf. Demoprogramm anpassen
 Plan machen, was genau man an jeder Stelle des Programms gezeigt bekommen soll
+anschauen, was für ein Bild lenni für das UI gemacht hat und wie er es eingefügt hat
+gleichzeitig Demoprogramm Schritt für Schritt ausführen und Text schreiben 
+    ggf. mit Windowssnippigtool Bilder machen und später einfügen
 auch nur das beschreiben und bebildern
 nicht in Details verlieren!
+
+
+![Example output of the context screen](fig/context.png){#fig:context width=470px height=317px shortcaption='Example output of the context screen'}
+.png Bilder in den Ordner fig/ legen
 -->
 
 goals:
