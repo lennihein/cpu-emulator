@@ -109,13 +109,6 @@ class CPU:
 
     def tick(self) -> CPUStatus:
 
-        # check if any program is being executed
-        if self._frontend is None:
-            return CPUStatus(False, None, None, [])
-
-        if self._frontend.is_done() and self._exec_engine.is_done():
-            return CPUStatus(False, None, None, [])
-
         cpu_status: CPUStatus = CPUStatus(True, None, None, [])
 
         # fill execution units
@@ -142,10 +135,10 @@ class CPU:
                 resume_at_pc += 1
 
             try:
-                self._frontend.set_pc(resume_at_pc)
+                self._frontend.pc = resume_at_pc
             except IndexError:
-                # program has ended
-                return CPUStatus(False, None, None, [])
+                print("CRITICAL ERROR, PC OUT OF BOUNDS")
+                exit(0)
 
             self._frontend.flush_instruction_queue()
 
@@ -169,6 +162,13 @@ class CPU:
 
         # create snapshot
         self._take_snapshot()
+
+        # check if any program is being executed
+        if self._frontend is None:
+            return CPUStatus(False, None, None, [])
+
+        if self._frontend.is_done() and self._exec_engine.is_done():
+            return CPUStatus(False, None, None, [])
 
         return cpu_status
 
