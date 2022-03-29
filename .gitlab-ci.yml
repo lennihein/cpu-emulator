@@ -1,4 +1,4 @@
-image: python:3.7.13-alpine3.15
+image: python:3.8.13-alpine3.15
 
 stages:
   - test
@@ -7,6 +7,7 @@ stages:
 before_script:
   - python3 -V  # Print out python version for debugging
   - pip3 install -r requirements.txt
+  - python3 main.py
 
 linting:
   stage: linting
