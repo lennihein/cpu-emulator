@@ -51,7 +51,7 @@ breakpoint weg lassen, kennen die ja aus gdb oder UI Kapitel
 -->
 
 In this section, we introduce different components of the vizualisation of our emulator and showcase our emulators out-of-order and speculative execution.
-To this end, we `step` and `continue` through an example program and introduce the central components of our vizualisation. 
+To this end, we `step` through an example program and introduce the central components of our vizualisation. 
 Introducing all the commands and vizualisations our emulator implements with an example program would be out of scope of this section, but a complete list of commands is given in [chapter @sec:UI].
 
 This is our example program.
@@ -75,55 +75,88 @@ To produce the examples for this section, the program is run on the default conf
         beq r4, r0, loop_label
     rdtsc r0
 
-When we start the emulator it automatically loads the program and shows first context screen, with the registers and default memory section initialised to zero and the instruction queue and reservation station still empty.
-<!-- pic ep_01_start.pngSS-->
+When we start the emulator, it automatically loads the program and shows the first context screen, as described in [@sec:context_screen].
+As we see in [@fig:ep_01_start], the registers and default memory section are initialised to zero and the instruction queue and reservation station are still empty.
+<!-- pic ep_01_start.png-->
+
+![Context screen at the start of the program](fig/ep_01_start.png){#fig:ep_01_start width=470px height=317px shortcaption='Context screen at the start of the program'}
 
 
-Within the first two `steps` the instruction queue is filled with the first five instructions, which are subsequently issued into the reservation station as per Tomasulos algorithm for out-of-order execution [@sec:Tomasulo].
-Instruction 0 is immediatly executed, since it is in the first slot of the reservation station and all operands ready as soon as it is issued.
+As we can see in [@fig:ep_02_two_steps], within the first two `steps` the instruction queue is filled with the first five instructions, which are subsequently issued into the reservation station as per Tomasulos algorithm for out-of-order execution [@sec:Tomasulo].
+Instruction 0 is immediatly executed, since it is in the first slot of the reservation station and all are operands ready as soon as it is issued.
 By the checkmark in the rightmost column in the reservation station, we can see that it is ready to retire.
 Since its result is broadcasted directly after the instruction finishes executing, register 1 and the first operand of intruction 1 are already set to 0x003.
 
-As per Tomasulos algorithm, we see `SlotIDs` both in the registers and the operand lists of instructions in the reservation station as placeholders for the result of the instruction in the respective reservation station slot. For example, register 2 is waiting for the result produced by the `addi` instruction in slot 2 of the reservation station and contains the placeholder `RS 002`.
+As per Tomasulos algorithm, in [@fig:ep_02_two_steps] we see `SlotIDs` as placeholders for the result of the instruction in the respective reservation station slot, both in the registers and the operand lists of instructions in the reservation station. 
+For example, register 2 is waiting for the result produced by the `addi` instruction in slot 2 of the reservation station and contains the placeholder `RS 002`.
 Note in particular, that for the `slli` instruction with `SlotID` 1 we see that its target register 2 already contains the `SlotID` of the next instruction. 
 But in the operand list of the `addi` in slot 2 the reservation station we can see the `SlotID` of the `slli` instruction waiting to be replaced with the result value.
 <!-- pic -ep_02_two_steps.png-->
 
+![Context screen after two `steps`](fig/ep_02_two_steps.png){#fig:ep_02_two_steps width=470px height=317px shortcaption='Context screen after two `steps`'}
+
 In the next step, the fence instruction is issued into the reservation station.
-Therefore no more instructions are issued into to the reservation station until all currently issued instructions have been executed.
+Therefore no more instructions are issued into the reservation station until all currently issued instructions have been executed.
+This can be observed in [@fig:ep_05_addi_ooe_full] and [@fig:ep_08_legal_load_result], in which the empty slots in the reservation station are not refilled with the instructions waiting in the instruction queue.
 <!--picture options ep_03_fence_full.png, ep_04_fence_rs.png -->
 
+<!-- ![Program, instruction queue and reservation station visualization after the `fence` instruction is issued](fig/ep_04_fence_rs.png){#fig:ep_04_fence_rs width=470px height=317px shortcaption='Program, instruction queue and reservation station visualization after the `fence` instruction is issued'} -->
+
 After the `slli` and the `addi` instructions in slots 1 and 2 of the reservation station, the program contains two memory operations `sw` and `lb`.
-Since these are executed with latency/ take long to execute, the `addi` instruction in slot 5 of the reservation station is executed out-of-order before the memory instructions retire.
+Since memory instructions take longer to execute, the `addi` instruction in slot 5 of the reservation station is executed out-of-order before the memory instructions retire.
+[@fig:ep_05_addi_ooe_full] shows the reservation station that still contains the `sw` and `lb` instructions but from which the `addi` instruction has already retired.
 <!--Formulierung -->
 <!-- pic options ep_05_addi_ooe_full.png, ep_06_addi_ooe_rs.png-->
 
+![Context screen after out-of-order execution of `addi` instruction](fig/ep_05_addi_ooe_full.png){#fig:ep_05_addi_ooe_full width=470px height=317px shortcaption='Context screen after out-of-order execution of `addi` instruction'}
+
 During the execution of the `sw` instruction, the value 0x0342 is stored as a `Word` starting at memory address 4. 
-In our example this is highlighted further by the the memory addresses 4-7 changing color to red.
-This signifies that they are placed in the cache as a `cacheline` of length of four bytes.
-Since we cannot visualze the whole memory all at once, we also offer a more detailed  visualization of the whole cache.
-The result of the store instruction is placed into memory multiple cycles before the instruction retires, both to model real world latencies in memory accesses and to leave enough time when checking for faults to allow transient execution, as we see in [@sec:evaluation_meltdown].
+In our example this is highlighted further by the the memory addresses 4-7 changing their color to red.
+This signifies that they are placed in the cache as a `cacheline` of length four bytes.
+Since we cannot visualize the whole memory all at once, we also offer a more detailed  visualization of the whole cache, as depicted in [@fig:ep_07_cache].
+The result of the store instruction is placed into memory multiple cycles before the instruction retires, both to model real world latencies in memory accesses and to leave enough time to check for faults during which transient execution happens, as we see in [@sec:evaluation_meltdown].
+Therefore, we can already observe the aforementioned changes in the memory visualization in [@fig:ep_05_addi_ooe_full], while the `sw` instruction is still being executed and present in the reservation station.
 <!--pic ep_05_addi_ooe_full.png, ep_07_cache.png -->
+
+<!--
+![Cache effect of the `sw` instruction](fig/ep_07_cache.png){#fig:ep_07_cache width=470px height=317px shortcaption='Cache effect of the `sw` instruction'}
+-->
+
+![Cached target address of the `sw` instruction](fig/ep_07_cache.png){#fig:ep_07_cache shortcaption='Cached target address of the `sw` instruction'}
 
 The `lb` instruction in slot 4 only reads one byte from memory address 5.
 Since the `sw` instruction places its `Word` value into memory in little endian order, the result of reading one byte from memory address 5 is 0x03.
+This can be observed as the new value of register 4 in [@fig:ep_08_legal_load_result], where the `lb` instruction has finished executing and is ready to retire, as shown by the tickmark.
 <!-- pc ep_08_legal_load_result.png-->
 
-With the `lb` instruction int slot 6 of the reservation station, we attempt to load a value from the inaccessible part of the memoy [@sec:memory].
-During the execution, the value from the inaccessible address is present in the target reister 3.
-But before instruction can retire, the fault is detected and the target register is rolled back to its previous state.
+![Context screen the `lb` instruction in slot 4 ready to retire](fig/ep_08_legal_load_result.png){#fig:ep_08_legal_load_result width=470px height=317px shortcaption='Context screen the `lb` instruction in slot 4 ready to retire'}
+
+With the `lb` instruction in slot 6 of the reservation station, we attempt to load a value from the inaccessible part of the memoy, as described in [@sec:memory].
+During the execution, the value 0x42 from the inaccessible address is present in the target register 3, as we can observe in [@fig:ep_08_legal_load_result].
+But before the instruction can retire, the fault is detected and the target register is rolled back to its previous state.
 Due to the rollback the reservation station is cleared and the subsequent instructions are put back into the instruction queue [@sec:rollback].
+In [@fig:ep_09_mem_fault] we can see the previous value of 0x83e8 from the address calculation in register 3, and the rolled back instruction queue and reservation station as well as the fault message.
 <!--ideally two pictures_ with 0x42 in register ep_08_legal_load_result.png and reset with fault message ep_09_mem_fault.png, ideally side by side -->
 
+![Rolled back memory fault](fig/ep_09_mem_fault.png){#fig:ep_09_mem_fault width=470px height=317px shortcaption='Rolled back memory fault'}
+
 Now the `fence` instruction can be executed and the subsequent instructions are put into the instruction queue and issued to the reservation station.
-Since per the default settings all jumps are first predicted as taken, we speculatively fill the instruction queue and reservation station with multiple/ infinite iterations of the loop.
-<!--Formulierung -->
-Since the branch condition is already violated in the first interation of the loop and the branch is not taken, we have a misprediction that results in a fault message and a rollback during which the reservation station is cleared and the `rtdsc` instruction is put into the instruction queue.
+Since per the default settings all jumps are first predicted as taken, we speculatively fill the instruction queue and reservation station with as many iterations of the loop as fit into them, as seen in [@fig:ep_10_loop_full].
+Since the branch condition is already violated in the first interation of the loop and the branch is not taken, we have a misprediction that results in a fault message and a rollback. 
+During the rollback the reservation station is cleared of the excess instructions from the loop interations that are not executed after all. 
+Instead the `rtdsc` instruction, which follows the loop in the program, is put into the instruction queue, as we can see in [@fig:ep_12_loop_fault_full].
 <!--pictures of iq and rs filled with multiple loop contents somewhere in the middle ep_10_loop_full.png, ep_11_loop_bottom.png, and of the fault message and  rolled back loop ep_12_loop_fault_full.png ep_13_loop_fault_bottom.png-->
 
+![Loop instructions are speculatively put into the instruction queue and issued into the reservation station](fig/ep_10_loop_full.png){#fig:ep_10_loop_full width=470px height=317px shortcaption='Loop instructions are speculatively put into the instruction queue and issued into the reservation station'}
+
+![Rolled back loop fault](fig/ep_12_loop_fault_full.png){#fig:ep_12_loop_fault_full width=470px height=317px shortcaption='Rolled back loop fault'}
+
 Lastly the `rdtsc` instruction is executed and shows in register 0 that the program took 0x0026 cycles to execute so far. 
-The end of the program is marked by the end message as well as the empty instruction queue and reservation station.
+The end of the program is marked by the end message as well as the empty instruction queue and reservation station, as we can see in [@fig:ep_14_end].
 <!--pic ep_14_end.png -->
+
+![Context screen at the end of the execution of the example program](fig/ep_14_end.png){#fig:ep_14_end width=470px height=317px shortcaption='Context screen at the end of the execution of the example program'}
+
 
 ## Demonstration of a Meltdown-Type Attack {#sec:evaluation_meltdown}
 

@@ -45,7 +45,7 @@ The syntax for running the emulator from the root folder of the repository is:
 If no target program is supplied, the emulator will print system information, along with a help message. The target program may contain instructions as specified in [@sec:ISA](#sec:ISA), separated by linebreaks. Comments can be added to the target program by preceding them with \texttt{//}. Furthermore, the \texttt{config.yml} file in the root folder can be modified to configure the emulator, see [@sec:config].
 
 
-## The Context Screen
+## The Context Screen {#sec:context_screen}
 
 The core of the visualization is the context screen. Here most of the relevant information is shown. The context screen is printed out every time the execution is paused. Alternatively, pressing enter with an empty input will also print the context screen. [@fig:context] shows an example output of the context screen.
 
