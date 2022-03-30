@@ -1,7 +1,9 @@
 """Execution Engine that executes instructions out-of-order."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import NewType, Optional, TypeVar, Union, cast, final
+from typing import NewType, Optional, TypeVar, Union, cast, final, List
 
 from .bpu import BPU
 from .byte import Byte
@@ -204,7 +206,7 @@ class _SlotFaulting(_Slot):
         # We are done waiting and allowed to cause a fault
         info = FaultInfo(self.pc, self.instr)
         self.populate_fault_info(info)
-        fault = _FaultState(cast(list[Word], self.registers), info)
+        fault = _FaultState(cast(List[Word], self.registers), info)
         return (fault,)
 
     def is_faulting(self) -> bool:
@@ -359,7 +361,7 @@ class _SlotALU(_Slot):
             return None
 
         # `operands` contains no more `_SlotID`s
-        operands = cast(list[Word], self.operands)
+        operands = cast(List[Word], self.operands)
         # Compute the result and return it
         assert self.instr_ty.compute_result is not None
         return self.instr_ty.compute_result(*operands)
@@ -480,7 +482,7 @@ class _SlotBranch(_SlotFaulting):
             return None
 
         # `operands` contains no more `_SlotID`s
-        operands = cast(list[Word], self.operands)
+        operands = cast(List[Word], self.operands)
         # Compute the branch condition
         assert self.instr_ty.condition is not None
         condition = self.instr_ty.condition(*operands)
@@ -761,6 +763,6 @@ class ExecutionEngine:
 
     def _rollback(self, state: _FaultState):
         """Roll back to the given state."""
-        self._registers = cast(list[_WordOrSlot], state.registers)
+        self._registers = cast(List[_WordOrSlot], state.registers)
         self._slots = [None for _ in range(len(self._slots))]
         self._faulting_inflight = set()
