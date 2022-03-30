@@ -109,6 +109,10 @@ class CPU:
 
     def tick(self) -> CPUStatus:
 
+        # check if any program is being executed
+        if self._frontend is None:
+            return CPUStatus(False, None, None, [])
+
         cpu_status: CPUStatus = CPUStatus(True, None, None, [])
 
         # fill execution units
@@ -134,11 +138,12 @@ class CPU:
             if isinstance(fault_info.instr.ty, (InstrLoad, InstrStore, InstrFlush)):
                 resume_at_pc += 1
 
-            try:
-                self._frontend.pc = resume_at_pc
-            except IndexError:
-                print("CRITICAL ERROR, PC OUT OF BOUNDS")
-                exit(0)
+            # We set the pc to the next instruction.
+            # It may happen that the last instruction of a program faults, in which case
+            # this index will be out of bounds. That's fine though, because the frontend's
+            # is_done method checks for this and we will not actually use this
+            # out of bounds index.
+            self._frontend.pc = resume_at_pc
 
             self._frontend.flush_instruction_queue()
 
@@ -162,10 +167,6 @@ class CPU:
 
         # create snapshot
         self._take_snapshot()
-
-        # check if any program is being executed
-        if self._frontend is None:
-            return CPUStatus(False, None, None, [])
 
         if self._frontend.is_done() and self._exec_engine.is_done():
             return CPUStatus(False, None, None, [])

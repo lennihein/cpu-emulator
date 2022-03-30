@@ -78,13 +78,18 @@ class CacheLine:
         """
         return self.data[offset]
 
-    def write(self, offset: int, data: int) -> None:
+    def write(self, offset: int, data: int, side_effects: bool = True) -> None:
         """
         Writes data to the cache line at index 'offset'.
 
         Parameters:
             offset (int) -- the offset to which to write
             data (int)   -- the data to write
+            side_effects (bool) -- whether the write should
+                have an effect on the caches that use access
+                times for their replacement policy, like LRU.
+                Note that the default CacheLine does not use
+                this parameter.
 
         Returns:
             This function does not have a return value.
@@ -202,7 +207,7 @@ class Cache:
 
         return None
 
-    def write(self, addr: int, data: int) -> None:
+    def write(self, addr: int, data: int, side_effects: bool = True) -> None:
         """
         Adds 'data' to the cache, indexed by 'addr'.
         If required, the replacement policy is applied.
@@ -210,6 +215,9 @@ class Cache:
         Parameters:
             addr (int) -- the address to which to write
             data (int) -- the data to cache
+            side_effects (bool) -- whether the write should
+                have an effect on caches that use access times
+                for thei replacement policy, like LRU.
 
         Returns:
             This function does not have a return value.
@@ -222,7 +230,7 @@ class Cache:
             if not self.sets[index][i].is_in_use():
                 self.sets[index][i].set_tag(tag)
             if self.sets[index][i].check_tag(tag):
-                self.sets[index][i].write(offset, data)
+                self.sets[index][i].write(offset, data, side_effects)
                 return
 
         # apply replacement policy of all cache lines are in use
@@ -335,9 +343,11 @@ class CacheLineLRU(CacheLine):
             self.lru_timestamp = time()
         return data
 
-    def write(self, offset, data: int) -> None:
+    def write(self, offset, data: int, side_effects: bool = True) -> None:
         super().write(offset, data)
-        self.lru_timestamp = time()
+
+        if side_effects:
+            self.lru_timestamp = time()
 
     def get_lru_time(self):
         return self.lru_timestamp
@@ -384,17 +394,17 @@ class CacheLineFIFO(CacheLine):
         super().__init__(line_size)
         self.first_write = time()
 
-    def write(self, offset: int, data: int) -> None:
+    def write(self, offset: int, data: int, side_effects: bool = True) -> None:
         empty = True
         for i in range(self.line_size):
             if self.data[i] is not None:
                 empty = False
                 break
 
-        if empty:
+        if empty and side_effects:
             self.first_write = time()
 
-        super().write(offset, data)
+        super().write(offset, data, side_effects)
 
     def get_fifo_time(self):
         return self.first_write
