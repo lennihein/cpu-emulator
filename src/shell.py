@@ -284,7 +284,7 @@ def __break(input: list[str], cpu: CPU):
     subcmd = input[0]
     if subcmd == 'add':
         if len(input) < 2:
-            print("Usage: break add <address in hex>")
+            print("Usage: break add <address in dec>")
             return cpu
         try:
             addr = int(input[1], base=10)
@@ -294,10 +294,10 @@ def __break(input: list[str], cpu: CPU):
             breakpoints[addr] = True
             print("Breakpoint added")
         except ValueError:
-            print("Usage: break add <address in hex>")
+            print("Usage: break add <address in dec>")
     elif subcmd == 'delete':
         if len(input) < 2:
-            print("Usage: break delete <address in hex>")
+            print("Usage: break delete <address in dec>")
             return cpu
         try:
             addr = int(input[1], base=10)
@@ -307,7 +307,7 @@ def __break(input: list[str], cpu: CPU):
             breakpoints.pop(addr)
             print("Breakpoint deleted")
         except ValueError:
-            print("Usage: break delete <address in hex>")
+            print("Usage: break delete <address in dec>")
     elif subcmd == 'list':
         print("Breakpoints:")
         for addr in breakpoints:
@@ -317,7 +317,7 @@ def __break(input: list[str], cpu: CPU):
                     "(disabled)" if not breakpoints[addr] else ""))
     elif subcmd == 'toggle':
         if len(input) < 2:
-            print("Usage: break toggle <address in hex>")
+            print("Usage: break toggle <address in dec>")
             return cpu
         try:
             addr = int(input[1], base=10)
@@ -327,7 +327,7 @@ def __break(input: list[str], cpu: CPU):
             breakpoints[addr] = not breakpoints[addr]
             print("Breakpoint toogled")
         except ValueError:
-            print("Usage: break toogle <address in hex>")
+            print("Usage: break toogle <address in dec>")
     else:
         __not_found(input, cpu)
 
@@ -383,6 +383,7 @@ def main():
 
     ui.get_terminal_size()
     ui.all_headers(cpu, breakpoints)
+    print(f"{ui.BLUE + ui.BOLD}  Press tab for a list of available commands.{ui.ENDC}")
 
     # enter main loop for shell
     while True:

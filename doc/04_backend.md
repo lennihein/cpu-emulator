@@ -165,18 +165,15 @@ The BPU of our emulator only consists of a PHT, which is enough for simple Spect
 The default PHT used in our emulator holds an array called `counter` of configurable length $2^n$ to store several predictions.
 The instructions are assigned to different prediction slots by the last $n$ bits of their index in the instruction list.
 For each of the slots, the prediction can take the four different values from zero to three, where zero and one indicate that the branch will probably not be taken and two and three indicate that the branch is likely to be taken.
-
 The source code for our emulator also contains a more simple BPU with only one slot for all instructions.
 While the more advanced BPU is used by default, the simple BPU can be chosen in the config file [@sec:config].
 
-<!-- Todo: Ggf. Begründung überlegen, wieso 2-bit statt 2-bit-sat.-->
-<!-- Todo: Nochmal überarbeiten, wenn bimodal_update klarer ist.-->
-When the execution engine executes a branch instruction, the BPU is updated with the actual branch outcome for the instruction and the prediction in the PHT is updated by a 2-bit counter.
-This means, that if the prediction was right, the counter remains at or updates to zero (strongly not taken) or three (strongly taken) respectively.
-If the prediction counter is at zero but the branch is actually taken, the counter is updated to one (weakly not taken).
-If it is at a one when the branch is taken, it is directly updated to three.
-The counter behaves similarly when it has the value two or three and the branch is not actually taken.
-        
+When the execution engine executes a branch instruction, the BPU is updated with the actual branch outcome for the instruction and the prediction in the PHT is updated by a 2-bit-saturating counter as introduced in [@SCA].
+This means that the counter has values 0 (strongly not taken), 1 (weakly not taken), 2 (weakly taken) and 3 (strongly taken).
+When the branch is actually taken, the counter is increased by one, unless it is already at 3 and cannot be increased further.
+Similarly the counter is decreased to as low as 0 when the branch is not actually taken.
+If the counter is at values 0 or 1, it predicts the branch as not being taken, and predicts it as taken if it has a value of 2 or 3.
+
 #### Instruction Queue {#sec:iq}
 
 In a real life CPU, the overall purpose of the frontend is to provide the execution unit with a steady strean of instructions so the backend is busy as much as possible and therefore efficient.
@@ -198,7 +195,7 @@ For branch instructions it also holds the respective branch prediction from the 
 This additional information is needed by the execution engine to handle mispredictions and other exceptions [@sec:execution].
 
 When adding instructions to the queue, the frontend selects them from the instruction list, adds the additional information for the execution engine and places them into the instruction queue until the queue's maximum capacity is reached.
-The frontend maintains a program counter (*pc*) that points to the next instruction in the list that should be added to the queue.
+The frontend maintains a program counter `pc` that points to the next instruction in the list that should be added to the queue.
 When the frontend encounters a branch instruction and the branch is predicted to be taken, the frontend adjusts the pc to resume adding instructions at the branch target.
 If a branch was mispredicted, the frontend provides a special function to reset the pc and refill the instruction queue with the correct instructions.
 
@@ -550,11 +547,6 @@ TODO: Reference to Meltdown and Spectre demos performed in the evaluation
 
 ## ISA {#sec:ISA}
 \marginpar{Melina Hoffmann}
-<!--
-todo: decide should we move this subchapter to the frontend?
-    general concept fits nicely into the backend
-    ISA itself is more of a manual
--->
 
 Real life Intel x86 CPUs differentiate between two types of instructions or operations. 
 Macro-operations refer to the relatively easily human readable and convenient but complex instructions that are described by the x86 ISA.
@@ -586,7 +578,8 @@ This basic instruction set is also used in our example programs in [@sec:UI].
 Our relatively small instruction set is based on a subset of the RISC-V ISA [@riscv].
 It offers a selection of instructions that is sufficient to implement Meltdown and Spectre attacks as well as other small assembler programs, while still being of a manageable size so students can start to write assembler code quickly without spending much time to get to  know our ISA.
 <!--todo: add this?  (still turing complete, vgl. vllt. TI-Folien wegen konkreter min. Instruktionssets...) -->
-The syntax of the assembler representation is also based on RISC-V (as introduced in the "RISC-V Assembly Programmer’s Handbook" chapter of the RISC-V ISA) [@riscv]. 
+The syntax of the assembler representation is also based on RISC-V as introduced in the "RISC-V Assembly Programmer’s Handbook" chapter of the RISC-V ISA [@riscv]. 
+Also as in the RISC-V ISA, with our default configuration we have 32 registers available, see [@sec:config].
 If needed, students can add further instructions by registering them with the parser [@sec:parser].
 
 In the following subchapters we introduce the instructions of our default ISA.

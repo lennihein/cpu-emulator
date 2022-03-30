@@ -7,6 +7,7 @@ date: "2022-04-01"
 titlegraphic: "unilogo.pdf"
 lang: "en"
 theme: "metropolis"
+aspectratio: "169"
 ---
 
 ## Structure
