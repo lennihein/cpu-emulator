@@ -281,7 +281,7 @@ The end of the program is marked by the end message as well as the empty instruc
     - second and third component is if the training is performed in the same address space or a different one, and if the training uses a branch at the same or a branch at a different address
       - we only have a single address space
       - and in this case we perform the training in-place
-        - out-of-place would also be possible, since our BPU uses a limited number of address bits to index its internal counter table
+      - out-of-place would also be possible, since our BPU uses a limited number of address bits to index its internal counter table
 - comparison with spectre paper
   - original spectre paper describes a very similar attack, where an array is repeatedly indexed in-bounds to train the branch predictor, and then a single time out-of-bounds to force a misprediction and access a secret value during the following transient execution
 
