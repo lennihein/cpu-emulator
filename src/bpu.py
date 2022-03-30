@@ -45,9 +45,9 @@ class SimpleBPU:
 
 def bimodal_update(state: int, taken: bool) -> int:
     if taken is True:
-        return 1 if state == 0 else 3
+        return min(state + 1, 3)
     else:
-        return 2 if state == 3 else 0
+        return max(state - 1, 0)
 
 
 def bimodal_prediction(state: int) -> bool:

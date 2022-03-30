@@ -227,7 +227,7 @@ class MemorySubsystem:
 
         return MemResult(Word(0), fault, cycles_value, cycles_fault)
 
-    def _load_line(self, address: Word) -> None:
+    def _load_line(self, address: Word, side_effects: bool = True) -> None:
         """
         Loads the entire cache line corresponding to 'addr'
         into the cache. Note that 'addr' needs to be any
@@ -236,6 +236,12 @@ class MemorySubsystem:
 
         Parameters:
             addr (Word) -- the address to be loaded
+            side_effects (bool) -- whether the loading of
+                the cache line should have an effect on
+                caches taht use access times as their
+                replacement policies. If false, the data
+                is simply loaded into the cache, but variables
+                like lru_timestamp remain unchanged.
 
         Returns:
             This function does not have a return value.
@@ -246,7 +252,7 @@ class MemorySubsystem:
 
         for i in range(self.cache.line_size):
             current_addr = base_addr + i
-            self.cache.write(current_addr, self.memory[current_addr])
+            self.cache.write(current_addr, self.memory[current_addr], side_effects)
 
     def flush_line(self, address: Word) -> MemResult:
         """
