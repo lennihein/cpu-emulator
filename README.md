@@ -19,3 +19,18 @@ To install the required packages, one may use the following command:
 The syntax for running the emulator from the root folder of the repository is:
 
     ./main.py <path_to_target_program>
+
+On Windows systems, the following command should be used instead:
+
+    python main.py <path_to_target_program>
+
+There are demo programs available in the `demo` folder, including sample attacks using meltdown and spectre.
+
+## Config
+
+Edit `config.yml` to change the default settings.
+
+
+## Further Information
+
+For further information, check the accompanying document located in `docs/lab.pdf`.
