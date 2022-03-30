@@ -1,5 +1,5 @@
 # Specification of our task {#sec:task}
-\marginpar{Felix Betke}
+\marginpar{Lenni Hein, Felix Betke}
 This chapter briefly specifies our task and defines our target audience.
 As motivated in the introduction ([@sec:introduction]), exploiting Meltdown or Spectre for educational purposes on personal hardware can be challenging. Therefore, our goal is to develop a CPU emulator that is vulnerable to select variants of the two vulnerabilities and runs on most operating systems and architectures. To achieve this, it must support out-of-order and speculative execution.
 
