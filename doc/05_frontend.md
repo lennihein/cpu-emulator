@@ -14,7 +14,7 @@ As with GDB, the emulator can only be interacted with using commands. We further
 
 The following things need to be installed to run the program:
 
-- Python
+- Python >= 3.8
 - Python-Benedict
 - Python-Prompt-Toolkit
 
@@ -28,7 +28,7 @@ Optionally, the following things can be installed to allow for git fingerprints 
 
 It is recommended to use the program on a Linux system, although Windows functionality is mostly implemented. Further, it's recommended to have a terminal with a width of at least 120 characters.
 
-TThe program is tested on the following system:
+The program is tested on the following system:
 
 - Debian GNU/Linux 11 (bullseye) 
 - Python 3.9.10
@@ -40,7 +40,7 @@ TThe program is tested on the following system:
 
 The syntax for running the emulator from the root folder of the repository is:
 
-    python -m src.shell <path_to_target_program>
+    ./main.py <path_to_target_program>
 
 If no target program is supplied, the emulator will print system information, along with a help message. The target program may contain instructions as specified in [@sec:ISA](#sec:ISA), separated by linebreaks. Comments can be added to the target program by preceding them with \texttt{//}. Furthermore, the \texttt{config.yml} file in the root folder can be modified to configure the emulator, see [@sec:config].
 

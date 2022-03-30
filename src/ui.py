@@ -351,7 +351,7 @@ def rs_str(engine: ExecutionEngine, show_empty=True, reg_capitalisation: bool = 
     max_pc_length = max(max_pc_length, 1)
     max_index_length = max(max_index_length, 1)
 
-    rs_length = max_instr_length + max_pc_length + 1 + 3 + 3 + 14 + 4
+    rs_length = max_instr_length + max_pc_length + 1 + 3 + 3 + 14 + 4 + 4
 
     if not show_empty:
         rs_length += max_index_length + 3

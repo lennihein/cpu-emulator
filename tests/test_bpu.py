@@ -14,7 +14,7 @@ class BPUTests(unittest.TestCase):
         predictor.update(None, False)
         self.assertIs(predictor.predict(None), False)
         predictor.update(None, True)
-        self.assertIs(predictor.predict(None), False)
+        self.assertIs(predictor.predict(None), True)
         predictor.update(None, True)
         self.assertIs(predictor.predict(None), True)
         print(predictor)
