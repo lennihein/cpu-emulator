@@ -5,7 +5,7 @@ As specified in [chapter @sec:task], our goal is to implement a CPU emulator tha
 In this chapter we demonstrate that our emulator allows the user to execute both a Meltdown and a Spectre attack, with the use of basic example programs. 
 Firstly, we introduce the general functionality and visualization of our emulator on a simple example program that does not yet implement microarchitectural attacks in [@sec:evaluation_example].
 Then, we demonstrate both the Meltdown and the Spectre variant which are possible on our emulator in [@sec:evaluation_meltdown] and [@sec:evaluation_spectre] respectively.
-Lastly, we show different mitigations against these microarchitectural attacks on our emulator, which are based on mitigations gainst real life microarchitectural attacks in [@sec:evaluation_mitigations].´
+Lastly, we show different mitigations against these microarchitectural attacks on our emulator, which are based on mitigations gainst real life microarchitectural attacks in [@sec:evaluation_mitigations].
 
 ## Example Program {#sec:evaluation_example}
 \marginpar{Melina Hoffmann}
@@ -75,7 +75,7 @@ To produce the examples for this section, the program is run on the default conf
         beq r4, r0, loop_label
     rdtsc r0
 
-When we start the emulator it automatically loads the program and shows first context screen, with the registers and default memory section initialised to zero and the instruction queue and reservation station still empty.. 
+When we start the emulator it automatically loads the program and shows first context screen, with the registers and default memory section initialised to zero and the instruction queue and reservation station still empty.
 <!-- pic ep_01_start.pngSS-->
 
 
@@ -86,7 +86,7 @@ Since its result is broadcasted directly after the instruction finishes executin
 
 As per Tomasulos algorithm, we see `SlotIDs` both in the registers and the operand lists of instructions in the reservation station as placeholders for the result of the instruction in the respective reservation station slot. For example, register 2 is waiting for the result produced by the `addi` instruction in slot 2 of the reservation station and contains the placeholder `RS 002`.
 Note in particular, that for the `slli` instruction with `SlotID` 1 we see that its target register 2 already contains the `SlotID` of the next instruction. 
-But in the operand list of the `addi`in slot 2 the reservation station we can see the `SlotID` of the `slli` instruction waiting to be replaced with the result value.
+But in the operand list of the `addi` in slot 2 the reservation station we can see the `SlotID` of the `slli` instruction waiting to be replaced with the result value.
 <!-- pic -ep_02_two_steps.png-->
 
 In the next step, the fence instruction is issued into the reservation station.
@@ -94,19 +94,19 @@ Therefore no more instructions are issued into to the reservation station until 
 <!--picture options ep_03_fence_full.png, ep_04_fence_rs.png -->
 
 After the `slli` and the `addi` instructions in slots 1 and 2 of the reservation station, the program contains two memory operations `sw` and `lb`.
-Since these are executed with latency/ take long to execute, the `addi`instruction in slot 5 of the reservation station is executed out-of-order before the memory instructions retire.
+Since these are executed with latency/ take long to execute, the `addi` instruction in slot 5 of the reservation station is executed out-of-order before the memory instructions retire.
 <!--Formulierung -->
 <!-- pic options ep_05_addi_ooe_full.png, ep_06_addi_ooe_rs.png-->
 
-During the execution of the `sw` instruction, the value 0x0342 is stored as a `Word`starting at memory address 4. 
+During the execution of the `sw` instruction, the value 0x0342 is stored as a `Word` starting at memory address 4. 
 In our example this is highlighted further by the the memory addresses 4-7 changing color to red.
-This signifies that they are placed in the cache as a `cacheline`of length of four bytes.
+This signifies that they are placed in the cache as a `cacheline` of length of four bytes.
 Since we cannot visualze the whole memory all at once, we also offer a more detailed  visualization of the whole cache.
 The result of the store instruction is placed into memory multiple cycles before the instruction retires, both to model real world latencies in memory accesses and to leave enough time when checking for faults to allow transient execution, as we see in [@sec:evaluation_meltdown].
 <!--pic ep_05_addi_ooe_full.png, ep_07_cache.png -->
 
 The `lb` instruction in slot 4 only reads one byte from memory address 5.
-Since the `sw`instruction places its `Word` value into memory in little endian order, the result of reading one byte from memory address 5 is 0x03.
+Since the `sw` instruction places its `Word` value into memory in little endian order, the result of reading one byte from memory address 5 is 0x03.
 <!-- pc ep_08_legal_load_result.png-->
 
 With the `lb` instruction int slot 6 of the reservation station, we attempt to load a value from the inaccessible part of the memoy [@sec:memory].
@@ -115,10 +115,10 @@ But before instruction can retire, the fault is detected and the target register
 Due to the rollback the reservation station is cleared and the subsequent instructions are put back into the instruction queue [@sec:rollback].
 <!--ideally two pictures_ with 0x42 in register ep_08_legal_load_result.png and reset with fault message ep_09_mem_fault.png, ideally side by side -->
 
-Now the `fence`instruction can be executed and the subsequent instructions are put into the instruction queue and issued to the reservation station.
+Now the `fence` instruction can be executed and the subsequent instructions are put into the instruction queue and issued to the reservation station.
 Since per the default settings all jumps are first predicted as taken, we speculatively fill the instruction queue and reservation station with multiple/ infinite iterations of the loop.
 <!--Formulierung -->
-Since the branch condition is already violated in the first interation of the loop and the branch is not taken, we have a misprediction that results in a fault message and a rollback during which the reservation station is cleared and the `rtdsc`instruction is put into the instruction queue.
+Since the branch condition is already violated in the first interation of the loop and the branch is not taken, we have a misprediction that results in a fault message and a rollback during which the reservation station is cleared and the `rtdsc` instruction is put into the instruction queue.
 <!--pictures of iq and rs filled with multiple loop contents somewhere in the middle ep_10_loop_full.png, ep_11_loop_bottom.png, and of the fault message and  rolled back loop ep_12_loop_fault_full.png ep_13_loop_fault_bottom.png-->
 
 Lastly the `rdtsc` instruction is executed and shows in register 0 that the program took 0x0026 cycles to execute so far. 
