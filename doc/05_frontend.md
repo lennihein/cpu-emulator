@@ -51,9 +51,9 @@ The core of the visualization is the context screen. Here most of the relevant i
 
 ![Example output of the context screen](fig/context.png){#fig:context width=470px height=317px shortcaption='Example output of the context screen'}
 
-The context screen is divided into three sections: first, the registers are being shown, as if the \texttt{show regs} command was issued (for details on the commands, refer to the following [@sec:commands). The second section shows the Memory, also analogous to the \texttt{show mem} command. The third section shows the whole pipeline, itself being divided into visualization of the Program, the Instruction Queue and finally the Reservation Stations. By default only a part of the Program is printed - all in-flight instructions as well as one further instruction each before and after will be displayed. Further, arrows connect the different stages of the pipeline. These arrows show the location of the instruction that will be issued next into the Reservation Station in both the Program, as well as the Instruction Queue.
+The context screen is divided into three sections: first, the registers are being shown, as if the \texttt{show regs} command was issued (for details on the commands, refer to the following [@sec:commands]). The second section shows the Memory, also analogous to the \texttt{show mem} command. The third section shows the whole pipeline, itself being divided into visualization of the Program, the Instruction Queue and finally the Reservation Stations. By default only a part of the Program is printed - all in-flight instructions as well as one further instruction each before and after will be displayed. Further, arrows connect the different stages of the pipeline. These arrows show the location of the instruction that will be issued next into the Reservation Station in both the Program, as well as the Instruction Queue.
 
-## Commands
+## Commands {#sec:commands}
 
 Following, we describe the commands available in the emulator. The commands are grouped into the following categories: displaying information, modifying the CPU, commands that revolve around pausing and resuming the execution, breakpoint management, as well as some miscellaneous commands.
 
@@ -101,7 +101,7 @@ Should the user select to use a microcode in case a fault is encountered (see [@
 
     show rs
 
-#### show prog
+#### show prog {#sec:showprog}
 
 Displays a visualization of the source program. Further, there are icons indicating which instructions are currently in-flight, as well as which instruction is marked as a breakpoint. 
 
@@ -168,7 +168,7 @@ The values correspond to the following:
 - \texttt{2}: Weakly taken
 - \texttt{3}: Strongly taken
 
-See further in chapter \ref{sec:bpu} for more information.
+See further in chapter \ref{sec:BPU} for more information.
 
 ### Breakpoint Management
 

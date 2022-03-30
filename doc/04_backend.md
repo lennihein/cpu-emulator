@@ -21,22 +21,42 @@ Lastly we show how our emulator can be adapted for different demonstrations and 
 
 ## CPU Components and our equivalents/ models {#sec:components}
 
-todo
+\marginpar{Jan-Niklas Sohn}
+
+This section describes the individual components of our CPU emulator and various interactions between them. Each component is modelled after one or multiple components found in typical modern x86 CPUs.
+The main *CPU* component described in [@sec:CPU] initializes all other components and interfaces between them.
+The parser component described in [@sec:parser] parses users' program code into a sequence of instruction objects.
+[@Sec:data] introduces the data representation used throughout the CPU, in particular with respect to memory accesses.
+The CPU frontend described in [@sec:CPU_frontend] supplies the execution engine with a stream of instructions.
+The memory subsystem is detailed in [@sec:memory] and manages main memory and the cache.
+[@Sec:execution] describes the execution engine, which is responsible for actually performing computations.
 
 ### CPU {#sec:CPU}
 \marginpar{Felix Betke}
-The primary purpose of the _CPU_ class is to allow all other components to work together. That is, the CPU initializes all other components and provides interfaces to their functions. Most importantly, the _CPU_ provides a _tick_ function that is called each cycle and does the following: instructions from the instruction queue are fetched from the frontend and forwarded to the execution engine, until either no more slots in the unified reservation station are available, or the instruction queue is empty. It then calls the _tick_ function of the execution engine. In case of a rollback, the instruction queue maintained by the frontend is flushed. If configured, a µ-program is executed prior to resuming execution. If the rollback was caused by a faulting load instruction, execution is resumed at the next instruction (as described in [@sec:rollback]). In case a branch was mispredicted, the frontend is notified and refills the instruction queue accordingly. If configured, corresponding microprograms are sent to the instruction queue. Lastly, a snapshot of the current state of the CPU is taken. To provide the UI with useful information to display to the users, the _tick_ function returns an instance of a _CPUStatus_ class that contains a boolean indicating if the program has terminated, whether an exception has raised a fault, and a list of instructions that have been issued during this tick.
+The primary purpose of the `CPU` class is to allow all other components to work together. That is, the `CPU` initializes all other components and provides interfaces to their functions. Most importantly, it provides a `tick` function that models a single cycle and provides the snapshot functionality which allows a user of the emulator to step back to previous cycles.
+
+The `tick` function is called each cycle and does the following: instructions from the instruction queue are fetched from the frontend and forwarded to the execution engine, until either no more slots in the unified reservation station are available, or the instruction queue is empty. It then calls the `tick` function of the execution engine. In case of a rollback, the instruction queue maintained by the frontend is flushed. If configured, a microprogram corresponding to the faulting instruction type is added to the instruction queue. That way, it will be executed before regular execution is resumed. If the rollback was caused by a faulting load instruction, execution is resumed at the next instruction (as described in [@sec:rollback]). In case a branch was mispredicted, the frontend is notified and refills the instruction queue accordingly. Lastly, a snapshot of the current state of the CPU is taken. To provide the UI with useful information to display to the users, the `tick` function returns an instance of a `CPUStatus` class that contains a boolean indicating if the program has terminated, whether an exception has raised a fault and, if so, whether a microprogram is to be executed, and, lastly, a list of instructions that have been issued during this tick.
 <!---
 TODO: Microprograms
 -->
 
-Other functions exist to load programs from files and initialize the frontend and execution engine accordingly. Further, references to each component are exposed by getter functions to allow the UI to visualize their current state.
+The second main purpose of the `CPU` class is to provide the snapshot functionality, which allows a user of the emulator to step back to previous cycles. The snapshot list is simply a list that grows at each cycle, where ech entry is a deepcopy of the `CPU` instance. To simply be able to deepcopy the `CPU` class, the snapshot list is held separately and is not one of its members. Instead, the `CPU` class, and therefore each snapshot, maintains an index to its own entry in the snapshot list. This reference makes traversing the snapshot list one step at a time easier. Due to the low complexity of the programs we expect our users to run, at the moment, no maximum number of available snapshots is configured. To restore snapshots, a static `restore_snapshot` function exists in the `CPU` class. Crucially, this function returns the deepcopy of an entry of the snapshot list relative to the value of `_snapshot_index` of the current instance. This allows users to step back and forth between snapshots. However, manipulating a restored snapshot by calling the `tick` function, for example, discards all more recent snapshots.
 
-The second purpose of the _CPU_ class is to provide the snapshot functionality, which allows a user of the emulator to step back to previous cycles. The snapshot list is simply a list that grows at each cycles, where ech entry is a deepcopy of the _CPU_ instance. To simply be able to deepcopy the CPU class, the snapshot list is held separately and not one of its members. Instead, the CPU class, and therefore each snapshot, maintains an index to its own entry in the snapshot list. This reference makes traversing the snapshot list one step at a time easier. Due to the low complexity of the programs we expect our users to run, at the moment, no maximum number of available snapshots is configured. To restore snapshots, a static _restore\_snapshot_ function exists in the _CPU_ class. Crucially, this function returns the deepcopy of an entry of the snapshot list relative to the value of _\_snapshot\_index_ of the current instance. This allows users to step back and forth between snapshots. However, manipulating a restored snapshot by calling the _tick_ function, for example, discards all more recent snapshots.
+Other functions exist to load programs from files and initialize the frontend and execution engine accordingly. Further, references to each component are exposed by getter functions to allow the UI to visualize their current state.
 
 ### Instructions and Parser {#sec:parser}
 
-TODO
+\marginpar{Jan-Niklas Sohn}
+
+<!-- - Users provide assembly-like source code
+- Parsed and provided to the rest of the CPU
+- This is in contrast to real x86 CPUs, which read and decode instructions from memory -->
+
+Users of our CPU emulator provide programs as an assembly-like source code.
+This source code is parsed by the `parser` module into a sequence of `Instruction` objects. Information about individual instructions is provided by the `instructions` module.
+The parsed instruction sequence is used throughout the rest of our CPU, indexed by the current program counter.
+This is in contrast to real x86 CPUs, which read and decode instructions from memory.
+However, parsing the program code once and from a textual representation simplifies the design of our CPU emulator, and for instance allows us to completely omit instruction memory from our memory model.
 
 <!-- - General instruction format: mnemonic followed by comma-separated operands, as is common in assembly languages
 - Instruction mnemonic already determines the exact instruction, including the types of its operands
@@ -199,38 +219,41 @@ Since our emulator only executes one program at a time, the other components can
 ### Memory {#sec:memory}
 <!---TODO: No virtual addresses.-->
 \marginpar{Felix Betke}
-Memory is primarily managed by the Memory Subsystem (MS). As a simplification over an MS as it is assumed to be used by Intel's Skylake architecture [@skylake], our version maintains only a single cache, no load, store, or fill buffers. Further, it maintains the main memory directly. These simplifications are possible, since our objective is to allow users to learn about Meltdown-US-L1 and Spectre v1, none of which rely on any of the MS components we removed in our version. Further, the fact that our CPU consists of a single core only, the MS can directly use the main memory.
+Memory is primarily managed by the Memory Subsystem (MS). As a simplification over an MS as it is assumed to be used by Intel's Skylake architecture [@skylake], our version maintains only a single cache and no load, store, or fill buffers. Further, it maintains the main memory directly. Due to the lack of an operating systems, there are no virtual addresses. These simplifications are possible, since our objective is to allow users to learn about Meltdown-US-L1 and Spectre v1, none of which rely on any of the MS components we removed in our version. Further, the fact that our CPU consists of a single core only, the MS can directly use the main memory.
 
-To represent the main memory, the class contains a simple array that has $2^{Word Width}$ entries, half of which are initialized to $0$. Since our emulator does not run an operating system and therefore does not support paging, a different method is needed to model a page fault that allows attackers to enter the transient execution phase of the Meltdown-US-L1 attack (as explained in [@sec:meltdown-and-spectre]). To solve this, we have decided to make the upper half of the address space ($32768$ to $65535$, by default) inaccessible. Any reads or writes to an address within the upper half result in a fault which causes a rollback a couple of cycles later. Naturally, the value written to the inaccessible addresses is $0x42$.
+To represent the main memory, the `MemorySubsystem` class contains a simple array that has $2^{Word Width}$ entries. Since our emulator does not run an operating system and therefore does not support paging, a different method is needed to model a page fault that allows attackers to enter the transient execution phase of the Meltdown-US-L1 attack (as explained in [@sec:meltdown-and-spectre]). To solve this, we declare the upper half of the address space ($32768$ to $65535$, by default) to be inaccessible. Any reads or writes to an address within the upper half result in a fault which causes a rollback a couple of cycles later. Naturally, the value written to the inaccessible addresses is $0x42$, while the ones accessible by programs is initialized to $0$.
 
-To handle memory accesses, _read\_byte_, _read\_word_, _write\_byte_, and _write\_word_ functions are available, which do as their names suggest, optionally without any cache side effects. Each function returns a _MemResult_ instance, which contains the data, the number of cycles this operation takes, whether the operation should raise a fault (i.e. memory address is inaccessible), and, if so, in how many cycles this happen. For _write_ operations, only the variables regarding faults are of relevance (see [@sec:execution]).
+To handle memory accesses,`_read_byte`, `read_word`, `write_byte`, and `write_word` functions are available, which do as their names suggest, optionally without any cache side effects. Each function returns a `MemResult` instance, which contains the data, the number of cycles this operation takes, whether the operation should raise a fault (i.e. memory address is inaccessible), and, if so, in how many cycles this happen. For `write` operations, only the variables regarding faults are of relevance (see [@sec:execution]).
 
-Other functions that allow the UI to visualize the memory contents are provided. More specifically, _is\_addr\_cached_ and _is\_illegal\_access_ return whether an address is currently cached and whether a memory access to a specific address would raise a fault, respectively. Further, the MS includes functions that handle the cache management, such as _load\_line_, _flush\_line_, and _flush\_all_.
+Other functions that allow the UI to visualize the memory contents are provided. More specifically, `is_addr_cached` and `is_illegal_access` return whether an address is currently cached and whether a memory access to a specific address would raise a fault, respectively. Further, the `MemorySubsystem` includes functions that handle the cache management, such as `load_line`, `flush_line`, and `flush_all`.
 
 #### Meltdown Mitigation
-As explained in [@sec:meltdown-and-spectre-mitigations], one of the mitigations implemented by Intel is believed to zero out data illegally read during transient execution. To model this, both the _read\_byte_ functions still perform the read operation, but provide $0$ as the data in the returned _MemResult_, if the mitigation is enabled. As of now, the read operation still changes the cache, but since only the contents of the inaccessible memory address are cached and not the corresponding oracle entry of the attacker, the mitigation still works. The reason for this is that we believe a consequence of the CPU still performing the illegal read operation but zeroing out the result should have side effects on the cache. If desired, this behavior can be changed easily in the _read\_byte_ functions.
+As explained in [@sec:meltdown-and-spectre-mitigations], researches suggest one of Intel's mitigations to zero out any data illegaly read during the transient execution phase.
+To model this, both the `read_byte` functions still perform the read operation, but provide $0$ as the data in the returned `MemResult`, if the mitigation is enabled. As of now, the read operation still changes the cache, but since only the contents of the inaccessible memory address are cached and not the corresponding oracle entry of the attacker, the mitigation still works. The reason for this is that we believe a consequence of the CPU still performing the illegal read operation but zeroing out the result should have side effects on the cache. If desired, this behavior can be changed easily in the `read_byte` function.
 
 #### Cache {#sec:cache}
-To enable attackers to encode transiently read data, the MS maintains a single cache. The number of sets, ways, and entries per line can be configured via the config file (see [@sec:config]). The base _Cache_ class firstly initializes all cache sets as an array with each entry holding an array of instances of the _CacheLine_ class. There are functions that allow components using the cache to _read_, _write_, and _flush_ data given an address and data, if applicable. The _parse\_addr_ can be used to obtain the index, tag, and offset of an address. Lastly, the _Cache_ class includes functions that allow the UI to visualize its state (_get\_num\_sets_, _get\_num\_lines_, _get\_line\_size_, and _get\_cache\_dump_). Note that the base _Cache_ class cannot be used directly, as it does not implement the _\_apply\_replacement\_policy_ function.
+To enable attackers to encode transiently read data, the MS maintains a single cache. The number of sets, ways, and entries per line can be configured via the config file (see [@sec:config]). The base `Cache` class firstly initializes all cache sets as an array with each entry holding an array of instances of the `CacheLine` class. There are functions that allow components using the cache to `read`, `write`, and `flush` data given an address and data, if applicable. The `parse_addr` can be used to obtain the index, tag, and offset of an address. Lastly, the `Cache` class includes functions that allow the UI to visualize its state (`get_num_sets`, `get_num_lines`, `get_line_size`, and `get_cache_dump`). Note that the base `Cache` class cannot be used directly, as it does not implement the `_apply_replacement_policy_` function.
 
-The _CacheLine_ class holds an integer array for the data, a tag, and its own size. Further, functions to _read_, _write_, and _flush_ are provided. Lastly, there are functions that set the tag (_set\_tag_) and return whether or not the cache line is currently in use by checking if the tag is set. Contrary to the _Cache_ class, the _CacheLine_ class can be used directly.
+The `CacheLine` class holds an integer array for the data, a tag, and its own size. Further, functions to `read`, `write`, and `flush` are provided. Lastly, there are functions that set the tag (`set_tag`) and return whether or not the cache line is currently in use by checking if the tag is set. Contrary to the `Cache` class, the 1CacheLine` class can be used directly.
 
-By default, there are three available cache replacement policies that determine which cache line is evicted from a full cache set in case new data should be added. All are implemented by extending the base _Cache_ and _CacheLine_ classes accordingly. The first policy is the random replacement policy (RR) whose implementation can be found in the _CacheRR_ class. This policy simply picks a cache line at random for eviction. Even though the policy introduces noise into the side channel, users may experiment with it for their cache attacks, if they so choose (see [@sec:config].
+By default, there are three available cache replacement policies that determine which cache line is evicted from a full cache set in case new data should be added. All are implemented by extending the base `Cache` and `CacheLine` classes accordingly. The first policy is the random replacement policy (RR) whose implementation can be found in the `CacheRR` class. This policy simply picks a cache line at random for eviction. Even though the policy introduces noise into the side channel, users may experiment with it for their cache attacks, if they so choose (see [@sec:config]).
 
-The second cache replacement policy is the least-recently-used policy (LRU). By this policy, the cache line to be evicted from a full cache set should be the one whose most recent access was the longest time ago. To achieve this functionality, a new _CacheLineLRU_ class updates a _lru\_timestamp_ variable each time the _read_ or _write_ functions are called. This variable is then used by the new _CacheLRU_ class in its implementation of the _\_apply\_replacement\_policy_ function.
+The second cache replacement policy is the least-recently-used policy (LRU). By this policy, the cache line to be evicted from a full cache set should be the one whose most recent access was the longest time ago. To achieve this functionality, a new `CacheLineLRU` class updates a `lru_timestamp` variable each time the `read` or `write` functions are called. This variable is then used by the new `CacheLRU` class in its implementation of the `_apply_replacement_policy` function.
 
-Lastly, the third cache replacement policy is the first-in-first-out (FIFO). In case of a full cache set, this policy picks the cache line that was first populated with data and flushes it. The classes _CacheFIFO_ and _CacheLineFIFO_ implement the required functions by using a _first\_write_ variable.
+Lastly, the third cache replacement policy is the first-in-first-out (FIFO). In case of a full cache set, this policy picks the cache line that was first populated with data and flushes it. The classes `CacheFIFO` and `CacheLineFIFO` implement the required functions by using a `first_write` variable.
 
-Even though more complex replacement policies exist, the exact way in which they work is often undocumented [@find_eviction_sets]. However, we believe our chosen policies are sufficient to understand Meltdown, Spectre, and most cache timing attacks, such as Flush+Reload. New cache replacement polices can easily be added by defining the desired behavior in new cache and cache line classes that inherit from _Cache_ and _Cache\_Line, respectively. Further, the constructor of the MS needs to be adjusted to account for the existence of the new policy.
+Even though more complex replacement policies exist, the exact way in which they work is often undocumented [@find_eviction_sets]. However, we believe our chosen policies are sufficient to understand Meltdown, Spectre, and most cache timing attacks, such as Flush+Reload. New cache replacement polices can easily be added by defining the desired behavior in new cache and cache line classes that inherit from `Cache` and `Cache_Line`, respectively. Further, the constructor of the MS needs to be adjusted to account for the existence of the new policy.
 
 ### Execution Engine {#sec:execution}
+
+\marginpar{Jan-Niklas Sohn}
 
 <!-- - Executes instructions out-of-order
   - Ofc data dependencies have to be honored to guarantee correctness
   - We use a modified version of Tomasulo's Algorithm described in sec:tomasulo -->
 
 The execution engine is the central component of a CPU. It is the component responsible for actually performing computations, by executing the stream of instructions provided by the frontend.
-Just like the execution engine of modern x86 processors, our execution engine executes instructions out-of-order, i.e. not necessarily in the order of the incoming instruction stream. In order to preserve the semantics of the program, any data dependencies have to be honored during reordering. For this we use a modified version of Tomasulo's Algorithm, that is described in detail in [@sec:Tomasulo].
+Just like the execution engine of modern x86 processors, our execution engine executes instructions out-of-order, i.e. not necessarily in the order of the incoming instruction stream [@gruss-habil, p. 15]. In order to preserve the semantics of the program, any data dependencies have to be honored during reordering. For this we use a modified version of Tomasulo's Algorithm, that is described in detail in [@sec:Tomasulo].
 <!-- although the frontend passes instructions in program order to the execution engine, the order in which these instructions are actually executed usually differs. -->
 
 <!-- - Contains Reservation Station with a fixed number of slots
@@ -239,7 +262,7 @@ Just like the execution engine of modern x86 processors, our execution engine ex
   - Instructions' ability to execute concurrently only limited by available slots, no concept of Execution Units that instructions need to be dispatched to; instructions execute in slots directly -->
 
 The execution engine contains the Reservation Station with a fixed number of instruction slots. Each slot contains an instruction that is currently being executed. We call such instructions *in-flight*.
-Our Reservation Station is unified, i.e. each slot can contain any kind of instruction. The same is often found in modern CPUs TODO citation.
+Our Reservation Station is unified, i.e. each slot can contain any kind of instruction. The same is often found in modern CPUs [@skylake].
 The slots of our Reservation Station are also used to model Load Buffers and Store Buffers; the specifics of executing memory accesses are handled by the slots directly instead of separate components.
 We also have no concept of Execution Units that instructions need to be dispatched to, which means that instructions' ability to execute concurrently is only limited by the number of available slots.
 
@@ -248,9 +271,9 @@ We also have no concept of Execution Units that instructions need to be dispatch
     - Wait for source operands to become available and compute result
     - Once result is computed: Make it available to other instructions (or the register file), transition to retiring -->
 
-All instructions pass through two phases during execution: In the first phase the instruction is said to be *executing*. It waits for any source operands to become available and computes its result. Once the result is computed, it is made available to waiting instructions, and the instruction transitions to the second phase.
-
-TODO: Instructions wait for fixed amount of cycles before finishing execution or retirement
+All instructions pass through two phases during execution: In the first phase the instruction is said to be *executing*. It waits for any source operands to become available and computes its result.
+Once the result is computed, the instruction waits for a specific amount of CPU cycles. This delay is introduced to mimic the latency of real execution units, which may take several CPU cycles to compute a result.
+After this delay expires, the instruction's result is made available to waiting instructions, and the instruction transitions to the second phase.
 
   <!-- - Retiring: Determine if instruction causes a fault
     - Fault means microarchitectural fault; both architecturally visible faults like memory protection violations and architecturally invisible faults like branch mispredictions are handled in the same way in the Execution Engine
@@ -258,8 +281,6 @@ TODO: Instructions wait for fixed amount of cycles before finishing execution or
 
 In the second phase the instruction is said to be *retiring*. The instruction determines if it causes a *fault*, which in this case means a *microarchitectural* fault. These can be architecturally visible faults like memory protection violations or architecturally invisible faults like branch mispredictions; both are handled the same way in the Execution Engine.
 Once the instruction finishes retiring its slot becomes available again and may be used to execute a new instruction.
-
-TODO: Describe concrete execution/retirement behavior for each instruction category?
 
 <!-- - In each clock cycle only one instruction is able to finish execution or retirement
   - Models contention of the common data bus, and improves debugging experience -->
@@ -329,9 +350,6 @@ Instead, the tick function goes through the occupied slots in the Reservation St
 This follows the order of the slots in the Reservation Station, regardless of when the instruction in each slot was issued, i.e. regardless of their order in the program.
 
 If the operands of the current instruction are not ready yet, i.e. there are still *slotIDs* in the operand list, the instruction is skipped.
-To mimic the latency of real world execution units and memory accesses, each instruction type additionally waits a specific amount of CPU cycles after all operands are ready until producing its result.
-These waiting instructions are also skipped.
-<!-- todo: wait time not really appropriate here, but I would like to have it mentioned; maybe move to execution engine chapter?-->
 
 Once the instruction is executed and produces a result, i.e. all operands are available and the wait time is over, according to Tomasulos algorithm this result has to be broadcasted via the CDB to the other slots and the registers [@sec:background-out-of-order-execution].
 In our emulator, the CDB is modelled by the *_notify_result* function.
@@ -366,6 +384,8 @@ Similar to the memory instructions, it waits for all the instructions in the lis
 Additionally, no other instructions can be issued to the Reservation Station while it contains a *fence* instruction.
 
 ## Exception- and Fault-Handling {#sec:rollback}
+
+\marginpar{Jan-Niklas Sohn}
 
 <!-- Exceptions: -->
 
@@ -440,7 +460,7 @@ and returns information about the fault to the main CPU component. The main CPU 
 There are two possible approaches to performing rollbacks.
 The first approach tracks any changes that executed instructions make to the architectural state. When a fault occurs, these tracked changes can be performed in reverse in order to recover the target architectural state.
 The second approach records a snapshot of the architectural state when the faulting instruction is issued. When a fault occurs, this snapshot can be restored in order to recover the target architectural state.
-It is not publicly documented what approach real x86 CPUs take to performing rollbacks. Our implementation follows the snapshot-based approach, since it is judged to be easier to implement in a software-based simulator.
+It is not publicly documented what approach real x86 CPUs take to performing rollbacks. Our implementation follows the snapshot-based approach, since it is judged to be easier to implement in a software-based emulator.
 
 In our case, the architectural state that needs to be restored includes the register state and the contents of memory.
 The state of the cache and the BPU are not considered part of the architectural state and are not restored when performing a rollback.
@@ -725,21 +745,18 @@ fence& - & add execution fixpoint at this code position\\
 
 ## Config File {#sec:config}
 <!--todo: should we move this to the frontend? more like a manual? -->
-<!---
-TODO: Microprograms, config given to all components
--->
 \marginpar{Felix Betke}
-To allow users to change certain parameters of the presented emulator, a configuration file is available. It can be found in the root folder of the project and edited with a regular text editor. Internally, a dictionary containing the entire configuration is passed to each individual component. This section briefly mentions which parts of the demonstrated emulator can be configured, and why which default values have been chosen.
+To allow users to change certain parameters of the presented emulator or to toggle certain mitigations on or off, a configuration file is available. It can be found in the root folder of the project and edited with a regular text editor. Internally, a dictionary containing the entire configuration is passed to each individual component. This section briefly mentions which parts of the demonstrated emulator can be configured, and why which default values have been chosen.
 
 ### Memory {#sec:config-memory}
-In the "Memory" section, the users may configure how many cycles write operations should take (_num\_write\_cycles_), and how many cycles should be between a faulting memory operation and the corresponding instruction raising a fault (_num\_fault\_cycles_). By default, the former is set to $5$ cycles, the latter to $8$. While the specific values are not as important, the difference between the number of cycles it takes to perform any faulting memory operation and the number of cycles it takes to raise the fault should be at least $1$. Otherwise, the rollback is initiated before dependent instructions can encode the data into the cache for the attacker to retrieve. During our testing, we decided that a difference of at most $3$ on a cache miss is sufficient for our versions of Meltdown-US-L1 and Spectre v1 to work. It is important to note that with this configuration, attackers are able to steal secrets even if they are not cached and have to be loaded from the system's memory first. If one were to model the Meltdown-US-L1 attack more accurately, a cache miss would have to take more cycles to retrieve the data than the CPU takes to initiate the rollback. We believe that this difference does not negatively impact the user's ability to understand the basics of the Meltdown vulnerability as long as it is clearly communicated to them. In the more realistic scenario, attackers would have to perform two illegal reads, one to cache the secret, and one to steal it. By default, the first read is not necessary.
+In the "Memory" section, the users may configure how many cycles write operations should take (`num_write_cycles`), and how many cycles should be between a faulting memory operation and the corresponding instruction raising a fault (`num_fault_cycles`). By default, the former is set to $5$ cycles, the latter to $8$. While the specific values are not as important, the difference between the number of cycles it takes to perform faulting memory operation (`num_write_cycles`) and the number of cycles it takes to raise the fault (`num_fault_cycles`) should be at least $1$. Note that `num_write_cycles` only affects write operations. To configure the number of cycles it takes to read data, see [@sec:config-cache].
 
-### Cache
+### Cache {#sec:config-cache}
 In the "Cache" section, users may configure the size of the cache by setting the number of sets, ways, and entries per cache line. For readability when printing, the default value we chose for all values is $4$. However, it is important to note that if one were to perform the full Meltdown/Spectre attacks by measuring access times to each oracle entry, a sufficient cache size that ensures accessing an oracle entry does not evict another is required.
 
 Further, the cache replacement policy can be set to either "RR", for random replacement, "LRU", for least-recently-used, and "FIFO", for first-in-first-out. Each policy is explained in [@sec:cache]. As RR introduces noise, we have decided against using it as the default. Although widely undocumented, Intel's Skylake architecture is believed to use some kind of specialized version of LRU [@find_eviction_sets]. For that reason, and since our choice is largely irrelevant as long as users clearly understand how it works, we chose the LRU policy.
 
-The other two values that can be configured are the number of cycles cache hits and misses take. As mentioned in [@sec:config-memory], the specific values are not as important as their differences.
+The other two values that can be configured are the number of cycles cache hits and misses take (`cache_hit_cycles` and `cache_miss_cycles`). As already mentioned in [@sec:config-memory], the specific values are not as important as their differences. Due to our decision to allow users to perform the Meltdown-US-L1 attack even if the data to be stolen is not currently cached (see [@sec:task]), the number of cycles needed for retrieve data from memory after a cache miss (`cache_miss_cycles`) is lower than the number of cycles it takes for a faulting memory operation to raise a fault (`num_fault_cycles`, see [@sec:config-memory]). To model the Meltdown-US-L1 attack more accurately, a cache miss would have to take more cycles to retrieve the data than the CPU takes to initiate the rollback. In the more realistic scneario, attackers would have to perform two illegal reads, one to cache the secret, and one to steal it. By default, the first read is not necessary.
 
 ### Instruction Queue
 The config allows users to configure the size of the instruction queue maintained by the frontend. It determines the maximum number of instructions that can be issued per tick. As the transient execution window is largely determined by cache hits and the number of available entries in the unified reservation station, this choice is not as important. Our testing shows the desired attacks are possible with an instruction queue size of $5$. As pointed out in [@sec:CPU_frontend], this limit is ignored in case micro-programs are to be executed.
@@ -748,7 +765,7 @@ The config allows users to configure the size of the instruction queue maintaine
 Here, the user may configure whether to use the simple BPU, or the advanced one. The difference is that the simple BPU maintains only a single counter, while the advanced one maintains a counter for each program counter value. Additionally, the number of bits used for the counter as well as its initial value can be chosen. By default, we use the advanced BPU with $4$ index bits and an initial counter of $2$.
 
 ### Execution Engine
-The execution engine allows the configuration of the number of available slots in the reservation station. In part, this value determines the width of the transient execution window. We found that with $8$ slots, Meltdown and Spectre attacks are possible. Additionally, the number of registers can be configured. Since our instruction set is based on the RISC-V ISA, we chose to offer the same number of registers by default, which is $32$ [@riscv].
+The execution engine allows the configuration of the number of available slots in the reservation station. In part, this value determines the width of the transient execution window. We find that with $8$ slots, Meltdown and Spectre attacks are possible. Additionally, the number of registers can be configured. Since our instruction set is based on the RISC-V ISA, we offer the same number of registers by default, which is $32$ [@riscv, p. 9].
 
 ### UX
 The UX can be configured to omit display of certain elements. When selecting to use a large cache, it may be desirable to hide empty cache ways and sets to prevent clutter. By default, we choose to show the empty cache ways so the user can easily can see whether or not a cache set is full. We also choose to show the empty cache sets so there is a visual representation of which addresses correspond to certain sets. Another option is to hide the unused reservation station slots. In this case every entry in the reservation station will be numbered. Showing the unused slots may help the user to keep track of bottlenecks in the execution, and is therefore chosen per default. Finally, the user may choose between capitalized or lowercase letters for the registers. By default, we choose to use lowercase letters.
