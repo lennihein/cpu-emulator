@@ -160,62 +160,57 @@ The end of the program is marked by the end message as well as the empty instruc
 
 ## Demonstration of a Meltdown-Type Attack {#sec:evaluation_meltdown}
 
-- demonstrate that a meltdown-type attack can be performed inside our emulator
+\marginpar{Jan-Niklas Sohn}
+
+<!-- - demonstrate that a meltdown-type attack can be performed inside our emulator
 - this is shown through an example program that performs such an attack
 - afterwards the attack is categorized according to the naming scheme established by transient-fail
-- and compared to the attack described in the original meltdown paper
+- and compared to the attack described in the original meltdown paper -->
 
-### A Meltdown-Type Attack
+This chapter demonstrates that a Meltdown-type attack can be performed inside our CPU emulator.
+This is shown through an example program that performs such an attack. The example program and the inner workings of the attack are described in [@sec:evaluation_meltdown_attack].
+In [@sec:evaluation_meltdown_cmp] the attack is categorized according to the naming scheme established by Canella et al. [@transient_fail] and compared to the attack described in the original Meltdown paper [@meltdown].
 
-- high-level explanation
+### A Meltdown-Type Attack {#sec:evaluation_meltdown_attack}
+
+<!-- - high-level explanation
   - Load byte from inaccessible memory. That triggers a fault
   - During the following transient execution, use loaded value to index into a "probe array"
   - That causes this entry of the probe array to be cached, encodes the value in the cache
   - After the transient execution, check which entry of the probe array is cached
     - By loading each entry and measuring the access time
-  - That way we leak the value that is supposed to be inaccessible
+  - That way we leak the value that is supposed to be inaccessible -->
 
-- code: meltdown part
-    lb r1, r0, 0xc000
-    slli r1, r1, 4
-    lb r2, r1, 0x1000
+The Meltdown-type attack described in this section starts with loading a byte from inaccessible memory. This access causes a fault.
+During the following transient execution, the value resulting from the faulting load is used to index into a previously prepared *probe array*.
+This causes the accessed entry of the probe array to be cached. Thus, the value resulting from the faulting load is encoded into the cache.
+After the transient execution has ended and the rollback has been performed, the attack checks which entry of the probe array is cached. This is achieved by loading each entry and measuring its access time.
+In this way, the value retrieved by the faulting load is leaked, even though it is supposed to be inaccessible.
+
+<!-- - code: meltdown part
 - explanation meltdown part
   - Load byte from the inaccessible address 0xc000
   - Shift by 4, multiplying the value by 0x10, because the entries of our probe array are 0x10 bytes apart
   - Use resulting value to index into the probe array starting at address 0x1000
 - when we step through the program, we see that the faulting load indeed provides the secret value 0x42 to the following instructions (screenshot)
-- after the transient execution is ended by the rollback, we can investigate the state of the cache to see that entry 0x42 of the probe array is cached (screenshot)
+- after the transient execution is ended by the rollback, we can investigate the state of the cache to see that entry 0x42 of the probe array is cached (screenshot) -->
 
-- code: cache decoding
-    // Loop over the probe array, record the shortest access time:
+The code in [@lst:our_meltdown] illustrates the core part of our attack. It loads a byte from the inaccessible memory address `0xc000`.
+The resulting value is shifted to the left by 4 bits, multiplying the value by 16. This is done because the entries of our probe array are 16 bytes apart.
+The shifted value is then used to index into the probe array, which starts at address `0x1000`.
+When stepping through the program until the faulting load instruction has executed and provided its result to subsequent instructions, as is shown in (TODO screenshot), we observe that the faulting load indeed provides the secret value `0x42` to the following `slli` instruction.
+After the transient execution is terminated by the rollback, we use the `show cache` command to investigate the state of the cache. As (TODO screenshot) shows, we see that the entry at index `0x42` of the probe array is cached.
+Thus, the secret value obtained during transient execution was successfully encoded into the cache.
 
-    // Index of shortest access, in bytes
-    addi r1, r0, 0
-    // Time of shortest access
-    addi r2, r0, -1
-    // Current index, in bytes
-    addi r3, r0, 0
-    // Probe array length, in bytes
-    addi r4, r0, 0x1000
-    probe:
+```{float=tbp #lst:our_meltdown}
+lb r1, r0, 0xc000
+slli r1, r1, 4
+lb r2, r1, 0x1000
+```
 
-    // Perform timed access into probe array
-    fence
-    rdtsc r5
-    lb r7, r3, 0x1000
-    fence
-    rdtsc r6
-    sub r5, r6, r5
+: Core part of our Meltdown-type attack, loading a byte from an inaccessible address and encoding it into the cache.
 
-    // Update shortest access
-    bgeu r5, r2, skip
-    addi r1, r3, 0
-    addi r2, r5, 0
-    skip:
-
-    // Increment index and loop
-    addi r3, r3, 0x10
-    bne r3, r4, probe
+<!-- - code: cache decoding
 - explanation cache decoding
   - Loops over the probe array and records the shortest access time
   - During the loop, register r1 stores the index of the shortest seen access, and register r2 stores its access time. Register r3 stores the current index into the probe array, and register r4 stores the length of the probe array. To simplify the code, the indices and lengths are stored in units of bytes and not in units of probe array entries.
@@ -226,31 +221,82 @@ The end of the program is marked by the end message as well as the empty instruc
   - The fence following the lb ensures that the load completes before the cycle count is recorded
   - The second part of the loop body, starting at line X, updates the shortest access index and time in the case that the load was the shortest yet
   - The loop tail starts at line X and increments the index into the probe array. It checks if the end of the probe array was reached, looping back up to line X if that is not the case.
-- when executing the whole program, we can see that index 0x42 had the shortest access time; the secret was transmitted from the transient execution successfully
+- this cache decoding step does not work with the default cache configuration, since it is only able to store up to 4*4=16 entries; to store 256 cache entries, 64 sets and 4 ways are used
+- when executing the whole program, we can see that index 0x42 had the shortest access time; the secret was transmitted from the transient execution successfully -->
 
-- which components interact to make it work
+The code in [@lst:our_meltdown_decode] displays the cache-decoding part of our attack. It loops over the probe array and records the shortest access time.
+During the loop, register `r1` stores the index of the shortest seen access, and register `r2` stores its access time. Register `r3` stores the current index into the probe array, and register `r4` stores the length of the probe array. To simplify the code, the indices and lengths are stored in units of bytes and not in units of probe array entries.
+These registers are initialized in the block starting in line X.
+The loop body starting in line X performs an access into the probe array, and records the access time.
+This is done by surrounding the `lb` instruction that performs the access with `fence; rdtsc` sequences that record the cycle counter before and after the access.
+The fence in front of the `lb` instruction ensures that the recorded cycle count closely matches the time the `lb` instruction is issued. It waits for preceding instructions to complete, so that the reservation station has enough free slots to issue the `lb` instruction immediately after issuing the `rdtsc` instruction.
+The fence following the `lb` instruction ensures that the load completes before the second cycle count is recorded.
+The second part of the loop body, starting at line X, updates the shortest access index and time in the case that the load was the shortest yet.
+The loop tail starts at line X and increments the index into the probe array. It checks if the end of the probe array was reached, looping back up to line X if that is not the case.
+When we observe the register values after having executed the whole program, as is shown in (TODO screenshot), we can see that index `0x42` had the shortest access time; the secret was decoded from the cache successfully.
+Since the default cache configuration established in [@sec:config-cache] uses 4 cache sets and 4 cache ways, iterating over the probe array might evict the cached entry before the short access time was seen.
+Thus, for this attack we use 64 cache sets and 4 cache ways. TODO: actually try this
+
+```{float=tbp #lst:our_meltdown_decode}
+// Loop over the probe array, record the shortest access time:
+
+// Index of shortest access, in bytes
+addi r1, r0, 0
+// Time of shortest access
+addi r2, r0, -1
+// Current index, in bytes
+addi r3, r0, 0
+// Probe array length, in bytes
+addi r4, r0, 0x1000
+probe:
+
+// Perform timed access into probe array
+fence
+rdtsc r5
+lb r7, r3, 0x1000
+fence
+rdtsc r6
+sub r5, r6, r5
+
+// Update shortest access
+bgeu r5, r2, skip
+addi r1, r3, 0
+addi r2, r5, 0
+skip:
+
+// Increment index and loop
+addi r3, r3, 0x10
+bne r3, r4, probe
+```
+
+: Cache-decoding part of our Meltdown-type attack, looping over the probe array and recording the shortest access time.
+
+<!-- - which components interact to make it work
   - out of order execution that leads to a transient execution window after the faulting load
   - memory subsystem that provides the value stored in memory as the result of the load, even when it faults
-  - cache that is used as a transmission channel from the transient execution domain to the architectural domain
+  - cache that is used as a transmission channel from the transient execution domain to the architectural domain -->
 
-### Comparison With Meltdown-Type Attacks on Real CPUs
+Several components of our CPU emulator interact to make this Meltdown-type attack possible.
+Out-of-order execution leads to a transient execution window after the faulting load.
+The memory subsystem provides the value stored in memory as the result of the load instruction, even though the instruction faults.
+The cache is used as a transmission channel from the transient execution domain to the architectural domain.
 
-- explain which Meltdown variant it implements: Meltdown-US-L1 and Meltdown-US-Mem
+### Comparison With Meltdown-Type Attacks on Real CPUs {#sec:evaluation_meltdown_cmp}
+
+<!-- - explain which Meltdown variant it implements: Meltdown-US-L1 and Meltdown-US-Mem
   - according to transient-fail naming scheme
     - first component describes how the leaking fault is triggered
     - second component describes where the leaked data comes from
   - our scheme for checking memory accesses models the way the user/supervisor-bit is usually set up in x86 operating systems, in that the top half of memory is reserved for the kernel and accesses to it cause a fault
-  - if the value accessed by the meltdown snippet already resides in the cache, the value is leaked from the cache. this results in meltdown-us-l1. if the value is not cached, it is leaked from main memory. this results in meltdown-us-mem
+  - if the value accessed by the meltdown snippet already resides in the cache, the value is leaked from the cache. this results in meltdown-us-l1. if the value is not cached, it is leaked from main memory. this results in meltdown-us-mem -->
 
-- compare to example program from meltdown paper
+Meltdown-type attacks are typically classified according to the naming scheme first introduced by Canella et al. [@transient_fail].
+This scheme adds two name components. The first component describes the microarchitectural condition that causes the leaking fault. The second component describes the microarchitectural element that data is leaked from.
+Our scheme for checking memory accesses models the way the US-bit is usually set up on x86 systems, where the top half of memory is reversed for the kernel and accesses to it cause a fault.
+If the value accessed by our attack already resides in the cache, the value is leaked from the cache. This results in a variant similar to Meltdown-US-L1. If the value is not cached, it is leaked from main memory, which results in a variant similar to Meltdown-US-Mem.
+
+<!-- - compare to example program from meltdown paper
   - code: the small meltdown snippet
-        ; rcx = kernel address, rbx = probe array
-        xor rax, rax
-        retry:
-        mov al, byte [rcx]
-        shl rax, 0xc
-        jz retry
-        mov rbx, qword [rbx + rax]
   - explain how it works
     - loads a byte from a kernel address
     - shifts the value by 12, multiplying it by 0x1000
@@ -260,7 +306,22 @@ The end of the program is marked by the end message as well as the empty instruc
     - very similar to our code snippet
     - beside the differing size of the probe array entries, the only difference is the retry loop
     - on real x86 CPUs the faulting load only leaks data sporadically
-    - our emulator is completely deterministic -> attack works every time
+    - our emulator is completely deterministic -> attack works every time -->
+
+[Listing @lst:orig_meltdown] displays the core part of the original Meltdown attack, taken verbatim from the corresponding paper [@meltdown].
+This code loads a byte from a kernel address, causing a fault. In the following transient execution, the value retrieved by the faulting load is shifted left by 12 bits, multiplying the value by 4096. If the resulting value is zero, the faulting load is executed again, until it produces a non-zero value. Finally, the shifted value is used to index into the probe array.
+This core part of the attack is very similar to the core part of our Meltdown-type attack (described above and shown in [@lst:our_meltdown]).
+Beside the differing size of the probe array entries, the only difference is the retry loop. On real x86 CPUs the faulting load only leaks data sporadically. Because of this, immediately performing the load again if the leak fails increases the attack's performance [@meltdown, sec. 5.2]. In contrast to this, our CPU emulator is completely deterministic; the core of our attack succeeds every time and no retry loop is necessary.
+
+\begin{lstlisting}[caption={Core of the original Meltdown attack, loading a byte from an inaccessible address and encoding it into the cache. {\autocite[lst.~2]{meltdown}}}, float=tbp, label=lst:orig_meltdown]
+; rcx = kernel address, rbx = probe array
+xor rax, rax
+retry:
+mov al, byte [rcx]
+shl rax, 0xc
+jz retry
+mov rbx, qword [rbx + rax]
+\end{lstlisting}
 
 ## Demonstration of a Spectre-Type Attack {#sec:evaluation_spectre}
 
