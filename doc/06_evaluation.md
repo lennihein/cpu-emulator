@@ -40,7 +40,7 @@ As we see in [@fig:ep_01_start], the registers and the shown memory section are 
 As we can see in [@fig:ep_02_two_steps], within the first two `steps` the instruction queue is filled with the first five instructions, which are subsequently issued into the reservation station as per Tomasulo's algorithm for out-of-order execution as discussed in [@sec:Tomasulo].
 Instruction 0 is immediately executed, since it is in the first slot of the reservation station and all of it operands are ready as soon as it is issued.
 By the checkmark in the rightmost column in the reservation station, we can see that it is ready to retire.
-Since its result is broadcasted directly after the instruction finishes executing, register 1 and the first operand of instruction 1 are already set to 0x003.
+Since its result is broadcasted directly after the instruction finishes executing, register 1 and the first operand of instruction 1 are already set to `0x003`.
 
 As per Tomasulo's algorithm, in [@fig:ep_02_two_steps] we see `SlotIDs` as placeholders for the result of the instruction in the respective reservation station slot, both in the registers and the operand lists of instructions in the reservation station. 
 For example, register 2 is waiting for the result produced by the `addi` instruction in slot 2 of the reservation station and contains the placeholder `RS 002`.
@@ -59,7 +59,7 @@ Since memory instructions take longer to execute, the `addi` instruction in slot
 
 ![Context screen after out-of-order execution of the `addi` instruction in slot 5](fig/ep_05_addi_ooe_full.png){#fig:ep_05_addi_ooe_full width=470px height=317px shortcaption='Context screen after out-of-order execution of the `addi` instruction in slot 5'}
 
-During the execution of the `sw` instruction, the value 0x0342 is stored as a `Word` starting at memory address 4. 
+During the execution of the `sw` instruction, the value `0x0342` is stored as a `Word` starting at memory address 4. 
 In our example this is highlighted further by the the memory addresses 4-7 changing their color to red.
 This signifies that they are placed in the cache as a `cacheline` of length four bytes.
 Since we cannot visualize the whole memory all at once, we also offer a more detailed  visualization of the whole cache, as depicted in [@fig:ep_07_cache].
@@ -69,16 +69,16 @@ Therefore, we can already observe the aforementioned changes in the memory visua
 ![Cached target address of the `sw` instruction](fig/ep_07_cache.png){#fig:ep_07_cache shortcaption='Cached target address of the `sw` instruction'}
 
 The `lb` instruction in slot 4 only reads one byte from memory address 5.
-Since the `sw` instruction places its `Word` value into memory in little endian order, the result of reading one byte from memory address 5 is 0x03.
+Since the `sw` instruction places its `Word` value into memory in little endian order, the result of reading one byte from memory address 5 is `0x03`.
 This can be observed as the new value of register 4 in [@fig:ep_08_legal_load_result], where the `lb` instruction has finished executing and is ready to retire, as shown by the tickmark.
 
 ![Context screen with the `lb` instruction in slot 4 ready to retire](fig/ep_08_legal_load_result.png){#fig:ep_08_legal_load_result width=470px height=317px shortcaption='Context screen  with the `lb` instruction in slot 4 ready to retire'}
 
 With the `lb` instruction in slot 6 of the reservation station, we attempt to load a value from the inaccessible part of the memory, as described in [@sec:memory].
-During the execution, the value 0x42 from the inaccessible address is present in the target register 3, as we can observe in [@fig:ep_08_legal_load_result].
+During the execution, the value `0x42` from the inaccessible address is present in the target register 3, as we can observe in [@fig:ep_08_legal_load_result].
 But before the instruction can retire, the fault is detected and the target register is rolled back to its previous state.
 Due to the rollback the reservation station is cleared and the subsequent instructions are put back into the instruction queue [@sec:rollback].
-In [@fig:ep_09_mem_fault] we can see the previous value of 0x83e8 from the address calculation in register 3, and the rolled back instruction queue and reservation station as well as the fault message.
+In [@fig:ep_09_mem_fault] we can see the previous value of `0x83e8` from the address calculation in register 3, and the rolled back instruction queue and reservation station as well as the fault message.
 
 ![Rolled back memory fault](fig/ep_09_mem_fault.png){#fig:ep_09_mem_fault width=470px height=317px shortcaption='Rolled back memory fault'}
 
@@ -92,7 +92,7 @@ Instead the `rtdsc` instruction, which follows the loop in the program, is put i
 
 ![Rolled back loop fault](fig/ep_12_loop_fault_full.png){#fig:ep_12_loop_fault_full width=470px height=317px shortcaption='Rolled back loop fault'}
 
-Lastly the `rdtsc` instruction is executed and shows in register 0 that the program took 0x0026 cycles to execute so far. 
+Lastly the `rdtsc` instruction is executed and shows in register 0 that the program took `0x0026` cycles to execute so far. 
 The end of the program is marked by the end message as well as the empty instruction queue and reservation station, as we can see in [@fig:ep_14_end].
 
 ![Context screen at the end of the execution of the example program](fig/ep_14_end.png){#fig:ep_14_end width=470px height=317px shortcaption='Context screen at the end of the execution of the example program'}
