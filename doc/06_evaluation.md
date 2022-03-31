@@ -196,19 +196,23 @@ In this way, the value retrieved by the faulting load is leaked, even though it 
 - after the transient execution is ended by the rollback, we can investigate the state of the cache to see that entry 0x42 of the probe array is cached (screenshot) -->
 
 The code in [@lst:our_meltdown] illustrates the core part of our attack. It loads a byte from the inaccessible memory address `0xc000`.
-The resulting value is shifted to the left by 4 bits, multiplying the value by 16. This is done because the entries of our probe array are 16 bytes apart.
+The resulting value is shifted to the left by 2 bits, multiplying the value by 4. This is done because the entries of our probe array are 4 bytes apart, which matches the default cache line size of our emulator.
 The shifted value is then used to index into the probe array, which starts at address `0x1000`.
-When stepping through the program until the faulting load instruction has executed and provided its result to subsequent instructions, as is shown in (TODO screenshot), we observe that the faulting load indeed provides the secret value `0x42` to the following `slli` instruction.
-After the transient execution is terminated by the rollback, we use the `show cache` command to investigate the state of the cache. As (TODO screenshot) shows, we see that the entry at index `0x42` of the probe array is cached.
+When stepping through the program until the faulting load instruction has executed and provided its result to subsequent instructions, as is shown in [@fig:meltdown1], we observe that the faulting load indeed provides the secret value `0x42` to the following `slli` instruction.
+After the transient execution is terminated by the rollback, we use the `show cache` command to investigate the state of the cache. As [@fig:meltdown2] shows, we see that the entry at index `0x42` of the probe array is cached.
 Thus, the secret value obtained during transient execution was successfully encoded into the cache.
 
 ```{float=tbp #lst:our_meltdown}
 lb r1, r0, 0xc000
-slli r1, r1, 4
+slli r1, r1, 2
 lb r2, r1, 0x1000
 ```
 
 : Core part of our Meltdown-type attack, loading a byte from an inaccessible address and encoding it into the cache.
+
+![The faulting load instruction (slot 0) provides the secret value `0x42` to the following instruction (slot 1).](fig/meltdown1.png){#fig:meltdown1}
+
+![After the rollback, the cache contains an entry with index `0x2` and tag `0x11`, which corresponds to address `0x1108` or index `0x42` of the probe array.](fig/meltdown2.png){#fig:meltdown2}
 
 <!-- - code: cache decoding
 - explanation cache decoding
@@ -234,9 +238,9 @@ The fence following the `lb` instruction ensures that the load completes before 
 The second part of the loop body, starting at line 21, updates the shortest access index and time in the case that the load was the shortest yet.
 The loop tail starts at line 27 and increments the index into the probe array. It checks if the end of the probe array was reached, looping back up to line 13 if that is not the case.
 
-When we observe the register values after having executed the whole program, as is shown in (TODO screenshot), we can see that index `0x42` had the shortest access time; the secret was decoded from the cache successfully.
+When we observe the register values after having executed the whole program, as is shown in [@fig:meltdown3], we can see that register `r1` contains the value `0x108`. This means that index `0x42` had the shortest access time; the secret was decoded from the cache successfully.
 Since the default cache configuration established in [@sec:config-cache] uses 4 cache sets and 4 cache ways, iterating over the probe array might evict the cached entry before the short access time was seen.
-Thus, for this attack we use 64 cache sets and 4 cache ways. TODO: actually try this
+Thus, for this attack we use 64 cache sets and 4 cache ways.
 
 ```{float=tb #lst:our_meltdown_decode}
 // Loop over the probe array, record the shortest access time:
@@ -248,7 +252,7 @@ addi r2, r0, -1
 // Current index, in bytes
 addi r3, r0, 0
 // Probe array length, in bytes
-addi r4, r0, 0x1000
+addi r4, r0, 0x400
 probe:
 
 // Perform timed access into probe array
@@ -260,17 +264,19 @@ rdtsc r6
 sub r5, r6, r5
 
 // Update shortest access
-bgeu r5, r2, skip
+bgu r5, r2, skip
 addi r1, r3, 0
 addi r2, r5, 0
 skip:
 
 // Increment index and loop
-addi r3, r3, 0x10
+addi r3, r3, 4
 bne r3, r4, probe
 ```
 
 : Cache-decoding part of our Meltdown-type attack, looping over the probe array and recording the shortest access time.
+
+![The probe array entry at offset `0x108` had the shortest access time, which corresponds to index `0x42`.](fig/meltdown3.png){#fig:meltdown3 width=555px height=84px}
 
 <!-- - which components interact to make it work
   - out of order execution that leads to a transient execution window after the faulting load
@@ -354,11 +360,11 @@ In this way, the secret value of the out-of-bounds array element is leaked, even
 
 The code in [@lst:our_spectre] illustrates the setup and core part of our attack. The block starting in line 1 performs a number of stores to prepare the victim array, starting at address `0x1000`. It stores eight zero bytes, followed by one byte with the value `0x41`, which constitutes the out-of-bounds element.
 This is followed by a loop over the victim array, starting in line 14. During this loop, register `r2` stores the index of the current element, and register `r3` stores the length of the victim array.
-The loop body starting in line 18 loads the current element of the victim array. It then shifts the element's value left by 4, multiplying it by 16. This is done because the entries of our probe array are 16 bytes apart. The shifted value is then used to index into the probe array, which starts at address `0x2000`.
+The loop body starting in line 18 loads the current element of the victim array. It then shifts the element's value left by 2, multiplying it by 4. This is done because the entries of our probe array are 4 bytes apart, which matches the default cache line size of our emulator. The shifted value is then used to index into the probe array, which starts at address `0x2000`.
 The loop tail starts at line 23 and increments the index into the victim array. It checks if the end of the victim array was reached, looping back up to line 18 if that is not the case.
 
-(TODO screenshot) shows the state of the BPU at the end of the last loop iteration. As we can see, the upcoming conditional branch that should terminate the loop is predicted as taken. This leads to an additional loop iteration with out-of-bounds index, that is only executed transiently. Continuing to the loop body, we observe that the out-of-bounds index is used to access the secret value behind the array, as shown in (TODO screenshot).
-After executing the whole program, we use the `show cache` command to investigate the state of the cache. As (TODO screenshot) shows, we see that the entry at index `0x41` of the probe array is cached.
+[Figure @fig:spectre1] shows the state of the BPU at the end of the last loop iteration. As we can see, the upcoming conditional branch that should terminate the loop is predicted as taken. This leads to an additional loop iteration with out-of-bounds index, that is only executed transiently. Continuing to the loop body, we observe that the out-of-bounds index is used to access the secret value behind the array, as shown in [@fig:spectre2].
+After executing the whole program, we use the `show cache` command to investigate the state of the cache. As [@fig:spectre3] shows, we see that the entry at index `0x41` of the probe array is cached.
 Thus, the secret value of the out-of-bounds array element was successfully encoded into the cache.
 
 ```{float=tb #lst:our_spectre}
@@ -382,7 +388,7 @@ loop:
 // Load array element
 lb r4, r2, 0x1000
 // Encode value in cache
-slli r4, r4, 4
+slli r4, r4, 2
 lb r4, r4, 0x2000
 // Increment loop index
 addi r2, r2, 1
@@ -394,7 +400,13 @@ bne r2, r3, loop
 
 : Setup and core part of our Spectre-type attack, iterating over an array and transiently accessing an out-of-bounds element.
 
-To decode the secret value from the cache, the technique displayed in [@lst:our_meltdown_decode] is used, which was already covered in detail in [@sec:evaluation_meltdown_attack].
+![The conditional branch is mapped to index 1 of the BPU, which has a counter of 3 or "strongly taken".](fig/spectre1.png){#fig:spectre1 width=82px height=261px}
+
+![The out-of-bounds access to element 8 of the victim array is about to be executed.](fig/spectre2.png){#fig:spectre2}
+
+![When the program finishes, the cache contains an entry with index `0x1` and tag `0x21`, which corresponds to address `0x2104` or index `0x41` of the probe array.](fig/spectre3.png){#fig:spectre3 width=247px height=487px}
+
+To decode the secret value from the cache, the technique displayed in [@lst:our_meltdown_decode] is used, which was already covered in detail in [@sec:evaluation_meltdown_attack]. The only difference is that the probe array of our Spectre-type attack is located at address `0x2000` instead of `0x1000`.
 
 <!-- - involved components
   - branch prediction
