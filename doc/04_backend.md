@@ -393,7 +393,7 @@ Additionally, no other instructions can be issued to the Reservation Station whi
 *Exceptions* in general are certain conditions that can occur during execution and require handling before execution can be continued. We distinguish between *architectural* and *microarchitectural* exceptions.
 
 Architectural exceptions are visible to the program being executed and are usually handled by that program or the underlying operating system.
-In our CPU simulation there is no operating system that could handle architectural exceptions, and requiring the program to handle these would increase the complexity of both our CPU and user programs.
+In our CPU emulator there is no operating system that could handle architectural exceptions, and requiring the program to handle these would increase the complexity of both our CPU and user programs.
 For this reason architectural exceptions are handled implicitly, by skipping execution of the instruction that caused the exception. After an exception occurred, execution continues with the following instruction instead.
 The only architectural exceptions present in our CPU are caused by invalid memory accesses, when a memory operation is performed on an inaccessible address.
 
@@ -530,16 +530,17 @@ Because of this, the BPU could be used as a transmission channel just like the c
 
 The result of a faulting load operation is made available to following instructions before the fault is handled.
 During transient execution, this result can be transmitted to the architectural domain via a cache-based channel.
-Thus, Meltdown-type attacks are possible in our CPU simulation.
+Thus, Meltdown-type attacks are possible in our CPU emulator.
+This is demonstrated and described in detail in [@sec:evaluation_meltdown].
+<!-- [Section @sec:evaluation_meltdown] describes and demonstrates such a Meltdown-type attack. -->
 
 <!-- - Why spectre is possible
   - During transient execution after a mispredicted branch, memory loads can be performed and their result encoded in the cache -->
 
 During the transient execution after a mispredicted branch, memory loads can be performed.
 In the same transient execution, their result can be transmitted to the architectural domain via a cache-based channel.
-Thus, Spectre-type attacks are possible in our CPU simulation.
-
-TODO: Reference to Meltdown and Spectre demos performed in the evaluation
+Thus, Spectre-type attacks are possible in our CPU emulator.
+This is demonstrated and described in detail in [@sec:evaluation_spectre].
 
 ## ISA {#sec:ISA}
 \marginpar{Melina Hoffmann}
