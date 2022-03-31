@@ -15,7 +15,7 @@ To this end, we `step` through an example program and introduce the central comp
 Introducing all the commands and visualizations our emulator implements with an example program would be out of scope of this section, but a complete list of commands is given in [chapter @sec:UI].
 
 This is our example program.
-it is included as `demo.tea`in our gitlab repository.
+it is included as `demo/demo.tea`in our gitlab repository.
 To produce the examples for this section, the program is run on the default config settings as discussed in [@sec:config].
 
     addi r1, r0, 3
@@ -55,7 +55,7 @@ This can be observed in [@fig:ep_05_addi_ooe_full] and [@fig:ep_08_legal_load_re
 
 After the `slli` and the `addi` instructions in slots 1 and 2 of the reservation station, the program contains two memory operations `sw` and `lb`.
 Since memory instructions take longer to execute, the `addi` instruction in slot 5 of the reservation station is executed out-of-order before the memory instructions retire.
-[@fig:ep_05_addi_ooe_full] shows the reservation station that still contains the `sw` and `lb` instructions but from which the `addi` instruction has already retired.
+[Figure @fig:ep_05_addi_ooe_full] shows the reservation station that still contains the `sw` and `lb` instructions but from which the `addi` instruction has already retired.
 
 ![Context screen after out-of-order execution of the `addi` instruction in slot 5](fig/ep_05_addi_ooe_full.png){#fig:ep_05_addi_ooe_full width=470px height=317px shortcaption='Context screen after out-of-order execution of the `addi` instruction in slot 5'}
 
@@ -382,6 +382,7 @@ Since our BPU uses a limited number of address bits to index its internal counte
 The original Spectre paper describes an attack very similar to our Spectre-type attack. In this attack, an array is repeatedly indexed in-bounds to train the branch predictor, and then a single time out-of-bounds to force a misprediction. During the following transient execution, the out-of-bounds access retrieves a secret value that is subsequently encoded into the cache. [@spectre, sec. IV]
 
 ## Mitigations Demonstration {#sec:evaluation_mitigations}
+\marginpar{Lennart Hein}
 
 As described in [@sec:meltdown-and-spectre-mitigations], there are several mitigations available, that can be used to protect against Meltdown and Spectre attacks. In the following, we will present our implementations of some of these mitigations, and discuss their effectiveness against the demonstrated attacks from [@sec:evaluation_meltdown_attack] and [@sec:evaluation_spectre_attack].
 
@@ -406,7 +407,7 @@ slli r1, r1, 4
 lb r2, r1, 0x1000
 ```
 
-After issuing a \texttt{continue} command which breaks at the rollback of the first instruction, only the first instruction has been executed. There is no transient execution window, and the secret value is not encoded in the cache. At the end of the program, while the target address is still in the cache, it can't be read by the attacker, and the encoded value in the cache will be located at \texttt{0x1000}, independently of the secret value.
+After issuing a \texttt{continue} command which breaks at the rollback of the first instruction, only the first instruction has been executed. There is no transient execution window, and the secret value is not encoded in the cache. At the end of the program, while the target address is still in the cache, it cannot be read by the attacker, and the encoded value in the cache will be located at \texttt{0x1000}, independently of the secret value.
 
 This mitigation also is effective against the demonstrated Spectre attack supplied in `demo/spectre.tea`.
 
@@ -442,13 +443,13 @@ lb r2, r1, 0x1000
 fence
 ```
 
-Stepping into the program, we can see that the first fence blocks following instructions from entering the reservation station. Only after the rollback occurs, the first load instruction retires and the fence allows subsequent instructions to enter the reservation station. Since the attacks depends on the subsequent instructions to be executed before the rollback is executed, the secret byte can not be encoded into the cache, and thus not leaked.
+Stepping into the program, we can see that the first fence blocks following instructions from entering the reservation station. Only after the rollback occurs, the first load instruction retires and the fence allows subsequent instructions to enter the reservation station. Since the attack depends on the subsequent instructions to be executed before the rollback is executed, the secret byte cannot be encoded into the cache, and thus not leaked.
 
 The mitigation also works against the demonstrated Spectre attack.
 
 ### Flushall Microcode Injection Mitigation
 
-The emulator allows the user to specify microcode programs, that are injected into the CPU after a rollback. One example how this can be used to implement a mitigation is the Flushall Microcode Injection Mitigation. Here we inject a microcode program that flushes the entire cache, after the rollback is executed. Since the secret byte is encoded into the cache, it subsequently is flushed and can not be read by the attacker.
+The emulator allows the user to specify microcode programs, that are injected into the CPU after a rollback. One example how this can be used to implement a mitigation is the Flushall Microcode Injection Mitigation. Here we inject a microcode program that flushes the entire cache, after the rollback is executed. Since the secret byte is encoded into the cache, it subsequently is flushed and cannot be read by the attacker.
 
 To enable this mitigation against the demonstrated Meltdown attack supplied in `demo/meltdown_small.tea`, we use the following configuration file:
 
@@ -457,6 +458,6 @@ Microprograms:
     InstrLoad: demo/flushall.tea
 ```
 
-Using \texttt{continue} will forward execution to the rollback. As indicated by the UI, the \texttt{flushall} and \texttt{fence} instructions are injected before regular execution can be resumed. Using \texttt{retire} followed by \texttt{show cache}, we can observe the cache being empty, thus the secret value can not be leaked.
+Using \texttt{continue} will forward execution to the rollback. As indicated by the UI, the \texttt{flushall} and \texttt{fence} instructions are injected before regular execution can be resumed. Using \texttt{retire} followed by \texttt{show cache}, we can observe the cache being empty, thus the secret value cannot be leaked.
 
 The mitigation also works against the demonstrated Spectre attack.
