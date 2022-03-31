@@ -10,8 +10,8 @@ Breaking up the source code into individual CPU components makes it easier to un
 Additionally, we have made simplifications and modifications in comparison to a real life CPU, so the emulator is as clear and easy to understand as possible while still implementing a functioning out-of-order execution and providing the necessary functionality for Meltdown and Spectre attacks.
 
 In this chapter we firstly introduce the components of our CPU emulator, how they work and interact and which part of a real life CPU they emulate in [@sec:components].
-Then, in [@sec:background-out-of-order-execution],  we explain how our emulator provides out of order execution and how it may differ from the Tomasulo algorithm introduced in [ @sec:Tomasulo].
-Subsequently, we show how we implemented rollbacks and exception handling, which are necessary for Meltdown and Spectre attacks, in [@sec:rollback].
+Then, in [ @sec:Tomasulo], we explain how our emulator provides out of order execution and how it may differ from the Tomasulo algorithm introduced in [@sec:background-out-of-order-execution].
+Subsequently, we show how we implement rollbacks and exception handling, which are necessary for Meltdown and Spectre attacks, in [@sec:rollback].
 Then we give an overview over the available instruction set architecture in [@sec:ISA].
 Lastly we show how our emulator can be adapted for different demonstrations and attacks via a config file without changing the source code in [@sec:config].
 
@@ -128,7 +128,7 @@ For a detailed description of the mechanics involved in memory operations, see [
 \marginpar{Melina Hoffmann}
 
 In modern CPUs, the CPU frontend provides an interface between the instructions in the memory and the execution engine.
-It contains components to fetch and decode the instructions from a cache and supply them to the CPU in a queue.
+It contains components to fetch and decode the instructions from a cache and to supply them to the CPU in a queue.
 It is also involved in speculative execution by predicting the result of conditional jumps and supplying instructions to the execution engine accordingly.
 [@skylake]
 
@@ -155,11 +155,11 @@ Real life CPUs benefit from stored target addresses since they have to expensive
 In our emulator, the parser ([@sec:parser]) decodes the jump labels from the assembler code and directly provides them to the frontend, so storing them in an additional buffer is unnecessary.
 We further forgo the GHT because it is not strictly necessary to execute a Meltdown or Spectre attack.
 Additionally, our emulator and its behavior are easier to understand and predict without it, which is important when implementing microarchitectural attacks for didactic purposes.
-The BPU of our emulator only consists of a PHT, which is enough for simple Spectre-PHT variants as we demonstrate in [@sec:evaluation_spectre].
+The BPU of our emulator only consists of a PHT, which is enough for simple Spectre variants as we demonstrate in [@sec:evaluation_spectre].
 
 The default PHT used in our emulator holds an array called `counter` of configurable length $2^n$ to store several predictions.
 The instructions are assigned to different prediction slots by the least significant $n$ bits of their index in the instruction list.
-For each of the slots, the prediction can take the four different values from zero to three, where zero and one indicate that the branch will probably not be taken and two and three indicate that the branch is likely to be taken.
+For each of the slots, the prediction can take the four different values from 0 to 3, where 0 and 1 indicate that the branch will probably not be taken and 2 and 3 indicate that the branch is likely to be taken.
 The source code for our emulator also contains a simpler BPU with only one slot for all instructions.
 While the more advanced BPU is used by default, the simple BPU can be chosen in the config file described in [@sec:config].
 
@@ -167,7 +167,6 @@ When the execution engine executes a branch instruction, the BPU is updated with
 This means that the counter has values 0 (strongly not taken), 1 (weakly not taken), 2 (weakly taken) and 3 (strongly taken).
 When the branch is actually taken, the counter is increased by one, unless it is already at 3 and cannot be increased further.
 Similarly the counter is decreased to as low as 0 when the branch is not actually taken.
-If the counter is at values 0 or 1, it predicts the branch as not being taken, and predicts it as taken if it has a value of 2 or 3.
 
 #### Instruction Queue {#sec:iq}
 
@@ -179,7 +178,7 @@ In our emulator, except for the BPU, the functionality of the CPU frontend is bu
 It is significantly simplified compared to a real life x86 CPU, especially since we only use one type of instructions instead of distinguishing between macro- and microinstructions, as we discuss in [@sec:ISA].
 They are already provided as a list by the parser ([@sec:parser]), which renders the decoding and optimization steps in the frontend unnecessary.
 
-The main task of our frontend is to act as an interface between the instruction list provided by the parser and the execution engine, wich is described in [@sec:execution].
+The main task of our frontend is to act as an interface between the instruction list provided by the parser and the execution engine, which is described in [@sec:execution].
 It provides and manages the instruction queue, which holds the instructions that the execution engine should issue next.
 Conditional branches with their respective BPU predictions are taken into account when filling the queue.
 This enables speculative execution which is needed for Spectre attacks, as we see in [@sec:meltdown-and-spectre].
@@ -191,8 +190,8 @@ This additional information is needed by the execution engine to handle mispredi
 
 When adding instructions to the queue, the frontend selects them from the instruction list, adds the additional information for the execution engine and places them into the instruction queue until the queue's maximum capacity is reached.
 The frontend maintains a program counter `pc` that points to the next instruction in the list that should be added to the queue.
-When the frontend encounters a branch instruction and the branch is predicted to be taken, the frontend adjusts the pc to resume adding instructions at the branch target.
-If a branch was mispredicted, the frontend provides a special function to reset the pc and refill the instruction queue with the correct instructions.
+When the frontend encounters a branch instruction and the branch is predicted to be taken, the frontend adjusts the `pc` to resume adding instructions at the branch target.
+If a branch was mispredicted, the frontend provides a special function to reset the `pc` and refill the instruction queue with the correct instructions.
 
 Additionally, the frontend provides a function to add a microprogram to the queue.
 It consists of a list of instructions separate from the parser instruction list.
@@ -202,9 +201,8 @@ This functionality can be used to implement mitigations against microarchitectur
 The frontend provides interfaces to both read and take instructions from the queue.
 It also provides a function that combines taking an instruction from the queue and refilling it.
 Additionally, the frontend has an interface for flushing the whole queue at once without taking the instructions from the queue.
-The latter can be used when demonstrating mitigations against microarchitectural attacks, as we see in [@sec:evaluation_mitigations].
 
-The frontend provides further basic interfaces, e.g. for reading the size the `instruction queue` and reading and setting the `pc`.
+The frontend provides further basic interfaces, e.g. for reading the size of the instruction queue and reading and setting the `pc`.
 These are used by the other components during regular execution, e.g. when issuing instructions to the execution engine, but also to reset the queue to a certain point in the program after an exception has occurred, see [@sec:rollback].
 Since our emulator only executes one program at a time, the other components can check via another interface whether the frontend has reached the end of the program.
 
@@ -298,22 +296,22 @@ Below, we provide a detailed look at our version of out-of-order execution and t
 ### Issuing Instructions
 
 Since we implement out-of-order execution according to Tomasulo's algorithm, our execution engine does not try to execute instructions directly when it receives them from the frontend.
-Instead, it issues them to the Reservation Station where multiple instructions can wait until all their operands are ready.
-If all operands of an instruction are ready, the Execution Engine can execute it.
+Instead, it issues them to the reservation station where multiple instructions can wait until all their operands are ready.
+If all operands of an instruction are ready, the execution engine can execute it.
 This does not generally happen in the order of instructions as provided by the program, but will always lead to the intended effect since data dependencies are respected.
 
 The instructions are provided by the frontend ([@sec:CPU_frontend]) in program order. 
-The Execution Engine issues them into the Reservation Station, if it is not yet fully occupied.
-The Reservation Station is modelled as a list of `slots` which can each hold an instruction together with additional information about the instruction.
+The execution engine issues them into the reservation station, if it is not yet fully occupied.
+The reservation station is modelled as a list of `slots` which can each hold an instruction together with additional information about the instruction.
 It is unified in that each spot in the list can hold slots for all types of instructions.
 This models the unified reservation stations of modern Intel CPUs, as we see in [@sec:background-out-of-order-execution].
 
-To issue an instruction, the Execution Engine creates a `slot` object that fits the type of the instruction and puts it into the Reservation Station.
+To issue an instruction, the execution engine creates a `slot` object that fits the type of the instruction and puts it into the reservation station.
 Besides the instruction itself, it holds additional information, including a list of the instruction's operands.
-While immediate operands can be directly converted to a Word, register operands have to be resolved during the issuing process.
+While immediate operands can be directly converted to a `Word`, register operands have to be resolved during the issuing process.
 
-The registers are modelled by a list in which each entry can either be a `Word` value or the ID of the slot in the Reservation Station which holds the instruction that will produce the next register value as its result.
-As we see in [@sec:execution], since the instructions are issued in program order, this reflects the expected register state at the point of issuing the current instruction, if the program was executed in order.
+The registers are modelled by a list in which each entry can either be a `Word` value or the ID of the slot in the reservation station which holds the instruction that will produce the next register value as its result.
+As we see in [@sec:execution], since the instructions are issued in program order, this reflects the expected register state at the point of issuing the current instruction if the program was executed in order.
 The only difference being, that the results of yet unexecuted instructions are being represented by the respective `SlotID`.
 To resolve the register operands, the current content of the respective register is added to the operand list, so the operand list can contain both `Words` and `SlotIDs`.
 As described below, `SlotIDs` in the operand list will be replaced by the result of the instruction which produces the value when it finishes executing.
@@ -323,20 +321,20 @@ To increase performance, real life CPUs practice register renaming in order to f
 Modern CPUs rename registers by assigning ISA level registers to different microarchitectural registers [@SCA].
 Since, as described in  [@sec:ISA], we do not differentiate between the ISA and microarchitectural level, and aim to keep our emulator easy to comprehend, we do not implement register renaming.
 
-Once the slot with the new instruction is placed into the Reservation Station, if the instruction will produce a result for a target register, the `SlotID` of the instruction is put into this target register.
+Once the slot with the new instruction is placed into the reservation station, if the instruction will produce a result for a target register, the `SlotID` of the instruction is put into this target register.
 This ensures, that when the next instruction is issued, the register state again represents the expected register state if the instructions where executed in-order.
-Note that placing the `SlotID` into the target register cannot only overwrite a Word value but also a `SlotID, if the previous instruction that uses this register as its target register is not yet fully executed.
+Note that placing the `SlotID` into the target register cannot only overwrite a `Word` value but also a `SlotID`, if the previous instruction that uses this register as its target register is not yet fully executed.
 This is not a problem, since every instruction, that may need the result of the respective instruction of the previous `SlotID` as an operand, already holds this `SlotID` in its own operand list.
 It will be notified of the result when it is ready, regardless of whether the `SlotID` is still present in the register or not.
 
 
 ### Executing Instructions
 
-According to the basic Tomasulo algorithm, when all operands of an instruction in the Reservation Station are ready, it is transferred to a free execution unit and executed, as explained in [@sec:background-out-of-order-execution].
-In our emulator, execution of the instructions is triggered by the `tick` function of the Execution Engine, which is executed once per CPU cycle.
+According to the basic Tomasulo algorithm, when all operands of an instruction in the reservation station are ready, it is transferred to a free execution unit and executed, as explained in [@sec:background-out-of-order-execution].
+In our emulator, execution of the instructions is triggered by the `tick` function of the execution engine, which is executed once per CPU cycle.
 We do not model a finite number of execution units as separate components.
-Instead, the `tick` function goes through the occupied slots in the Reservation Station and tries to execute each instruction by calling the `tick_execute` function of its respective slot.
-This follows the order of the slots in the Reservation Station, regardless of when the instruction in each slot was issued, i.e. regardless of their order in the program.
+Instead, the `tick` function goes through the occupied slots in the reservation station and tries to execute each instruction by calling the `tick_execute` function of its respective slot.
+This follows the order of the slots in the reservation station, regardless of when the instruction in each slot was issued, i.e. regardless of their order in the program.
 If the operands of the current instruction are not ready yet, i.e. there are still `SlotIDs` in the operand list, the instruction is skipped.
 
 Once the instruction is executed and produces a result, i.e. all operands are available and the wait time is over, according to Tomasulo's algorithm described in [@sec:background-out-of-order-execution], this result has to be broadcasted via the CDB to the other slots and the registers.
@@ -345,17 +343,17 @@ It goes through all registers and replaces all occurrences of the `slotID` of th
 It also notifies all occupied slots of the result together with the `slotID` of the instruction which produced it, so they can replace the `slotID` if it is in their operands.
 If a result is produced like this, the `tick` function returns without executing further slots.
 This mimics that a real life CDB can only broadcast one result each cycle.
-It has the side effect that instructions do not necessarily execute in the same number of ticks, depending on where they are in the reservation station.
+It has the side effect that instructions do not necessarily execute in the same number of `ticks`, depending on where they are in the reservation station.
 The `tick` function also returns before all slots have been executed if the instruction in a slot retires, in order to properly handle potentially faulting instruction as we see in [@sec:rollback].
                     
 ### Memory Hazards
 
 As described above, we handle data dependencies between instructions that use the same registers by using `SlotIDs` as placeholders for as yet uncomputed results.
 We also need to handle data dependencies between memory accesses.
-For this, each slot that contains a memory instruction also holds set of `SlotIDs` of other memory instructions that potentially lead to a memory hazard together with the current instruction.
+For this, each slot that contains a memory instruction also holds a set of `SlotIDs` of other memory instructions that potentially lead to a memory hazard together with the current instruction.
 The memory instruction is only executed when all other instructions from its list of potential hazards have retired.
 
-This list is filled when the memory address the instruction will access is computed, beforehand it is set to the placeholder value `none`.
+This list is filled when the memory address that the instruction will access is computed, beforehand it is set to the placeholder value `none`.
 To fill the list, the `_tick_execute` function of the slot goes through its `faulting-preceding` list that i.a. contains all in-flight memory instructions that precede the current instruction in program order, and includes them if they access the same address.
 If there is a previously issued memory instructions for which the memory address is not yet available, the instruction waits until the hazard list can be completed.
 
@@ -367,9 +365,9 @@ Additionally, to simplify fault handling, store instructions wait until all othe
 
 The `fence` instruction is a special instruction in that it does not produce a result or a lasting side effect in the other components of the emulator.
 It creates a fixed point in the execution of the program, effectively suspending the out-of-order execution with regards to the fence instruction, as we describe in further detail in  [@sec:ISA].
-It holds a list of all instructions that were already in the Reservation Station when itself was issued.
+It holds a list of all instructions that were already in the reservation station when itself was issued.
 Similar to the memory instructions, it waits for all the instructions in the list to be retired before executing itself.
-Additionally, no other instructions can be issued to the Reservation Station while it contains a `fence` instruction.
+Additionally, no other instructions can be issued to the reservation station while it contains a `fence` instruction.
 
 ## Exception- and Fault-Handling {#sec:rollback}
 
@@ -568,14 +566,14 @@ Also as in the RISC-V ISA, with our default configuration as described in [@sec:
 If needed, students can add further instructions by registering them with the parser as described in [@sec:parser].
 
 In the following subchapters we introduce the instructions of our default ISA.
-They are grouped according to their respective instruction type in the emulator except for the special instructions which are grouped together.
+They are grouped according to their respective instruction type in the emulator except for the special instructions which which do not share an instruction type but are still grouped together.
 
 #### Arithmetic and Logical Instructions Without Immediate {#sec:instr_alu}
 
 These are basic arithmetic and logical instructions that operate solely on register values, i.e. both source operands and the destination operand reference registers.
 For simplicity, we write, for example, Reg1 when referring to the value read from or stored in the register referenced by the first register operand.
 
-Each of these default instructions uses the respective python standard operator on our `Word` class to compute the result, except for the right shifts.
+Each of these default instructions uses the respective `python` standard operator on our `Word` class to compute the result, except for the right shifts.
 For the logical and the arithmetic right shift, the python standard right shift operator is used on the unsigned and the signed version of the register value respectively.
 When returning the result as a `Word`, it is truncated to the maximal word length by a modulo operation, if necessary. 
 This means, that any potential carry bits or overflows are effectively ignored.
@@ -635,7 +633,7 @@ andi& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 and Imm\\
 #### Memory Instructions {#sec:instr_mem}
 
 These instructions provide basic interactions with the emulated memory introduced in [@sec:memory].
-Load and store instructions exist in two versions, one that operates on `Word` length data chunks, for convenience, and one that operates on `Byte` length data chunks, for the fine granular access needed in micro architectural attacks.
+Load and store instructions exist in two versions, one that operates on `Word` length data chunks, for convenience, and one that operates on `Byte` length data chunks, for the fine granular access needed in microarchitectural attacks.
 The `flush` instruction flushes the cache line for the given address.
 The `flushall` instruction flushes the whole cache.
 The address is calculated in the same way for all memory instructions: \texttt{addr:=Reg2+Imm,} and \texttt{addr:=Reg+Imm} for the `flush` instruction respectively.
@@ -690,7 +688,7 @@ It returns the number of `ticks` the execution unit has executed so far into the
 <!--todo: This kind of information is used in real life micro architectural attacks [@source]. -->
 
 The `fence` instruction acts as a fixed point in the out-of-order execution.
-All instructions that are already issued in the execution unit at the point of issuing the `fence` instruction are executed before the `fence` is executed.
+All instructions that are already issued into the reservation station at the point of issuing the `fence` instruction are executed before the `fence` is executed.
 No new instructions are issued before the execution of the `fence` instruction is complete.
 This can be used to model mitigations against microarchitectural attacks, as demonstrated in [@sec:evaluation_mitigations].
 

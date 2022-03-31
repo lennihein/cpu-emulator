@@ -1,7 +1,6 @@
 # Implementation of Our Emulator
     thank you felix
-    so, after felix has already introduced our goal and has talked in general terms about the theoretical background and our plan for the emulator
-    I will talk about how we actually implemented our emulator
+    I will give an overview about how we actually implemented our emulator
         this will be a very selective overview over the implementation and design decisions
         I will have a strong focus on the aspects and components needed for the Meltdown and Spectre attacks which we will see during the practical demonstrations
             i.e. how we implemented out-of-order and speculative execution and how we handle microarchitectural faults
@@ -26,6 +25,7 @@
         firstly the CPU uses our parser to load the program the user wants to execute
         users can provide their programs to our emulator in a assembler style source code format
         per default we offer a range of arithmetic, branch and basic memory instructions and fence and rtdsc
+		they are based on a subset of the RISC-V ISA
         the parser that reads this code and provides it in an instruction list to the other components, where branch labels have already been resolved to point at the target instructions
         this is of course different from the von Neuman architecture that many modern computers use, where the program resides in general memory, but is much easier to use in case of our emulator
         
@@ -52,7 +52,6 @@
         single cache, no further buffers
             size and replacement strategy can be configured by the user
         also directly maintains and handles the main memory
-            possible since only one core
         only physical addresses, since there is no OS
         enough for our chosen meltdown and spectre variants
         
@@ -79,7 +78,7 @@
 
 ## Issuing instructions 
 	ee gets intructions out of the iq and has to issue them into the rs
-    when issueing an instruction into the reservation station, its register operands and its target register have to be resolved, i.e. the register name has to be replaced with the register value and in the instructions operand list
+    when issueing an instruction into the reservation station, its register operands and its target register have to be resolved, i.e. the register name has to be replaced with the register value in the instructions operand list
         as per Tomasulos algorithm, registers in our emulator can have two kinds of values
             Word data value: 
                 easy, just put this value as the operand value into the reservation station slot with the instruction
@@ -124,15 +123,9 @@
     without speculative execution, whenever we would encounter a conditional branch instruction we would have to wait until its operands are ready, compute the result of the condition, and then choose the next instruction based on whether we take the branch or not
     we have just seen the effort we go to with Tomasulos algorithm to stall as little as possible because of our "normal" arithmetic and memory instruction etc.
         also want a mechanism to prevent stalls b.c. of branch instructions as much as possible
-    
-    speculative execution basic principle
-        when we encounter a branch instruction, make a prediction on whether we will take this branch or not
-        start executing subsequent instructions based on this prediction
-            if the prediction was right, we did not stall and saved time
-            if it was false, we have to rollback the falsely executed instructions after the branch instruction is actually resolved, but did not loose more time than without speculative execution
-                I'll talk about rollbacks later
+		so modern CPUs implement specualtive execution
                 
-    need two centralc components for our speculative execution
+    to implement this in our emulator, we need two centralc components for our speculative execution
         branch prediction unit, that offers a prediction for each branch instruction
         component that ensures that we resume execution according to the prediction, in our emulator the CPU frontend with its instruction queue
 
@@ -146,7 +139,7 @@
         predictions are each handled by a simpe two-bit-saturating counter as introduced in the SCA lecture
 
 ## CPU frontend with instruction queue 
-	other central component of ooe
+	other central component of speculative 
     frontend with instruction queue
         in real life CPUs frontend multiple tasks, including taking instructions from memory and decoding them for the execution engine
             not necessary in our case, b.c. we get the instructions from the parser as a list that do not need further decoding
@@ -160,7 +153,6 @@
                 gets the respective prediction from the BPU
                 fills the queue accordingly by either "jumping" to the branch target, i.e. setting the pc to the branch target, and resuming to fill the instruction queue from this target on, or just increments the pc as usual if the branch is predicted not to be taken
 			
-	** screenshot of iq with instructions, event though we never actually take the jump (would be easy to see, if we had he time)
 		again an example from the execution our our demo program
 		can see a part of the assembler program, the instruction queue and the reservation station
 		very small loop consisting of one subi and the branch equal instruction
@@ -222,4 +214,4 @@ thank your for your attention for my part of our group presentation
 a lot of inmformation, but necessary for the following practical demonstrations
 before we start those, are there any questions so far?
 
-hand over (Wort übergeben?) to Lenni (Lennart Hein) who will show a more practical example/ start to give a more practival demonstration of what our emulator can do
+hand over (Wort übergeben?) to Lenni who will show a more practical example/ start to give a more practival demonstration of what our emulator can do
