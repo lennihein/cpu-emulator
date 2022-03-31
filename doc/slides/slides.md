@@ -288,7 +288,7 @@ Do you have any questions so far?
 
 ## Demo - Meltdown
 
-![](../fig/code.png){ style="margin: auto;" }
+![](../fig/code.png){ style="margin: auto;" height=95% }
 
 ## Spectre-Type Attack Demo
 
