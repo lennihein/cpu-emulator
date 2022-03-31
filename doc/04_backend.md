@@ -24,7 +24,7 @@ Lastly we show how our emulator can be adapted for different demonstrations and 
 \marginpar{Jan-Niklas Sohn}
 
 This section describes the individual components of our CPU emulator and various interactions between them. Each component is modelled after one or multiple components found in typical modern x86 CPUs.
-The main *CPU* component described in [@sec:CPU] initializes all other components and interfaces between them.
+The main CPU component described in [@sec:CPU] initializes all other components and interfaces between them.
 The parser component described in [@sec:parser] parses users' program code into a sequence of instruction objects.
 [@Sec:data] introduces the data representation used throughout the CPU, in particular with respect to memory accesses.
 The CPU frontend described in [@sec:CPU_frontend] supplies the execution engine with a stream of instructions.
@@ -52,7 +52,7 @@ Other functions exist to load programs from files and initialize the frontend an
 Users of our CPU emulator provide programs as an assembly-like source code.
 This source code is parsed by the `parser` module into a sequence of `Instruction` objects. Information about individual instructions is provided by the `instructions` module.
 The parsed instruction sequence is used throughout the rest of our CPU, indexed by the current program counter.
-This is in contrast to real x86 CPUs, which read and decode instructions from memory.
+This Harvard-style architecture is in contrast to x86 CPUs, where instructions and data share a single address space.
 However, parsing the program code once and from a textual representation simplifies the design of our CPU emulator, and for instance allows us to completely omit instruction memory from our memory model.
 
 <!-- - General instruction format: mnemonic followed by comma-separated operands, as is common in assembly languages
@@ -65,7 +65,7 @@ There are three different types of operands in our instruction set:
 
 - *Register* operands specify a register the instruction should operate on. They are introduced by an `r` followed by the decimal register number.
 
-- *Immediate* operands specify a 16-bit immediate value used by the instruction. They take on the usual decimal or hexadecimal form for integer literals, optionally prefixed by a sign.
+- *Immediate* operands specify a 16-bit immediate value used by the instruction. They take on the usual decimal (without prefix) or hexadecimal (prefixed with `0x`) forms for integer literals. Immediate values can optionally be prefixed by a sign, in which case they take the value of the corresponding two's complement signed integer.
 
 - *Label* operands specify the destination of a branch instruction. The label referenced has to be defined somewhere in the assembly file, using the label name followed by a colon.
 
@@ -99,7 +99,7 @@ The mechanisms involved in the execution engine are described in detail in [@sec
 - Two passes: first to extract all labels, second to actually parse instructions -->
 
 Our parser is based on an abstract description of the instructions of our instruction set. This description is limited to the instruction's mnemonic and the number and types of its operands. The parser handles all instructions uniformly and has no information about the semantics of any instruction.
-Operation of the parser is divided into two passes over the input file. The first pass exclusively handles label definitions, which consist of a label name followed by a colon. The parser maintains an internal directory of labels, associating each label name with the immediately following instruction.
+Operation of the parser is divided into two passes over the input file. The first pass exclusively handles label definitions. The parser maintains an internal directory of labels, associating each label name with the immediately following instruction.
 The second pass parses the actual program, with one instruction per line. After determining the mnemonic and looking up the corresponding instruction, it parses all operands, subject to the rules for operand types described above.
 Having identified the instruction and parsed all operands, the parser builds an `Instruction` object, which models a concrete instruction in program code. Every `Instruction` object references the `InstructionKind` object of the instruction it represents, and contains the concrete values of all operands.
 During both passes, the parser skips over any comments, which are lines starting with two slashes (`//`).
@@ -254,7 +254,7 @@ Just like the execution engine of modern x86 processors, our execution engine ex
   - Also used to model Load Buffer and Store Buffer, specifics of memory accesses are handled by the slots directly
   - Instructions' ability to execute concurrently only limited by available slots, no concept of Execution Units that instructions need to be dispatched to; instructions execute in slots directly -->
 
-The execution engine contains the Reservation Station with a fixed number of instruction slots. Each slot contains an instruction that is currently being executed. We call such instructions *in-flight*.
+The execution engine contains the Reservation Station with a fixed number of instruction slots. Each slot is either empty or contains an instruction that is currently being executed. We call such instructions *in-flight*.
 Our Reservation Station is unified, i.e. each slot can contain any kind of instruction. The same is often found in modern CPUs [@skylake].
 The slots of our Reservation Station are also used to model Load Buffers and Store Buffers; the specifics of executing memory accesses are handled by the slots directly instead of separate components.
 We also have no concept of Execution Units that instructions need to be dispatched to, which means that instructions' ability to execute concurrently is only limited by the number of available slots.
