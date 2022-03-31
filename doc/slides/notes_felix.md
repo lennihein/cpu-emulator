@@ -80,6 +80,7 @@ Consists of 3 components
 - Turns out: Rollbacks leave traces (caches)
 - Idea: Use faulting instrc. to obtain secret, embed in cache, await rollback, retrieve
 - Original: Meltdown-US-L1
+  - user/supervisor bit
   - US: no permission for page
   - L1: data to be stolen from L1 cache
   - Steps: oracle array, illegal read, embed secret-dependent oracle entry, wait, retrieve
