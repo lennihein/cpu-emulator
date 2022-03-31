@@ -1,7 +1,7 @@
 # Demonstration and Evaluation {#sec:evaluation}
 \marginpar{Melina Hoffmann}
 
-As specified in [chapter @sec:task], our goal is to implement a CPU emulator that offers out-of-order and speculative exection in order to demonstrate a Meltdown and a Spectre attack.
+As specified in [chapter @sec:task], our goal is to implement a CPU emulator that offers out-of-order and speculative execution in order to demonstrate a Meltdown and a Spectre attack.
 In this chapter we demonstrate that our emulator allows the user to execute both a Meltdown and a Spectre attack, with the use of basic example programs. 
 Firstly, we introduce the general functionality and visualization of our emulator on a simple example program that does not yet implement microarchitectural attacks in [@sec:evaluation_example].
 Then, we demonstrate both the Meltdown and the Spectre variant which are possible on our emulator in [@sec:evaluation_meltdown] and [@sec:evaluation_spectre] respectively.
@@ -36,12 +36,12 @@ As we see in [@fig:ep_01_start], the registers and default memory section are in
 ![Context screen at the start of the program](fig/ep_01_start.png){#fig:ep_01_start width=470px height=317px shortcaption='Context screen at the start of the program'}
 
 
-As we can see in [@fig:ep_02_two_steps], within the first two `steps` the instruction queue is filled with the first five instructions, which are subsequently issued into the reservation station as per Tomasulos algorithm for out-of-order execution [@sec:Tomasulo].
-Instruction 0 is immediatly executed, since it is in the first slot of the reservation station and all are operands ready as soon as it is issued.
+As we can see in [@fig:ep_02_two_steps], within the first two `steps` the instruction queue is filled with the first five instructions, which are subsequently issued into the reservation station as per Tomasulo's algorithm for out-of-order execution [@sec:Tomasulo].
+Instruction 0 is immediately executed, since it is in the first slot of the reservation station and all are operands ready as soon as it is issued.
 By the checkmark in the rightmost column in the reservation station, we can see that it is ready to retire.
-Since its result is broadcasted directly after the instruction finishes executing, register 1 and the first operand of intruction 1 are already set to 0x003.
+Since its result is broadcasted directly after the instruction finishes executing, register 1 and the first operand of instruction 1 are already set to 0x003.
 
-As per Tomasulos algorithm, in [@fig:ep_02_two_steps] we see `SlotIDs` as placeholders for the result of the instruction in the respective reservation station slot, both in the registers and the operand lists of instructions in the reservation station. 
+As per Tomasulo's algorithm, in [@fig:ep_02_two_steps] we see `SlotIDs` as placeholders for the result of the instruction in the respective reservation station slot, both in the registers and the operand lists of instructions in the reservation station. 
 For example, register 2 is waiting for the result produced by the `addi` instruction in slot 2 of the reservation station and contains the placeholder `RS 002`.
 Note in particular, that for the `slli` instruction with `SlotID` 1 we see that its target register 2 already contains the `SlotID` of the next instruction. 
 But in the operand list of the `addi` in slot 2 the reservation station we can see the `SlotID` of the `slli` instruction waiting to be replaced with the result value.
@@ -73,7 +73,7 @@ This can be observed as the new value of register 4 in [@fig:ep_08_legal_load_re
 
 ![Context screen the `lb` instruction in slot 4 ready to retire](fig/ep_08_legal_load_result.png){#fig:ep_08_legal_load_result width=470px height=317px shortcaption='Context screen the `lb` instruction in slot 4 ready to retire'}
 
-With the `lb` instruction in slot 6 of the reservation station, we attempt to load a value from the inaccessible part of the memoy, as described in [@sec:memory].
+With the `lb` instruction in slot 6 of the reservation station, we attempt to load a value from the inaccessible part of the memory, as described in [@sec:memory].
 During the execution, the value 0x42 from the inaccessible address is present in the target register 3, as we can observe in [@fig:ep_08_legal_load_result].
 But before the instruction can retire, the fault is detected and the target register is rolled back to its previous state.
 Due to the rollback the reservation station is cleared and the subsequent instructions are put back into the instruction queue [@sec:rollback].
@@ -83,8 +83,8 @@ In [@fig:ep_09_mem_fault] we can see the previous value of 0x83e8 from the addre
 
 Now the `fence` instruction can be executed and the subsequent instructions are put into the instruction queue and issued to the reservation station.
 Since per the default settings all jumps are first predicted as taken, we speculatively fill the instruction queue and reservation station with as many iterations of the loop as fit into them, as seen in [@fig:ep_10_loop_full].
-Since the branch condition is already violated in the first interation of the loop and the branch is not taken, we have a misprediction that results in a fault message and a rollback. 
-During the rollback the reservation station is cleared of the excess instructions from the loop interations that are not executed after all. 
+Since the branch condition is already violated in the first interaction of the loop and the branch is not taken, we have a misprediction that results in a fault message and a rollback. 
+During the rollback the reservation station is cleared of the excess instructions from the loop interactions that are not executed after all. 
 Instead the `rtdsc` instruction, which follows the loop in the program, is put into the instruction queue, as we can see in [@fig:ep_12_loop_fault_full].
 
 ![Loop instructions are speculatively put into the instruction queue and issued into the reservation station](fig/ep_10_loop_full.png){#fig:ep_10_loop_full width=470px height=317px shortcaption='Loop instructions are speculatively put into the instruction queue and issued into the reservation station'}
