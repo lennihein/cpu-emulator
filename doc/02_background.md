@@ -8,9 +8,7 @@ A CPU consists of a frontend, an execution engine, and a memory subsystem. As pe
 
 The execution engine consists of multiple sets of execution units, each set being responsible for a specific type of microinstruction, such as loads, stores, or arithmetic. Further, the scheduler allows the execution units to work on independent instructions in parallel, while the reorder buffer makes sure that instructions retire in the correct order. A common data bus (CDB) connects the reorder buffer, scheduler, and execution units. Its purpose is further described in [@sec:background-out-of-order-execution]. [@gruss-habil, pp. 15-16]
 
-Lastly, the memory subsystem handles all memory accesses of the execution units by maintaining caches and ensuring data is fetched from higher level caches or DRAM if needed [@gruss-habil, p. 409]. Most importantly, requests for data can be served faster if this data is present in the cache as opposed to requests for data that must be fetched from memory first.
-
-A visualization of the aforementioned components can be found in [@fig:background-cpu].
+Lastly, the memory subsystem handles all memory accesses of the execution units by maintaining caches and ensuring data is fetched from higher level caches or DRAM if needed [@gruss-habil, p. 409]. Most importantly, requests for data can be served faster if this data is present in the cache as opposed to requests for data that must be fetched from memory first. A visualization of the aforementioned components can be found in [@fig:background-cpu].
 
 ![Simplified overview an Intel Skylake CPU [@gruss-habil, fig. 2.1]. For the memory subsystem, detailed knowledge of the load and store buffers, as well as the TLBs, is not required. The same applies to the allocation queue of the frontend.](fig/cpu.png){#fig:background-cpu width=450px height=675px shortcaption='Simplified overview of an Intel Skylake CPU [@gruss-habil].'}
 
