@@ -316,7 +316,7 @@ Do you have any questions so far?
 
 ## Spectre-Type Attack: Preparation
 
-```
+```c
 // Set up array at 0x1000, 8 elements, all zero
 addi r1, r0, 0x1000
 sb r0, r1, 0
@@ -334,7 +334,7 @@ sb r2, r1, 8
 
 ## Spectre-Type Attack: Execution
 
-```
+```c
 // Loop over array, encode every value in cache
 addi r2, r0, 0    // r2: Loop index
 addi r3, r0, 8    // r3: Array length

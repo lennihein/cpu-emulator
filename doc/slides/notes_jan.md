@@ -60,7 +60,7 @@ We will use a contrived example for that, to demonstrate the main point as simpl
 The first part writes zero bytes to the first 8 elements
 The last two lines write the secret value of 0x41 just past the array -->
 
-```
+```c
 // Set up array at 0x1000, 8 elements, all zero
 addi r1, r0, 0x1000
 sb r0, r1, 0
@@ -96,7 +96,7 @@ the remaining two lines are the tail of the loop,
     if the new index is not equal to the length of the array
 -->
 
-```
+```c
 // Loop over array, encode every value in cache
 addi r2, r0, 0    // r2: Loop index
 addi r3, r0, 8    // r3: Array length
