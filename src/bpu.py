@@ -40,8 +40,6 @@ class SimpleBPU:
     def __str__(self) -> str:
         return str(self.counter)
 
-# this is a 2bit counter, not a 2bit saturating counter!
-
 
 def bimodal_update(state: int, taken: bool) -> int:
     if taken is True:
