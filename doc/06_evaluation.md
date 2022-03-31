@@ -10,56 +10,11 @@ Lastly, we show different mitigations against these microarchitectural attacks o
 ## Example Program {#sec:evaluation_example}
 \marginpar{Melina Hoffmann}
 
-<!--
-brief example program showing all the features in a "normal" execution, e.g. adding stuff
-at least one instruction from each category
-at least one faulting (memory) instruction
-faulting branch
-main goals: 
-    shown what the vizualization looks like
-        default view
-        different components
-        especially cache
-        instructions in RS waiting for operands
-        memory instructions execution vs. retiring
-    show that the emulator works in general
-why are the files called .tea again? transient emulator assembly?
-
-einfach mal Programm aufschreiben und morgen ausführen und schauen, ob es so passt
-    sieht man irgendwas nicht? wäre eine andere Reihenfolge schöner?
-    
-Bilder erstmal reinwerfen wie sie kommen, evtl. am Donnerstag oder heute Abend wenn noch Zeit ist Bilder klein nebeneinander stellen oder so
-
-Demoprogramm ausführen und schauen ob es sich verhält wie erwartet
-ggf. Demoprogramm anpassen
-Plan machen, was genau man an jeder Stelle des Programms gezeigt bekommen soll
-anschauen, was für ein Bild lenni für das UI gemacht hat und wie er es eingefügt hat
-gleichzeitig Demoprogramm Schritt für Schritt ausführen und Text schreiben 
-    ggf. mit Windowssnippigtool Bilder machen und später einfügen
-auch nur das beschreiben und bebildern
-nicht in Details verlieren!
-
-go through everything I want to show of the code with pictures
-    maybe later look up how I can make the pictures small and group them
-    also: show commands as part of pictures: not main focus, but maybe mention with which commands the output was generated, if it fits
-    
-breakpoint weg lassen, kennen die ja aus gdb oder UI Kapitel
-
-
-![Example output of the context screen](fig/context.png){#fig:context width=470px height=317px shortcaption='Example output of the context screen'}
-.png Bilder in den Ordner fig/ legen
--->
-
 In this section, we introduce different components of the vizualisation of our emulator and showcase our emulators out-of-order and speculative execution.
 To this end, we `step` through an example program and introduce the central components of our vizualisation. 
 Introducing all the commands and vizualisations our emulator implements with an example program would be out of scope of this section, but a complete list of commands is given in [chapter @sec:UI].
 
 This is our example program.
-<!--
-It consists of some basic arithmetic operations that prepare addresses and content for the following memory accesses.
-Then we introduce and show the effects of the fence and the flush operation.
-Lastly the program includes a small loop to show the effects of our speculative execution.
--->
 To produce the examples for this section, the program is run on the default config settings as discussed in [@sec:config].
 
     addi r1, r0, 3
@@ -77,7 +32,6 @@ To produce the examples for this section, the program is run on the default conf
 
 When we start the emulator, it automatically loads the program and shows the first context screen, as described in [@sec:context_screen].
 As we see in [@fig:ep_01_start], the registers and default memory section are initialised to zero and the instruction queue and reservation station are still empty.
-<!-- pic ep_01_start.png-->
 
 ![Context screen at the start of the program](fig/ep_01_start.png){#fig:ep_01_start width=470px height=317px shortcaption='Context screen at the start of the program'}
 
@@ -91,22 +45,16 @@ As per Tomasulos algorithm, in [@fig:ep_02_two_steps] we see `SlotIDs` as placeh
 For example, register 2 is waiting for the result produced by the `addi` instruction in slot 2 of the reservation station and contains the placeholder `RS 002`.
 Note in particular, that for the `slli` instruction with `SlotID` 1 we see that its target register 2 already contains the `SlotID` of the next instruction. 
 But in the operand list of the `addi` in slot 2 the reservation station we can see the `SlotID` of the `slli` instruction waiting to be replaced with the result value.
-<!-- pic -ep_02_two_steps.png-->
 
 ![Context screen after two `steps`](fig/ep_02_two_steps.png){#fig:ep_02_two_steps width=470px height=317px shortcaption='Context screen after two `steps`'}
 
 In the next step, the fence instruction is issued into the reservation station.
 Therefore no more instructions are issued into the reservation station until all currently issued instructions have been executed.
 This can be observed in [@fig:ep_05_addi_ooe_full] and [@fig:ep_08_legal_load_result], in which the empty slots in the reservation station are not refilled with the instructions waiting in the instruction queue.
-<!--picture options ep_03_fence_full.png, ep_04_fence_rs.png -->
-
-<!-- ![Program, instruction queue and reservation station visualization after the `fence` instruction is issued](fig/ep_04_fence_rs.png){#fig:ep_04_fence_rs width=470px height=317px shortcaption='Program, instruction queue and reservation station visualization after the `fence` instruction is issued'} -->
 
 After the `slli` and the `addi` instructions in slots 1 and 2 of the reservation station, the program contains two memory operations `sw` and `lb`.
 Since memory instructions take longer to execute, the `addi` instruction in slot 5 of the reservation station is executed out-of-order before the memory instructions retire.
 [@fig:ep_05_addi_ooe_full] shows the reservation station that still contains the `sw` and `lb` instructions but from which the `addi` instruction has already retired.
-<!--Formulierung -->
-<!-- pic options ep_05_addi_ooe_full.png, ep_06_addi_ooe_rs.png-->
 
 ![Context screen after out-of-order execution of `addi` instruction](fig/ep_05_addi_ooe_full.png){#fig:ep_05_addi_ooe_full width=470px height=317px shortcaption='Context screen after out-of-order execution of `addi` instruction'}
 
@@ -116,18 +64,12 @@ This signifies that they are placed in the cache as a `cacheline` of length four
 Since we cannot visualize the whole memory all at once, we also offer a more detailed  visualization of the whole cache, as depicted in [@fig:ep_07_cache].
 The result of the store instruction is placed into memory multiple cycles before the instruction retires, both to model real world latencies in memory accesses and to leave enough time to check for faults during which transient execution happens, as we see in [@sec:evaluation_meltdown].
 Therefore, we can already observe the aforementioned changes in the memory visualization in [@fig:ep_05_addi_ooe_full], while the `sw` instruction is still being executed and present in the reservation station.
-<!--pic ep_05_addi_ooe_full.png, ep_07_cache.png -->
-
-<!--
-![Cache effect of the `sw` instruction](fig/ep_07_cache.png){#fig:ep_07_cache width=470px height=317px shortcaption='Cache effect of the `sw` instruction'}
--->
 
 ![Cached target address of the `sw` instruction](fig/ep_07_cache.png){#fig:ep_07_cache shortcaption='Cached target address of the `sw` instruction'}
 
 The `lb` instruction in slot 4 only reads one byte from memory address 5.
 Since the `sw` instruction places its `Word` value into memory in little endian order, the result of reading one byte from memory address 5 is 0x03.
 This can be observed as the new value of register 4 in [@fig:ep_08_legal_load_result], where the `lb` instruction has finished executing and is ready to retire, as shown by the tickmark.
-<!-- pc ep_08_legal_load_result.png-->
 
 ![Context screen the `lb` instruction in slot 4 ready to retire](fig/ep_08_legal_load_result.png){#fig:ep_08_legal_load_result width=470px height=317px shortcaption='Context screen the `lb` instruction in slot 4 ready to retire'}
 
@@ -136,7 +78,6 @@ During the execution, the value 0x42 from the inaccessible address is present in
 But before the instruction can retire, the fault is detected and the target register is rolled back to its previous state.
 Due to the rollback the reservation station is cleared and the subsequent instructions are put back into the instruction queue [@sec:rollback].
 In [@fig:ep_09_mem_fault] we can see the previous value of 0x83e8 from the address calculation in register 3, and the rolled back instruction queue and reservation station as well as the fault message.
-<!--ideally two pictures_ with 0x42 in register ep_08_legal_load_result.png and reset with fault message ep_09_mem_fault.png, ideally side by side -->
 
 ![Rolled back memory fault](fig/ep_09_mem_fault.png){#fig:ep_09_mem_fault width=470px height=317px shortcaption='Rolled back memory fault'}
 
@@ -145,7 +86,6 @@ Since per the default settings all jumps are first predicted as taken, we specul
 Since the branch condition is already violated in the first interation of the loop and the branch is not taken, we have a misprediction that results in a fault message and a rollback. 
 During the rollback the reservation station is cleared of the excess instructions from the loop interations that are not executed after all. 
 Instead the `rtdsc` instruction, which follows the loop in the program, is put into the instruction queue, as we can see in [@fig:ep_12_loop_fault_full].
-<!--pictures of iq and rs filled with multiple loop contents somewhere in the middle ep_10_loop_full.png, ep_11_loop_bottom.png, and of the fault message and  rolled back loop ep_12_loop_fault_full.png ep_13_loop_fault_bottom.png-->
 
 ![Loop instructions are speculatively put into the instruction queue and issued into the reservation station](fig/ep_10_loop_full.png){#fig:ep_10_loop_full width=470px height=317px shortcaption='Loop instructions are speculatively put into the instruction queue and issued into the reservation station'}
 
@@ -153,7 +93,6 @@ Instead the `rtdsc` instruction, which follows the loop in the program, is put i
 
 Lastly the `rdtsc` instruction is executed and shows in register 0 that the program took 0x0026 cycles to execute so far. 
 The end of the program is marked by the end message as well as the empty instruction queue and reservation station, as we can see in [@fig:ep_14_end].
-<!--pic ep_14_end.png -->
 
 ![Context screen at the end of the execution of the example program](fig/ep_14_end.png){#fig:ep_14_end width=470px height=317px shortcaption='Context screen at the end of the execution of the example program'}
 
