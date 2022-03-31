@@ -15,13 +15,13 @@ aspectratio: "169"
 
 - Background
 
-- Our task
-
-- Our approach
+- Our task & approach
 
 - Implementation
 
-- Demo
+- Demos:
+  - Meltdown
+  - Spectre
 
 - Conclusion
 <!--
@@ -100,7 +100,7 @@ Aufteilung:
 
 - Abuses speculative execution
 
-- Different variations. Here: prediction of branch instrs.
+- Different variations. Here: prediction of conditional branch instrs.
 
 - Spectre v1: Deliberately train BPU used by victim process
 
