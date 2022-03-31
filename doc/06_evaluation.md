@@ -226,18 +226,19 @@ lb r2, r1, 0x1000
 
 The code in [@lst:our_meltdown_decode] displays the cache-decoding part of our attack. It loops over the probe array and records the shortest access time.
 During the loop, register `r1` stores the index of the shortest seen access, and register `r2` stores its access time. Register `r3` stores the current index into the probe array, and register `r4` stores the length of the probe array. To simplify the code, the indices and lengths are stored in units of bytes and not in units of probe array entries.
-These registers are initialized in the block starting in line X.
-The loop body starting in line X performs an access into the probe array, and records the access time.
+These registers are initialized in the block starting in line 3.
+The loop body starting in line 13 performs an access into the probe array, and records the access time.
 This is done by surrounding the `lb` instruction that performs the access with `fence; rdtsc` sequences that record the cycle counter before and after the access.
 The fence in front of the `lb` instruction ensures that the recorded cycle count closely matches the time the `lb` instruction is issued. It waits for preceding instructions to complete, so that the reservation station has enough free slots to issue the `lb` instruction immediately after issuing the `rdtsc` instruction.
 The fence following the `lb` instruction ensures that the load completes before the second cycle count is recorded.
-The second part of the loop body, starting at line X, updates the shortest access index and time in the case that the load was the shortest yet.
-The loop tail starts at line X and increments the index into the probe array. It checks if the end of the probe array was reached, looping back up to line X if that is not the case.
+The second part of the loop body, starting at line 21, updates the shortest access index and time in the case that the load was the shortest yet.
+The loop tail starts at line 27 and increments the index into the probe array. It checks if the end of the probe array was reached, looping back up to line 13 if that is not the case.
+
 When we observe the register values after having executed the whole program, as is shown in (TODO screenshot), we can see that index `0x42` had the shortest access time; the secret was decoded from the cache successfully.
 Since the default cache configuration established in [@sec:config-cache] uses 4 cache sets and 4 cache ways, iterating over the probe array might evict the cached entry before the short access time was seen.
 Thus, for this attack we use 64 cache sets and 4 cache ways. TODO: actually try this
 
-```{float=tbp #lst:our_meltdown_decode}
+```{float=tb #lst:our_meltdown_decode}
 // Loop over the probe array, record the shortest access time:
 
 // Index of shortest access, in bytes
@@ -277,9 +278,12 @@ bne r3, r4, probe
   - cache that is used as a transmission channel from the transient execution domain to the architectural domain -->
 
 Several components of our CPU emulator interact to make this Meltdown-type attack possible.
-Out-of-order execution leads to a transient execution window after the faulting load.
-The memory subsystem provides the value stored in memory as the result of the load instruction, even though the instruction faults.
-The cache is used as a transmission channel from the transient execution domain to the architectural domain.
+
+- Out-of-order execution leads to a transient execution window after the faulting load.
+
+- The memory subsystem provides the value stored in memory as the result of the load instruction, even though the instruction faults.
+
+- The cache is used as a transmission channel from the transient execution domain to the architectural domain.
 
 ### Comparison With Meltdown-Type Attacks on Real CPUs {#sec:evaluation_meltdown_cmp}
 
@@ -291,7 +295,7 @@ The cache is used as a transmission channel from the transient execution domain 
   - if the value accessed by the meltdown snippet already resides in the cache, the value is leaked from the cache. this results in meltdown-us-l1. if the value is not cached, it is leaked from main memory. this results in meltdown-us-mem -->
 
 Meltdown-type attacks are typically classified according to the naming scheme first introduced by Canella et al. [@transient_fail].
-This scheme adds two name components. The first component describes the microarchitectural condition that causes the leaking fault. The second component describes the microarchitectural element that data is leaked from.
+This scheme adds two name components to the "Meltdown-" stem. The first component describes the microarchitectural condition that causes the leaking fault. The second component describes the microarchitectural element that data is leaked from.
 Our scheme for checking memory accesses models the way the US-bit is usually set up on x86 systems, where the top half of memory is reversed for the kernel and accesses to it cause a fault.
 If the value accessed by our attack already resides in the cache, the value is leaked from the cache. This results in a variant similar to Meltdown-US-L1. If the value is not cached, it is leaked from main memory, which results in a variant similar to Meltdown-US-Mem.
 
@@ -325,26 +329,105 @@ mov rbx, qword [rbx + rax]
 
 ## Demonstration of a Spectre-Type Attack {#sec:evaluation_spectre}
 
-- intro
+\marginpar{Jan-Niklas Sohn}
+
+<!-- - intro
   - very similar
-  - demonstrate the mechanism behind spectre-type attacks
-- example attack
+  - demonstrate the mechanism behind spectre-type attacks -->
+
+This chapter demonstrates that a Spectre-type attack can be performed inside our CPU emulator.
+This is shown through an example program that performs such an attack. The example program and the inner workings of the attack are described in [@sec:evaluation_spectre_attack].
+In [@sec:evaluation_spectre_cmp] the attack is categorized according to the naming scheme established by Canella et al. [@transient_fail] and compared to the attack described in the original Spectre paper [@spectre].
+
+### A Spectre-Type Attack {#sec:evaluation_spectre_attack}
+
+<!-- - example attack
   - not really an attack, since we only have a single privilege mode and cannot attack anyone
   - spectre part
-  - cache decoding: same as meltdown
-- involved components
+  - cache decoding: same as meltdown -->
+
+The Spectre-type attack described in this section starts with setting up an array of eight elements in memory, which are initialized to zero. This *victim array* is immediately followed by one out-of-bounds element with the *secret value* `0x41`.
+The victim array is then iterated over, using each array element to index into a probe array. Thus, every array element is encoded into the cache.
+This loop trains the BPU to predict the conditional branch that starts a new iteration as taken. After the final loop iteration, the BPU will thus still predict this branch as taken. This results in an additional loop iteration, that is only executed transiently. Nonetheless, this additional iteration accesses the out-of-bounds element and encodes the secret value in the cache.
+After the true branch condition has been resolved and the rollback performed, the attack checks which entry of the probe array is cached. This is achieved by loading each entry and measuring its access time, as already described for the Meltdown-type attack in [@sec:evaluation_meltdown_attack].
+In this way, the secret value of the out-of-bounds array element is leaked, even though it is supposed to be inaccessible.
+
+The code in [@lst:our_spectre] illustrates the setup and core part of our attack. The block starting in line 1 performs a number of stores to prepare the victim array, starting at address `0x1000`. It stores eight zero bytes, followed by one byte with the value `0x41`, which constitutes the out-of-bounds element.
+This is followed by a loop over the victim array, starting in line 14. During this loop, register `r2` stores the index of the current element, and register `r3` stores the length of the victim array.
+The loop body starting in line 18 loads the current element of the victim array. It then shifts the element's value left by 4, multiplying it by 16. This is done because the entries of our probe array are 16 bytes apart. The shifted value is then used to index into the probe array, which starts at address `0x2000`.
+The loop tail starts at line 23 and increments the index into the victim array. It checks if the end of the victim array was reached, looping back up to line 18 if that is not the case.
+
+(TODO screenshot) shows the state of the BPU at the end of the last loop iteration. As we can see, the upcoming conditional branch that should terminate the loop is predicted as taken. This leads to an additional loop iteration with out-of-bounds index, that is only executed transiently. Continuing to the loop body, we observe that the out-of-bounds index is used to access the secret value behind the array, as shown in (TODO screenshot).
+After executing the whole program, we use the `show cache` command to investigate the state of the cache. As (TODO screenshot) shows, we see that the entry at index `0x41` of the probe array is cached.
+Thus, the secret value of the out-of-bounds array element was successfully encoded into the cache.
+
+```{float=tb #lst:our_spectre}
+// Set up array at 0x1000, 8 elements, all zeroes, followed by one out-of-bounds 0x41 value
+addi r1, r0, 0x1000
+sb r0, r1, 0
+sb r0, r1, 1
+sb r0, r1, 2
+sb r0, r1, 3
+sb r0, r1, 4
+sb r0, r1, 5
+sb r0, r1, 6
+sb r0, r1, 7
+addi r2, r0, 0x41
+sb r2, r1, 8
+
+// Loop over array, encode every value in cache
+addi r2, r0, 0
+addi r3, r0, 8
+loop:
+// Load array element
+lb r4, r2, 0x1000
+// Encode value in cache
+slli r4, r4, 4
+lb r4, r4, 0x2000
+// Increment loop index
+addi r2, r2, 1
+// Loop while index is in bounds
+bne r2, r3, loop
+
+// Although the out-of-bounds element was never accessed, the value 0x41 is encoded in the cache
+```
+
+: Setup and core part of our Spectre-type attack, iterating over an array and transiently accessing an out-of-bounds element.
+
+To decode the secret value from the cache, the technique displayed in [@lst:our_meltdown_decode] is used, which was already covered in detail in [@sec:evaluation_meltdown_attack].
+
+<!-- - involved components
   - branch prediction
-  - cache as transmission channel
-- comparison with real attacks
+  - cache as transmission channel -->
+
+Several components of our CPU emulator interact to make this Spectre-type attack possible.
+
+- Branch prediction leads to a transient execution window after the mispredicted loop condition.
+
+- The cache is used as a transmission channel from the transient execution domain to the architectural domain.
+
+### Comparison With Spectre-Type Attacks on Real CPUs {#sec:evaluation_spectre_cmp}
+
+<!-- - comparison with real attacks
   - classification with transient-fail: Spectre-PHT-SA-IP
     - first component is the component that is trained to perform a misprediction
       - our BPU only has a single prediction mechanism, that matched the PHT from modern x86 CPUs
     - second and third component is if the training is performed in the same address space or a different one, and if the training uses a branch at the same or a branch at a different address
       - we only have a single address space
       - and in this case we perform the training in-place
-      - out-of-place would also be possible, since our BPU uses a limited number of address bits to index its internal counter table
-- comparison with spectre paper
-  - original spectre paper describes a very similar attack, where an array is repeatedly indexed in-bounds to train the branch predictor, and then a single time out-of-bounds to force a misprediction and access a secret value during the following transient execution
+      - out-of-place would also be possible, since our BPU uses a limited number of address bits to index its internal counter table -->
+
+Just like Meltdown-type attacks, Spectre-type attacks are typically classified according to the naming scheme first introduced by Canella et al. [@transient_fail].
+This scheme adds three name components to the "Spectre-" stem. The first component describes the microarchitectural element that is trained to perform a certain misprediction. The second component indicates whether the training is performed in the same address space ("SA") or a different address space ("CA") than the targeted misprediction, and the third component indicates whether the training is performed using a branch at the same (in-place, "IP") or a branch at a different (out-of-place, "OP") address than the misprediction.
+As described in [@sec:BPU], our BPU only has a single prediction mechanism that matches the PHT of modern x86 CPUs. Additionally, our CPU emulator only has a single address space.
+In the case of our Spectre-type attack, we perform the training in-place, using the same branch instruction that produces the misprediction.
+Because of this, our Spectre-type attack is classified as Spectre-PHT-SA-IP.
+Since our BPU uses a limited number of address bits to index its internal counter table, an out-of-place training is also possible, which would result in an attack classified as Spectre-PHT-SA-OP.
+
+<!-- - comparison with spectre paper
+  - original spectre paper describes a very similar attack, where an array is repeatedly indexed in-bounds to train the branch predictor, and then a single time out-of-bounds to force a misprediction and access a secret value during the following transient execution -->
+
+The original Spectre paper describes an attack very similar to our Spectre-type attack. In this attack, an array is repeatedly indexed in-bounds to train the branch predictor, and then a single time out-of-bounds to force a misprediction. During the following transient execution, the out-of-bounds access retrieves a secret value that is subsequently encoded into the cache. [@spectre, sec. IV]
 
 ## Mitigations Demonstration {#sec:evaluation_mitigations}
 
