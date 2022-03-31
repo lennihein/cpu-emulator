@@ -155,6 +155,131 @@ Aufteilung:
 ## Our version
 ![](../fig/our_cpu.png){ style="margin: auto;" }
 
+<!-- Übergang zu Melina-->
+
+## Implementation of our emulator
+
+- overview over our whole emulator
+
+- out-of-order execution
+
+- speculative execution
+
+- fault handling and rollbacks
+
+## CPU class
+
+![](../fig/our_cpu.png){ style="margin: auto;" }
+
+## Parser
+
+- assembler style source code
+
+- arithmetic, branch and memory instructions, fence, rtdsc
+
+- provides an instruction list 
+
+- only one type of instructions
+
+## CPU components
+
+![](../fig/our_cpu.png){ style="margin: auto;" }
+
+## Out-of-order execution
+
+- Execution Engine
+
+- Tomasulos algorithm
+
+    - unified reservation station
+    
+    - instructions wait for their operands
+    
+    - keeping track of operands and results
+    
+## Issuing instructions  
+
+- resolve operands and target register 
+
+- two kinds of register values: Word and SlotID
+
+![](../fig/mp_rs.png){ style="margin: auto;" }
+    
+- register state always reflects in-order register state with SlotIDs as placeholders
+
+## Common Data Bus (CDB)
+
+- execute instructions in reservation station
+
+- broadcast the result over the CDB
+    
+    - registers
+    
+    - reservation station slots
+    
+    - at most once per cycle
+    
+## Speculative execution
+
+- predict outcome of branch instructions
+
+- resume execution based on this prediction
+
+- two central components 
+
+    - branch prediction unit (BPU)
+    
+    - CPU frontend with instruction queue
+    
+## Branch Prediction Unit (BPU)
+
+- simplified version
+
+- array of predictions
+
+- 2-bit-saturating counter to handle predictions
+
+## CPU frontend with instruction queue
+
+- interface btw. instruction list and execution unit 
+
+- especially wrt speculative execution
+
+- manages instruction queue
+ 
+![](../fig/ep_11_loop_bottom.png){ style="margin: auto;" }
+
+## Faults and Rollbacks
+
+- microarchitectural fault situation that has to be handled bevore we can resume our execution
+
+    - mispredicted branches
+    
+    - attempt to access inaccessible memory
+    
+- have to handle the effects of transient execution
+
+## Rollback
+
+- only rollback the register state and the memory contents
+
+- no rollback in Cache and BPU
+
+- restore register state via snapshots
+
+- prevent memory rollbacks by executing stores in-order
+
+- handle faults in program order
+
+## Rollback after mispredicted branch
+
+![](../fig/ep_12_loop_fault_bottom.png){ style="margin: auto;" }
+
+## Thank you for your attention
+
+Do you have any questions so far?
+    
 ## References
 
 - ja
+
