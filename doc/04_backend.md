@@ -1,4 +1,4 @@
-# CPU emulator/ backend {#sec:backend}
+# CPU Emulator {#sec:backend}
 \marginpar{Melina Hoffmann}
 
 In this chapter, we introduce the backend of our emulator program.
@@ -11,11 +11,11 @@ Additionally, we have made simplifications and modifications in comparison to a 
 
 In this chapter we firstly introduce the components of our CPU emulator, how they work and interact and which part of a real life CPU they emulate in [@sec:components].
 Then, in [@sec:background-out-of-order-execution],  we explain how our emulator provides out of order execution and how it may differ from the Tomasulo algorithm introduced in [ @sec:Tomasulo].
-Subsequently, we show how we implemented rollbacks and exception handling, which are necessary for Meltdown and Spetre attacks, in [@sec:rollback].
-Then we give an overview over the availbale instruction set architecture in [@sec:ISA].
+Subsequently, we show how we implemented rollbacks and exception handling, which are necessary for Meltdown and Spectre attacks, in [@sec:rollback].
+Then we give an overview over the available instruction set architecture in [@sec:ISA].
 Lastly we show how our emulator can be adapted for different demonstrations and attacks via a config file without changing the source code in [@sec:config].
 
-## CPU Components and our equivalents/ models {#sec:components}
+## CPU Components and Our Models {#sec:components}
 
 \marginpar{Jan-Niklas Sohn}
 
@@ -101,7 +101,9 @@ Having identified the instruction and parsed all operands, the parser builds an 
 During both passes, the parser skips over any comments, which are lines starting with two slashes (`//`).
 Performing two passes in this way allows labels to be used both before and after their definition.
 
-### Data representation {#sec:data}
+### Data Representation {#sec:data}
+
+\marginpar{Jan-Niklas Sohn}
 
 <!-- - Based on 8-bit byte, 16-bit word
 - All registers store a word
@@ -122,7 +124,7 @@ Since our memory model is based on 8-bit *bytes*, words are separated into two 8
 The two individual bytes of words are stored in memory in little endian order, i.e. the least-significant byte is stored at the lowest memory address.
 For a detailed description of the mechanics involved in memory operations, see [@sec:memory].
 
-### CPU frontend {#sec:CPU_frontend}
+### CPU Frontend {#sec:CPU_frontend}
 \marginpar{Melina Hoffmann}
 
 In modern CPUs, the CPU frontend provides an interface between the instructions in the memory and the execution engine.
@@ -217,7 +219,7 @@ To handle memory accesses,`read_byte`, `read_word`, `write_byte`, and `write_wor
 Other functions that allow the UI to visualize the memory contents are provided. More specifically, `is_addr_cached` and `is_illegal_access` return whether an address is currently cached and whether a memory access to a specific address would raise a fault, respectively. Further, the `MemorySubsystem` includes functions that handle the cache management, such as `load_line`, `flush_line`, and `flush_all`.
 
 #### Meltdown Mitigation
-As explained in [@sec:meltdown-and-spectre-mitigations], researchers suggest one of Intel's mitigations to zero out any data illegaly read during the transient execution phase.
+As explained in [@sec:meltdown-and-spectre-mitigations], researchers suggest one of Intel's mitigations to zero out any data illegally read during the transient execution phase.
 To model this, both the `read_byte` functions still perform the read operation, but provide `0` as the data in the returned `MemResult`, if the mitigation is enabled. As of now, the read operation still changes the cache, but since only the contents of the inaccessible memory address are cached and not the corresponding oracle entry of the attacker, the mitigation still works. We believe a consequence of the CPU still performing the illegal read operation but zeroing out the result is that there are cache side effects. If desired, this behavior can be changed easily in the `read_byte` function.
 
 #### Cache {#sec:cache}
@@ -283,19 +285,19 @@ In each clock cycle only a single instruction may finish execution or retirement
 Besides the Reservation Station, the Execution Engine also contains the Register File, with one entry for each register. Each register entry either contains the concrete value of the register or references a slot of the Reservation Station that will produce the register's value.
 Since instructions are issued in program order, the state of the register file at a single point in time represents the architectural register state at that point in time, with yet-unknown register values present as slot references.
 
-## Out of Order Execution {#sec:Tomasulo}
+## Out-of-Order Execution {#sec:Tomasulo}
 \marginpar{Melina Hoffmann}
 
 Our emulator implements out-of-order execution.
 This allows transient execution of instructions before the fault handling of previous instructions is finalized, which is essential for Meltdown type attacks, as discussed in [@sec:meltdown-and-spectre].
-Our version of out-of-order execution is based on Tomasulos algorithm, as introduced in [@sec:background-out-of-order-execution].
-Since the goal of our out-of-order execution is to enable and clearly illustrate microarchitectural attacks, not optimal performance, we use a simple version of Tomasulos algorithm.
-In our emulator, the components necessary for Tomasulos algorithm are located in the Execution Engine ([@sec:execution]).
+Our version of out-of-order execution is based on Tomasulo's algorithm, as introduced in [@sec:background-out-of-order-execution].
+Since the goal of our out-of-order execution is to enable and clearly illustrate microarchitectural attacks, not optimal performance, we use a simple version of Tomasulo's algorithm.
+In our emulator, the components necessary for Tomasulo's algorithm are located in the Execution Engine ([@sec:execution]).
 Below, we provide a detailed look at our version of out-of-order execution and the components involved in its implementation.
 
-### Issuing instructions
+### Issuing Instructions
 
-Since we implement out-of-order execution according to Tomasulos algorithm, our execution engine does not try to execute instructions directly when it receives them from the frontend.
+Since we implement out-of-order execution according to Tomasulo's algorithm, our execution engine does not try to execute instructions directly when it receives them from the frontend.
 Instead, it issues them to the Reservation Station where multiple instructions can wait until all their operands are ready.
 If all operands of an instruction are ready, the Execution Engine can execute it.
 This does not generally happen in the order of instructions as provided by the program, but will always lead to the intended effect since data dependencies are respected.
@@ -313,8 +315,8 @@ While immediate operands can be directly converted to a Word, register operands 
 The registers are modelled by a list in which each entry can either be a `Word` value or the ID of the slot in the Reservation Station which holds the instruction that will produce the next register value as its result.
 As we see in [@sec:execution], since the instructions are issued in program order, this reflects the expected register state at the point of issuing the current instruction, if the program was executed in order.
 The only difference being, that the results of yet unexecuted instructions are being represented by the respective `SlotID`.
-To resolve the register operands, the current content of the respective register is added to the operand list, so the operand list can contain both `Words` and `SlotIDs.
-As described below, `SlotIDs in the operand list will be replaced by the result of the instruction which produces the value when it finishes executing.
+To resolve the register operands, the current content of the respective register is added to the operand list, so the operand list can contain both `Words` and `SlotIDs`.
+As described below, `SlotIDs` in the operand list will be replaced by the result of the instruction which produces the value when it finishes executing.
 
 Resolving the register operands this way ensures that data dependencies between instructions that use the same registers are adhered to.
 To increase performance, real life CPUs practice register renaming in order to further eliminate data dependency hazards [@gruss-habil, p. 226].
@@ -324,11 +326,11 @@ Since, as described in  [@sec:ISA], we do not differentiate between the ISA and 
 Once the slot with the new instruction is placed into the Reservation Station, if the instruction will produce a result for a target register, the `SlotID` of the instruction is put into this target register.
 This ensures, that when the next instruction is issued, the register state again represents the expected register state if the instructions where executed in-order.
 Note that placing the `SlotID` into the target register cannot only overwrite a Word value but also a `SlotID, if the previous instruction that uses this register as its target register is not yet fully executed.
-This is not a problem, since every instruction, that may need the result of the respective instruction of the previous `SlotID` as an operand, already holds this ` SlotID` in its own operand list.
+This is not a problem, since every instruction, that may need the result of the respective instruction of the previous `SlotID` as an operand, already holds this `SlotID` in its own operand list.
 It will be notified of the result when it is ready, regardless of whether the `SlotID` is still present in the register or not.
 
 
-### Executing instructions
+### Executing Instructions
 
 According to the basic Tomasulo algorithm, when all operands of an instruction in the Reservation Station are ready, it is transferred to a free execution unit and executed, as explained in [@sec:background-out-of-order-execution].
 In our emulator, execution of the instructions is triggered by the `tick` function of the Execution Engine, which is executed once per CPU cycle.
@@ -337,16 +339,16 @@ Instead, the `tick` function goes through the occupied slots in the Reservation 
 This follows the order of the slots in the Reservation Station, regardless of when the instruction in each slot was issued, i.e. regardless of their order in the program.
 If the operands of the current instruction are not ready yet, i.e. there are still `SlotIDs` in the operand list, the instruction is skipped.
 
-Once the instruction is executed and produces a result, i.e. all operands are available and the wait time is over, according to Tomasulos algorithm described in [@sec:background-out-of-order-execution], this result has to be broadcasted via the CDB to the other slots and the registers.
+Once the instruction is executed and produces a result, i.e. all operands are available and the wait time is over, according to Tomasulo's algorithm described in [@sec:background-out-of-order-execution], this result has to be broadcasted via the CDB to the other slots and the registers.
 In our emulator, the CDB is modelled by the `_notify_result` function.
 It goes through all registers and replaces all occurrences of the `slotID` of the instruction with the result it just produced.
 It also notifies all occupied slots of the result together with the `slotID` of the instruction which produced it, so they can replace the `slotID` if it is in their operands.
 If a result is produced like this, the `tick` function returns without executing further slots.
-This mimicks that a real life CDB can only broadcast one result each cycle.
+This mimics that a real life CDB can only broadcast one result each cycle.
 It has the side effect that instructions do not necessarily execute in the same number of ticks, depending on where they are in the reservation station.
 The `tick` function also returns before all slots have been executed if the instruction in a slot retires, in order to properly handle potentially faulting instruction as we see in [@sec:rollback].
                     
-### Memory hazards
+### Memory Hazards
 
 As described above, we handle data dependencies between instructions that use the same registers by using `SlotIDs` as placeholders for as yet uncomputed results.
 We also need to handle data dependencies between memory accesses.
@@ -361,7 +363,7 @@ By adding all instructions to the hazard list that access the same memory addres
 Since efficiency is not our priority, we accept this in order to keep our emulator simple.
 Additionally, to simplify fault handling, store instructions wait until all other possibly faulting instructions have retired.
 
-### Fence instruction
+### Fence Instruction
 
 The `fence` instruction is a special instruction in that it does not produce a result or a lasting side effect in the other components of the emulator.
 It creates a fixed point in the execution of the program, effectively suspending the out-of-order execution with regards to the fence instruction, as we describe in further detail in  [@sec:ISA].
@@ -568,7 +570,7 @@ If needed, students can add further instructions by registering them with the pa
 In the following subchapters we introduce the instructions of our default ISA.
 They are grouped according to their respective instruction type in the emulator except for the special instructions which are grouped together.
 
-#### Arithmetic and Logical Instructions without Immediate {#sec:instr_alu}
+#### Arithmetic and Logical Instructions Without Immediate {#sec:instr_alu}
 
 These are basic arithmetic and logical instructions that operate solely on register values, i.e. both source operands and the destination operand reference registers.
 For simplicity, we write, for example, Reg1 when referring to the value read from or stored in the register referenced by the first register operand.
@@ -607,7 +609,7 @@ and& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 and Reg3\\
 \end{tabular} 
 
 
-#### Arithmetic and Logical Instructions with Immediate {#sec:instr_alui}
+#### Arithmetic and Logical Instructions With Immediate {#sec:instr_alui}
 
 These are analogous to the instructions introduced in [@sec:instr_alu].
 The main difference is, that the second source register is replaced by an immediate operand which is set directly in the assembler code.
@@ -634,8 +636,8 @@ andi& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 and Imm\\
 
 These instructions provide basic interactions with the emulated memory introduced in [@sec:memory].
 Load and store instructions exist in two versions, one that operates on `Word` length data chunks, for convenience, and one that operates on `Byte` length data chunks, for the fine granular access needed in micro architectural attacks.
-The flush instruction flushes the cache line for the given address.
-The flushall instruction flushes the whole cache.
+The `flush` instruction flushes the cache line for the given address.
+The `flushall` instruction flushes the whole cache.
 The address is calculated in the same way for all memory instructions: \texttt{addr:=Reg2+Imm,} and \texttt{addr:=Reg+Imm} for the `flush` instruction respectively.
 
 \begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }

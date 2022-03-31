@@ -157,7 +157,6 @@ def print_regs(engine: ExecutionEngine, reg_capitalisation: bool = False):
 
 
 def print_cache(mem: MemorySubsystem, show_empty_sets: bool, show_empty_ways: bool) -> None:
-    # TODO: make compatible with more than 12 bits for tag or index
     # long_index = True if num_index_bits > 12 else False
     # long_tag = True if num_tag_bits > 12 else False
 

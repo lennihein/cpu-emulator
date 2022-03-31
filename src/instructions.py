@@ -142,8 +142,7 @@ class InstrFlush(InstructionKind):
     def __init__(self, name: str):
         super().__init__(name)
 
-        # TODO: Width of cacheline
-        self.width = 32
+        self.width = 4
 
     def sources(self) -> Iterable[int]:
         return [0, 1]
@@ -214,7 +213,6 @@ class InstrFence(InstructionKind):
 class Instruction:
     """A concrete instruction in program code."""
 
-    # TODO: Rename to `kind`
     ty: InstructionKind
     ops: list[int]
 
