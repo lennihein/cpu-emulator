@@ -22,6 +22,7 @@ Again, we are 4 people.
     - runs on many systems
     - graphical UI, gdb-like interface
     - offers noise-free environment to better understand Melt/Spec
+    - Better insight into what CPU is doing.
     
 # Background
 We assume user is attending SCA or has basic knowledge of TE attacks
@@ -104,10 +105,10 @@ Consists of 3 components
 ## Mitigations: Spectre
 - More difficult: direct consequence of spec. exec.
 - Obviously: Disable spec. exec.
-- Better: fence instr.
+- Better: fence instr. Retire in program order
 - For Meltdown/Spec: Flush entire cache after rollback
   - Can be achieved by microprog
-  - quite inefficient
+  - inefficient
   
 ## Our task
 - What exactly we plan to do
@@ -128,6 +129,9 @@ Briefly show you how we started working on this task
 
 ## How we started
 - List of must-haves, nice-to-haves, future work
+  - must-haves: OOE, SE
+  - nice-to-haves: UI cond. break
+  - future work: small OS, HT, context switches with OS
 - At time of M/S: Intel used Skylake, or slight variations
 - Filter Skylake components; Important for M/S?
 - Build simplified CPU.

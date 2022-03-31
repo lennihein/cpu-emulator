@@ -203,19 +203,14 @@ Aufteilung:
 
 - two kinds of register values: Word and SlotID
 
-- register state always reflects in-order register state with SlotIDs as placeholders
+- put register content into operand list
+
+- put SlotID into target register
 
 ## Example Reservation Station
 
 ![](../fig/mp_rs.png){ style="margin: auto;" }
 
-## Issuing instructions  
-
-- resolve operands and target register 
-
-- two kinds of register values: Word and SlotID
-
-- register state always reflects in-order register state with SlotIDs as placeholders
 
 ## Common Data Bus (CDB)
 
@@ -289,13 +284,101 @@ Aufteilung:
 
 Do you have any questions so far?
     
-## References
+# Demo
 
-## Demo
-
-### Meltdown
+## Demo - Meltdown
 
 ![](../fig/code.png){ style="margin: auto;" }
 
-- ja
+## Spectre-Type Attack Demo
 
+- Demonstrate mechanism behind Spectre-type attacks
+
+- BPU can be trained for targeted misprediction
+
+- Requires code sequence that encodes leaked value into cache
+
+## Spectre-Type Attack: Overview
+
+- Prepare victim array: 8 elements, all zero
+
+  - Followed by secret value `0x41`
+
+- Victim loops over the array and encodes each value in the cache
+
+  - BPU is trained to predict that the loop continues
+
+- Final loop condition will be mispredicted
+
+  - During transient execution: Additional iteration with out-of-bounds index
+
+  - Secret value accessed and encoded into cache
+
+## Spectre-Type Attack: Preparation
+
+```c
+// Set up array at 0x1000, 8 elements, all zero
+addi r1, r0, 0x1000
+sb r0, r1, 0
+sb r0, r1, 1
+sb r0, r1, 2
+sb r0, r1, 3
+sb r0, r1, 4
+sb r0, r1, 5
+sb r0, r1, 6
+sb r0, r1, 7
+// Followed by one out-of-bounds 0x41 value
+addi r2, r0, 0x41
+sb r2, r1, 8
+```
+
+## Spectre-Type Attack: Execution
+
+```c
+// Loop over array, encode every value in cache
+addi r2, r0, 0    // r2: Loop index
+addi r3, r0, 8    // r3: Array length
+loop:
+// Load array element
+lb r4, r2, 0x1000
+// Encode value in cache
+slli r4, r4, 4
+lb r4, r4, 0x2000
+// Increment loop index
+addi r2, r2, 1
+fence
+// Loop while index is in bounds
+bne r2, r3, loop
+```
+
+# Attack Demo
+
+## Spectre-Type Attack: Mitigation
+
+- Flush cache after rollback
+
+- Prevents using cache as transmission channel
+
+- Implementation: Inject microcode after rollback
+
+  - Inject `flushall` instruction after mispredicted branch
+
+# Mitigation Demo
+
+## Conclusion
+
+- Goal: CPU Emulator
+
+  - Out-of-Order Execution
+
+  - Branch Prediction
+
+  - Transient Execution Attacks
+
+  - Mitigations
+
+## Further Work
+
+## References
+
+- ja
