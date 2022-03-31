@@ -170,7 +170,7 @@ If the counter is at values 0 or 1, it predicts the branch as not being taken, a
 #### Instruction Queue {#sec:iq}
 
 In a real life CPU, the overall purpose of the frontend is to provide the execution unit with a steady stream of instructions so the backend is utilized as much as possible.
-In a modern x86 CPU, the frontend has to fetch x86 macro-instructions from a cache and decode, optimize and queue them repeatedly to provide the backend with a queue of µ-instructions ready for issuing in the execution engine.
+In a modern x86 CPU, the frontend has to fetch x86 macro-instructions from a cache and decode, optimize and queue them repeatedly to provide the backend with a queue of microinstructions ready for issuing in the execution engine.
 [@skylake]
 
 In our emulator, except for the BPU, the functionality of the CPU frontend is bundled in \texttt{frontend.py}.
@@ -318,8 +318,8 @@ As described below, `SlotIDs in the operand list will be replaced by the result 
 
 Resolving the register operands this way ensures that data dependencies between instructions that use the same registers are adhered to.
 To increase performance, real life CPUs practice register renaming in order to further eliminate data dependency hazards [@gruss-habil, p. 226].
-Modern CPUs rename registers by assigning ISA level registers to different µ-architectural registers [@SCA].
-Since, as described in  [@sec:ISA], we do not differentiate between the ISA and µ-architectural level, and aim to keep our emulator easy to comprehend, we do not implement register renaming.
+Modern CPUs rename registers by assigning ISA level registers to different microarchitectural registers [@SCA].
+Since, as described in  [@sec:ISA], we do not differentiate between the ISA and microarchitectural level, and aim to keep our emulator easy to comprehend, we do not implement register renaming.
 
 Once the slot with the new instruction is placed into the Reservation Station, if the instruction will produce a result for a target register, the `SlotID` of the instruction is put into this target register.
 This ensures, that when the next instruction is issued, the register state again represents the expected register state if the instructions where executed in-order.
@@ -541,60 +541,41 @@ This is demonstrated and described in detail in [@sec:evaluation_spectre].
 Real life Intel x86 CPUs differentiate between two types of instructions or operations. 
 Macro-operations refer to the relatively easily human readable and convenient but complex instructions that are described by the x86 ISA.
 Their length differs between the instructions.
-Internally, in the execution units, the CPU works on µ-operations, which are small operations of a fixed length.
-One macro-operation contains one or multiple µ-operations.
-The CPU frontend has to decode the macro-operations into µ-operations in an expensive multi step process.
+Internally, in the execution units, the CPU works on micro-operations, which are small operations of a fixed length.
+One macro-operation contains one or multiple micro-operations.
+The CPU frontend has to decode the macro-operations into micro-operations in an expensive multi step process.
 [@skylake], [@macro_op], [@micro_op]
-<!--todo: get a better source. Intel directly? Gruss habille? -->
-<!--
-    erstmal weg lassen und auf x86 konzentrieren, weil die das aus der VL kennen
-RISC V: pseudo- and base instructions
-pseudo instructions: can encapsulate more than one base instruction or can be a convenient ... for a base instruction where one or more operand is fixed (e.g. nop -> addi x0, x0, 0, mv rd, rs -> addi rd, rs, 0) (source: RISC V ISA Doc)
-    in RISC V also directly use base instructions? not really the same?
--->
 
 Our CPU emulator only uses one type of instructions.
-They are directly read from our assembler code by the parser and passed to the execution engine without further decoding, splitting or replacing [@sec:parser], [@sec:CPU_frontend].
-To show basic Meltdown and Spectre variants, we do not need overly complex instructions, e.g. instructions that contain multiple memory accesses in one or that are used to perform encryption in hardware [@sec:evaluation_meltdown], [@sec:evaluation_spectre].
-Basic arithmetic operations, memory accesses, branches and a few special operations are sufficient for the demonstrated attacks and are both easy to implement as single instructions and to use in assembler code that should be well understood by the author. 
-Using the same operations throughout the emulator also makes the visualization more clear and easier to follow, e.g. when the same operations appear, one after the other, in the visualization of the assembler code, the instruction queue and the reservation stations [@sec:UI].
+They are directly read from our assembler code by the parser ([@sec:parser]) and passed to the execution engine without further decoding, splitting or replacing, as described in [@sec:CPU_frontend].
+To show basic Meltdown and Spectre variants as we demonstrate in [@sec:evaluation_meltdown] and [@sec:evaluation_spectre], we do not need overly complex instructions, e.g. instructions that contain multiple memory accesses in one or that are used to perform encryption in hardware.
+Basic arithmetic operations, memory accesses, branches and a few special operations are sufficient for the demonstrated attacks.
+They are both easy to implement as single instructions and to use in assembler code that should be well understood by the author. 
+Using the same operations throughout the emulator also makes the visualization more clear and easier to follow, e.g. when the same operations appear, one after the other, in the visualization of the assembler code, the instruction queue and the reservation stations.
 
 ### Default Instruction Set {#sec:default_instr} 
 
-In order that our CPU emulator can recognize and work with an instruction, it has to be registered with the parser [@sec:parser].
+In order that our CPU emulator can recognize and work with an instruction, it has to be registered with the parser as described in [@sec:parser].
 In our default setting, we register a basic set of instructions with the parser so students can start writing assembler code and using the emulator right away.
-This basic instruction set is also used in our example programs in [@sec:UI].
+This basic instruction set is also used in our example programs in [@sec:evaluation].
 
-Our relatively small instruction set is based on a subset of the RISC-V ISA [@riscv].
+Our relatively small instruction set is based on a subset of the RISC-V ISA [@riscv, pp. 13-29].
 It offers a selection of instructions that is sufficient to implement Meltdown and Spectre attacks as well as other small assembler programs, while still being of a manageable size so students can start to write assembler code quickly without spending much time to get to  know our ISA.
-<!--todo: add this?  (still turing complete, vgl. vllt. TI-Folien wegen konkreter min. Instruktionssets...) -->
-The syntax of the assembler representation is also based on RISC-V as introduced in the "RISC-V Assembly Programmer’s Handbook" chapter of the RISC-V ISA [@riscv]. 
-Also as in the RISC-V ISA, with our default configuration we have 32 registers available, see [@sec:config].
-If needed, students can add further instructions by registering them with the parser [@sec:parser].
+The syntax of the assembler representation is also based on RISC-V as introduced in the "RISC-V Assembly Programmer’s Handbook" chapter of the RISC-V ISA [@riscv, pp. 137-140]. 
+Also as in the RISC-V ISA, with our default configuration as described in [@sec:config] we have 32 registers available.
+If needed, students can add further instructions by registering them with the parser as described in [@sec:parser].
 
 In the following subchapters we introduce the instructions of our default ISA.
-They are grouped according to their respective instruction type in the emulator except for the special instructions which are grouped together [@sec:parser].
-All default instructions are summarized in the appendix into a quick reference sheet [ref_appendix]. 
-<!--
-todo: cheat sheet in Anhang
-vllt. referenz in Fussnote verschieben
-ggf. auf Cheat Sheet im Anhang verweisen
-    maybe put information like address calculation in table description so everyone has all the information
-adjust cheat sheet and table snippets so the wording is nice and the table is as non-redundant as possible
--->
-<!--
-try inline LAtex and the option to place tables "here" \h! , needs some additional LaTex package
-if that does not work, maybe table descritions? but that would be a bad formatting choice
--->
+They are grouped according to their respective instruction type in the emulator except for the special instructions which are grouped together.
 
 #### Arithmetic and Logical Instructions without Immediate {#sec:instr_alu}
 
 These are basic arithmetic and logical instructions that operate solely on register values, i.e. both source operands and the destination operand reference registers.
 For simplicity, we write, for example, Reg1 when referring to the value read from or stored in the register referenced by the first register operand.
 
-Each of these default instructions uses the respective python standard operator on our *Word* class to compute the result, except for the right shifts.
+Each of these default instructions uses the respective python standard operator on our `Word` class to compute the result, except for the right shifts.
 For the logical and the arithmetic right shift, the python standard right shift operator is used on the unsigned and the signed version of the register value respectively.
-When returning the result as a *Word*, it is truncated to the maximal word length by a modulo operation, if necessary. 
+When returning the result as a `Word`, it is truncated to the maximal word length by a modulo operation, if necessary. 
 This means, that any potential carry bits or overflows are effectively ignored.
 <!--
     weg lassen, eh schon wieder sehr lang:
@@ -628,9 +609,9 @@ and& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 and Reg3\\
 
 #### Arithmetic and Logical Instructions with Immediate {#sec:instr_alui}
 
-These are basically the same instructions as in [@sec:instr_alu].
+These are analogous to the instructions introduced in [@sec:instr_alu].
 The main difference is, that the second source register is replaced by an immediate operand which is set directly in the assembler code.
-This immediate is used as the value of a *Word*, so it is truncated by a modulo operation to be in the appropriate range.
+This immediate is used as the value of a `Word`, so it is truncated by a modulo operation to be in the appropriate range.
 
 \begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
 \hline
@@ -651,13 +632,11 @@ andi& Reg1, Reg2, Imm&Reg1 $:=$ Reg2 and Imm\\
     
 #### Memory Instructions {#sec:instr_mem}
 
-These instructions provide basic interactions with the emulated memory [@sec:memory].
-Load and store instructions exist in two versions, one that operates on *Word* length data chunks, for convenience, and one that operates on *Byte* length data chunks, for the fine granular access needed in micro architectural attacks.
-The flush instruction flushes the cache line for the given address [@sec:memory].
+These instructions provide basic interactions with the emulated memory introduced in [@sec:memory].
+Load and store instructions exist in two versions, one that operates on `Word` length data chunks, for convenience, and one that operates on `Byte` length data chunks, for the fine granular access needed in micro architectural attacks.
+The flush instruction flushes the cache line for the given address.
 The flushall instruction flushes the whole cache.
-<!--todo: maybe be more precise about what the flush instruction does -->
-The address is calculated in the same way for all memory instructions: addr:=Reg2+Imm, and addr:=Reg+Imm for the flush instruction respectively.
-<!--with Reg2 acting as the base and Imm acting as an offset -->
+The address is calculated in the same way for all memory instructions: \texttt{addr:=Reg2+Imm,} and \texttt{addr:=Reg+Imm} for the `flush` instruction respectively.
 
 \begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
 \hline
@@ -679,8 +658,7 @@ flushall  &  - &flush whole cache\\
 All branch instructions compare the values of two source registers. If the comparison evaluates to true, the execution of the program is resumed at the given label in the assembler code.
 If it evaluates to false, the next instruction in the program is executed.
 Depending on the instruction, the register values are interpreted as signed (s) or unsigned (u) integers.
-Labels in the assembler code are automatically resolved by the parser [@sec:parser], [@sec:evaluation_example].
-<!-- There are different options for the branch condition so the students can choose which one suits their program best. -->
+Labels in the assembler code are automatically resolved by the parser, as we can see in our examples in [@sec:evaluation_example].
 
 
 \begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
@@ -704,15 +682,15 @@ bges& Reg1, Reg2, Label&jump to Label if s(Reg1)$>=$s(Reg2)\\
 
 #### Special Instructions {#sec:instr_special}
 
-Rdtsc acts like a basic timing instruction.
-It returns the number of *ticks* the execution unit has executed so far into the given register.
+`Rdtsc` acts like a basic timing instruction.
+It returns the number of `ticks` the execution unit has executed so far into the given register.
 <!-- not reset when called-->
 <!--todo: This kind of information is used in real life micro architectural attacks [@source]. -->
 
-The fence instruction acts as a fixed point in the out of order execution.
-All instructions that are already issued in the execution unit at the point of issuing the fence instruction are executed before the fence is executed.
-No new instructions are issued before the execution of the fence instruction is complete.
-This can be used to model mitigations against µ-architectural attacks [@sec:evaluation_mitigations].
+The `fence` instruction acts as a fixed point in the out-of-order execution.
+All instructions that are already issued in the execution unit at the point of issuing the `fence` instruction are executed before the `fence` is executed.
+No new instructions are issued before the execution of the `fence` instruction is complete.
+This can be used to model mitigations against microarchitectural attacks, as demonstrated in [@sec:evaluation_mitigations].
 
 \begin{tabular}{ |p{2cm}|p{3cm}|p{9cm}|  }
 \hline
