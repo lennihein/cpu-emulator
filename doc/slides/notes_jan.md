@@ -86,68 +86,109 @@ We are going to skip over the preparation of the array
                     To do that, we
 break add 12        Set breakpoint at the fence instruction
 continue            Continue execution, and then
-retire ...          Step until all instructions from the preparation part have retired. After that we
+retire  x8          Step until all instructions from the preparation part have retired. After that we
 show mem 0x1000     Look at victim array at address 0x1000 -> 8 bytes of 0x01 followed by the secret value 0x41
 
 Let's continue the attack by single-stepping through the first loop iteration
-addi r2, r0, 0      initialize current loop index to zero
-addi r3, r0, 8      set the length of the array to 8
-lb r4, r2, 0x1000   
-slli r4, r4, 4      
-lb r4, r4, 0x2000   
-addi r2, r2, 1      
-bne r2, r3, loop    
+13 addi r2, r0, 0       initialize current loop index to zero
+    step step
+14 addi r3, r0, 8       set the length of the array to 8
+    step step
+15 lb r4, r2, 0x1000    load the current element
+    step step
+16 slli r4, r4, 4       shift value by 4
+    step step
+17 lb r4, r4, 0x2000    index into the probe array -> causes first entry of probe array to be cached
 
-This was a single loop iteration,
+This completes the first loop iteration,
     we are going to skip over the intermediate iterations
-    and continue with the supposedly last loop iteration
-break add 14
-continue ...
+    and continue at the end of the supposedly last loop iteration
+break add 19
+continue        until index 8
+break delete 19
 
-- Single-step through last loop iteration
-- Examine BPU state before the last branch is queued -> branch will be predicted as taken
-- Single-step through additional loop iteration, until the secret is encoded into the cache (address 0x2410)
+This branch instruction is supposed to conclude the final loop iteration,
+but as we can see another loop iteration is already queued
+if we single-step forward, we see that
+    step ...
+15 lb r4, r2, 0x1000    access the array out-of-bounds
+    step step
+16 slli r4, r4, 4       provide it to the following shift instruction
+    step step
+17 lb r4, r4, 0x2000    leads us to access the probe array with an index derived from the secret value
+    continue            now we continue until after the rollback
+    show cache          and examine the contents of the cache
+                        where we find an entry with the tag 0x241 that corresponds to index 0x41 of the probe array
+
+in total, the attack worked, as we have successfully encoded the secret value into the cache
+
+now back to the slides, where I want to talk about a possible mitigation against this attack
 
 ## Spectre-Type Attack: Mitigation
 
-<!-- There are a couple of mitigations against spectre vulnerabilities,
-    which we describe in our report
-the one I want to focus on here is
+There are a couple of mitigations against spectre vulnerabilities,
+    that felix briefly mentioned earlier
+but the one I want to focus on here is
 flushing the cache after a rollback
--->
 
-- Flush cache after rollback
+this prevents using cache as transmission channel from transient execution domain to architectural domain
 
-- Prevents using cache as transmission channel <!-- from transient execution domain to architectural domain -->
+in our implementation we provide the more general feature
+of being able to inject user-defined microcode after rollback
 
-- Implementation: Inject microcode after rollback
-
-  - Inject `flushall` instruction after mispredicted branch
+in that case, this mitigation is implemented by injecting a flushall instruction after mispredicted branch
 
 # Mitigation Demo
 
-<!-- Now we activate this mitigation and check if our spectre attack still works
+Now we activate this mitigation and check if our spectre attack still works
 
-- Edit config
-- Show injected program
-- Start directly in the last loop iteration
-- Single-step until rollback
-- See injected flush, observe cache before and after
--->
+Edit config, inject microprogram demo/flushall.tea
+
+show contents of program: flushall followed by fence,
+    to make sure flush finishes before subsequent instructions are issued
+
+run program again, immediately `continue` until the rollback
+
+now we can see that rollback occurred because of mispredicted branch
+    and microprogram was injected into instrQ
+
+show cache          cache entry which encodes the secret value still present
+retire              but after we execute flush
+show cache          cache is empty
+
+this shows that the mitigation works, an attacker would not be able to transmit any secrets via the cache
+
+and with that, back to the final slides
 
 ## Conclusion
 
-- Goal: CPU Emulator
-
-  - Out-of-Order Execution
-
-  - Branch Prediction
-
-  - Transient Execution Attacks
-
-  - Mitigations
-
-<!-- as we have demonstrated today, our CPU emulator reaches all of these goals
-and it can even be used to understand mitigations for transient execution attacks -->
+to conclude, we had goal of
+    developing cpu emulator that uses
+        out of order execution
+        branch prediction
+    that we can perform transient execution attacks against
+    and that we can use to understand mitigations for these attacks
+as we have demonstrated today, our CPU emulator reaches all of these goals
 
 ## Further Work
+
+there are a number of further improvements we considered but didn't implement
+mostly due to time or scope constraints
+
+for example we would like our emulator to support
+    more spectre and meltdown variants
+        meltdown: add load buffers, store buffers, line-fill buffers
+            can be used to extract data
+        spectre: elaborate BPU
+            can be trained in various ways
+    multiple execution contexts
+        by implementing multiple processes running interleaved or even in parallel
+    operating system
+        isolated from normal processes
+        can be interacted with using system calls
+    various ui improvements
+        conditional breakpoints
+
+
+thank you for your time and attention
+if you have any questions, we would be happy to answer some

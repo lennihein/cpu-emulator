@@ -379,3 +379,14 @@ bne r2, r3, loop
 
 ## Further Work
 
+- More Spectre and Meltdown variants
+
+  - Meltdown: Load, Store, Line-Fill Buffers
+
+  - Spectre: elaborate BPU
+
+- Multiple execution contexts
+
+- Operating System
+
+- UI Improvements
