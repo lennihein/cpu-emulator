@@ -137,11 +137,11 @@ class Word:
     def __hash__(self) -> int:
         return hash(self.value)
 
-    def shift_right_logical(self, amount: int) -> "Word":
-        return Word(self.value >> amount)
+    def shift_right_logical(self, amount: "Word") -> "Word":
+        return Word(self.value >> amount.value)
 
-    def shift_right_arithmetic(self, amount: int) -> "Word":
-        return Word(self.signed_value >> amount)
+    def shift_right_arithmetic(self, amount: "Word") -> "Word":
+        return Word(self.signed_value >> amount.value)
 
     def unsigned_lt(self, rhs: "Word") -> bool:
         return self.value < rhs.value
