@@ -161,11 +161,11 @@ Aufteilung:
 
 - overview over our whole emulator
 
-- out-of-order execution
+- Out-of-order execution
 
-- speculative execution
+- Speculative execution
 
-- fault handling and rollbacks
+- Fault handling and rollbacks
 
 ## CPU class
 
@@ -173,13 +173,13 @@ Aufteilung:
 
 ## Parser
 
-- assembler style source code
+- Assembler style source code
 
-- arithmetic, branch and memory instructions, fence, rtdsc
+- Arithmetic, branch and memory instructions, fence, rtdsc
 
-- provides an instruction list 
+- Provides an instruction list 
 
-- only one type of instructions
+- Only one type of instructions
 
 ## CPU components
 
@@ -187,25 +187,25 @@ Aufteilung:
 
 ## Out-of-order execution
 
-- Execution Engine
+- Execution engine
 
 - Tomasulos algorithm
 
-    - unified reservation station
+    - Unified reservation station
     
-    - instructions wait for their operands
+    - Instructions wait for their operands
     
-    - keeping track of operands and results
+    - Keeping track of operands and results
     
 ## Issuing instructions  
 
-- resolve operands and target register 
+- Resolve operands and target register 
 
-- two kinds of register values: Word and SlotID
+- Two kinds of register values: Word and SlotID
 
-- put register content into operand list
+- Put register content into operand list
 
-- put SlotID into target register
+- Put SlotID into target register
 
 ## Example Reservation Station
 
@@ -214,67 +214,67 @@ Aufteilung:
 
 ## Common Data Bus (CDB)
 
-- execute instructions in reservation station
+- Execute instructions in reservation station
 
-- broadcast the result over the CDB
+- Broadcast the result over the CDB
     
-    - registers
+    - Registers
     
-    - reservation station slots
+    - Reservation station slots
     
-    - at most once per cycle
+    - At most once per cycle
     
 ## Speculative execution
 
-- predict outcome of branch instructions
+- Predict outcome of branch instructions
 
-- resume execution based on this prediction
+- Resume execution based on this prediction
 
-- two central components 
+- Two central components 
 
-    - branch prediction unit (BPU)
+    - Branch prediction unit (BPU)
     
     - CPU frontend with instruction queue
     
 ## Branch Prediction Unit (BPU)
 
-- simplified version
+- Simplified version
 
-- array of predictions
+- Array of predictions
 
 - 2-bit-saturating counter to handle predictions
 
 ## CPU frontend with instruction queue
 
-- interface btw. instruction list and execution unit 
+- Interface between instruction list and execution unit 
 
-- especially wrt speculative execution
+- Involved in speculative execution
 
-- manages instruction queue
+- Manages instruction queue
  
 ![](../fig/ep_11_loop_bottom.png){ style="margin: auto;" }
 
 ## Faults and Rollbacks
 
-- microarchitectural fault situation that has to be handled bevore we can resume our execution
+- Microarchitectural fault situation that has to be handled bevore we can resume our execution
 
-    - mispredicted branches
+    - Mispredicted branches
     
-    - attempt to access inaccessible memory
+    - Attempt to access inaccessible memory
     
-- have to handle the effects of transient execution
+- Have to handle the effects of transient execution
 
 ## Rollback
 
-- only rollback the register state and the memory contents
+- Only rollback the register state and the memory contents
 
-- no rollback in Cache and BPU
+- No rollback in Cache and BPU
 
-- restore register state via snapshots
+- Restore register state via snapshots
 
-- prevent memory rollbacks by executing stores in-order
+- Prevent memory rollbacks by executing stores in-order
 
-- handle faults in program order
+- Handle faults in program order
 
 ## Rollback after mispredicted branch
 
@@ -379,6 +379,3 @@ bne r2, r3, loop
 
 ## Further Work
 
-## References
-
-- ja
