@@ -158,6 +158,7 @@ speculative execution ca. 5 Minuten -> ca. 60 Zeilen
         in our version, we have an array of predictions of configurable length 2*n and simple assign each instruction to a prediction by the last n bits of its index in the program
         predictions are handled by a simpe two-bit-saturating counter
             **hier wäre tatsächlich ein Bild nett
+            ** oder die genaue Beschreibung einfach weglassen
             four states, strongly not taken, weakly not taken, weakly taken, strongly taken
             updated after each execution of a branch instruction
             +1 of branch was taken, up to 3, -1 if branch was not taken at most down to 0

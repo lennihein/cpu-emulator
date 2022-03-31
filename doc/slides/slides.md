@@ -203,19 +203,14 @@ Aufteilung:
 
 - two kinds of register values: Word and SlotID
 
-- register state always reflects in-order register state with SlotIDs as placeholders
+- put register content into operand list
+
+- put SlotID into target register
 
 ## Example Reservation Station
 
 ![](../fig/mp_rs.png){ style="margin: auto;" }
 
-## Issuing instructions  
-
-- resolve operands and target register 
-
-- two kinds of register values: Word and SlotID
-
-- register state always reflects in-order register state with SlotIDs as placeholders
 
 ## Common Data Bus (CDB)
 
