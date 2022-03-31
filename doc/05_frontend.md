@@ -1,5 +1,7 @@
 # User Interface and Usage {#sec:UI}
 
+\marginpar{Lennart Hein}
+
 This chapter focuses on the usage of the application. The user interface and the design choices are described. An instruction on how to prepare the system and how to run the program is given. Furthermore, the application and it's features are explained in detail. Finally, we showcase the application in action.
 
 ## Purpose and Inspiration
@@ -10,7 +12,7 @@ The emulator follows the rough structure of the GNU Debugger GNU [@GDB] and more
 
 As with GDB, the emulator can only be interacted with using commands. We further implement auto-completion and auto-suggestion using the \texttt{python-prompt-toolkit} [@prompt]. This should lower the difficulty of getting started with a new tool. The emulator also implements a Pwndbg-style context-visualization, albeit with different elements shown to adapt to the different goal compared to GDB. This ensures most of the relevant information is on the screen at all times.
 
-## System Requirements and installation
+## System Requirements and Installation
 
 The following things need to be installed to run the program:
 
@@ -36,7 +38,7 @@ The program is tested on the following system:
 - Python-Benedict 0.25.0
 - Git Commit 419678d33a41eefb0bcd775966dae0418ba51245
 
-## Running the program
+## Running the Program
 
 The syntax for running the emulator from the root folder of the repository is:
 

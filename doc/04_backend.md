@@ -1,4 +1,4 @@
-# CPU emulator/ backend {#sec:backend}
+# CPU Emulator {#sec:backend}
 \marginpar{Melina Hoffmann}
 
 In this chapter, we introduce the backend of our emulator program.
@@ -15,7 +15,7 @@ Subsequently, we show how we implemented rollbacks and exception handling, which
 Then we give an overview over the availbale instruction set architecture in [@sec:ISA].
 Lastly we show how our emulator can be adapted for different demonstrations and attacks via a config file without changing the source code in [@sec:config].
 
-## CPU Components and our equivalents/ models {#sec:components}
+## CPU Components and Our Models {#sec:components}
 
 \marginpar{Jan-Niklas Sohn}
 
@@ -101,7 +101,9 @@ Having identified the instruction and parsed all operands, the parser builds an 
 During both passes, the parser skips over any comments, which are lines starting with two slashes (`//`).
 Performing two passes in this way allows labels to be used both before and after their definition.
 
-### Data representation {#sec:data}
+### Data Representation {#sec:data}
+
+\marginpar{Jan-Niklas Sohn}
 
 <!-- - Based on 8-bit byte, 16-bit word
 - All registers store a word
@@ -122,7 +124,7 @@ Since our memory model is based on 8-bit *bytes*, words are separated into two 8
 The two individual bytes of words are stored in memory in little endian order, i.e. the least-significant byte is stored at the lowest memory address.
 For a detailed description of the mechanics involved in memory operations, see [@sec:memory].
 
-### CPU frontend {#sec:CPU_frontend}
+### CPU Frontend {#sec:CPU_frontend}
 \marginpar{Melina Hoffmann}
 
 In modern CPUs, the CPU frontend provides an interface between the instructions in the memory and the execution engine.
@@ -283,7 +285,7 @@ In each clock cycle only a single instruction may finish execution or retirement
 Besides the Reservation Station, the Execution Engine also contains the Register File, with one entry for each register. Each register entry either contains the concrete value of the register or references a slot of the Reservation Station that will produce the register's value.
 Since instructions are issued in program order, the state of the register file at a single point in time represents the architectural register state at that point in time, with yet-unknown register values present as slot references.
 
-## Out of Order Execution {#sec:Tomasulo}
+## Out-of-Order Execution {#sec:Tomasulo}
 \marginpar{Melina Hoffmann}
 
 Our emulator implements out-of-order execution.
@@ -293,7 +295,7 @@ Since the goal of our out-of-order execution is to enable and clearly illustrate
 In our emulator, the components necessary for Tomasulos algorithm are located in the Execution Engine ([@sec:execution]).
 Below, we provide a detailed look at our version of out-of-order execution and the components involved in its implementation.
 
-### Issuing instructions
+### Issuing Instructions
 
 Since we implement out-of-order execution according to Tomasulos algorithm, our execution engine does not try to execute instructions directly when it receives them from the frontend.
 Instead, it issues them to the Reservation Station where multiple instructions can wait until all their operands are ready.
@@ -328,7 +330,7 @@ This is not a problem, since every instruction, that may need the result of the 
 It will be notified of the result when it is ready, regardless of whether the `SlotID` is still present in the register or not.
 
 
-### Executing instructions
+### Executing Instructions
 
 According to the basic Tomasulo algorithm, when all operands of an instruction in the Reservation Station are ready, it is transferred to a free execution unit and executed, as explained in [@sec:background-out-of-order-execution].
 In our emulator, execution of the instructions is triggered by the `tick` function of the Execution Engine, which is executed once per CPU cycle.
@@ -346,7 +348,7 @@ This mimicks that a real life CDB can only broadcast one result each cycle.
 It has the side effect that instructions do not necessarily execute in the same number of ticks, depending on where they are in the reservation station.
 The `tick` function also returns before all slots have been executed if the instruction in a slot retires, in order to properly handle potentially faulting instruction as we see in [@sec:rollback].
                     
-### Memory hazards
+### Memory Hazards
 
 As described above, we handle data dependencies between instructions that use the same registers by using `SlotIDs` as placeholders for as yet uncomputed results.
 We also need to handle data dependencies between memory accesses.
@@ -361,7 +363,7 @@ By adding all instructions to the hazard list that access the same memory addres
 Since efficiency is not our priority, we accept this in order to keep our emulator simple.
 Additionally, to simplify fault handling, store instructions wait until all other possibly faulting instructions have retired.
 
-### Fence instruction
+### Fence Instruction
 
 The `fence` instruction is a special instruction in that it does not produce a result or a lasting side effect in the other components of the emulator.
 It creates a fixed point in the execution of the program, effectively suspending the out-of-order execution with regards to the fence instruction, as we describe in further detail in  [@sec:ISA].
@@ -568,7 +570,7 @@ If needed, students can add further instructions by registering them with the pa
 In the following subchapters we introduce the instructions of our default ISA.
 They are grouped according to their respective instruction type in the emulator except for the special instructions which are grouped together.
 
-#### Arithmetic and Logical Instructions without Immediate {#sec:instr_alu}
+#### Arithmetic and Logical Instructions Without Immediate {#sec:instr_alu}
 
 These are basic arithmetic and logical instructions that operate solely on register values, i.e. both source operands and the destination operand reference registers.
 For simplicity, we write, for example, Reg1 when referring to the value read from or stored in the register referenced by the first register operand.
@@ -607,7 +609,7 @@ and& Reg1, Reg2, Reg3&  Reg1 $:=$ Reg2 and Reg3\\
 \end{tabular} 
 
 
-#### Arithmetic and Logical Instructions with Immediate {#sec:instr_alui}
+#### Arithmetic and Logical Instructions With Immediate {#sec:instr_alui}
 
 These are analogous to the instructions introduced in [@sec:instr_alu].
 The main difference is, that the second source register is replaced by an immediate operand which is set directly in the assembler code.

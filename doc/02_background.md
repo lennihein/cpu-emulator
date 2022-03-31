@@ -12,7 +12,7 @@ Lastly, the memory subsystem handles all memory accesses of the execution units 
 
 ![Simplified overview an Intel Skylake CPU [@gruss-habil, fig. 2.1]. For the memory subsystem, detailed knowledge of the load and store buffers, as well as the TLBs, is not required. The same applies to the allocation queue of the frontend.](fig/cpu.png){#fig:background-cpu width=450px height=675px shortcaption='Simplified overview of an Intel Skylake CPU [@gruss-habil].'}
 
-## Out-of-order execution {#sec:background-out-of-order-execution}
+## Out-of-Order Execution {#sec:background-out-of-order-execution}
 \marginpar{Felix Betke}
 As the name implies, out-of-order execution refers to the idea of executing instructions in a different order than the one in which they are given [@gruss-habil, p. 15]. With multiple execution units that run in parallel (as described in [@sec:background-cpu]), CPUs can take advantage of mutually independent instructions and execute them at the same time.
 
@@ -20,7 +20,7 @@ The basic realization of this concept is provided by Tomasulo's algorithm [@toma
 
 According to the original design by Tomasulo, each set of execution units needed its own reservation station. However, Intel's latest CPUs use a single unified reservation station, called scheduler, that handles all types of instructions, rather than just one [@tomasulo] [@skylake] [@gruss-habil, p. 228]. This can also be seen in [@fig:background-cpu].
 
-## Speculative execution {#sec:background-speculative-execution}
+## Speculative Execution {#sec:background-speculative-execution}
 \marginpar{Felix Betke}
 Speculative execution primarily allows a CPU to predict the outcome of branch instructions, but it is also used to predict the address at which execution will be resumed after a return instruction. This prevents stalling while waiting for the instruction that determines which branch is taken to finish. With speculative execution, rollbacks are needed  in cases where branches were mispredicted. [@gruss-habil, pp. 17-18, 53]
 
