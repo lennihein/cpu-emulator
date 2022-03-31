@@ -151,7 +151,7 @@ If the prediction was true, the execution is overall faster than without specula
 <!--todo: source needed? -->
 
 Detailed information about the BPU of our modern base CPU is not widely available [@skylake]. 
-In general, the Gshare BPU of modern CPU consists of multiple components.
+In general, the Gshare BPU of modern CPUs consists of multiple components.
 It contains a branch target buffer (BTB) that holds the predicted target addresses for conditional branches [@spectre].
 It also uses a pattern history table (PHT), that can be implemented as a 2-bit-saturating counter, and a global history register (GHT) to predict whether a conditional jump will be taken or not [@Evtyushkin].
 
@@ -176,15 +176,15 @@ If the counter is at values 0 or 1, it predicts the branch as not being taken, a
 
 #### Instruction Queue {#sec:iq}
 
-In a real life CPU, the overall purpose of the frontend is to provide the execution unit with a steady strean of instructions so the backend is busy as much as possible and therefore efficient.
+In a real life CPU, the overall purpose of the frontend is to provide the execution unit with a steady stream of instructions so the backend is busy as much as possible and therefore efficient.
 In a modern x86 CPU, the frontend has to fetch x86 macro-instructions from a cache and decode, optimize and queue them repeatedly to provide the backend with a queue of µ-instructions ready for issuing in the execution engine.
 [@skylake]
 
 In our emulator, except for the BPU, the functionality of the CPU frontend is bundled in *frontend.py*.
-It is significantly simplified compared to a real life x86 CPU, especially since the we use only one type of instructions instead of distinguishing between macro- and µ-instructions [@sec:ISA].
+It is significantly simplified compared to a real life x86 CPU, especially since we use only one type of instructions instead of distinguishing between macro- and µ-instructions [@sec:ISA].
 They are already provided as a list by the parser, which renders the decoding and optimization steps in the frontend unnecessary [@sec:parser].
 
-The main task of our frontend is to act as an interface between instruction list provided by the parser and the execution engine [@sec:execution].
+The main task of our frontend is to act as an interface between the instruction list provided by the parser and the execution engine [@sec:execution].
 It provides and manages the instruction queue, which holds the instructions that the execution engine should issue next.
 Conditional branches with their respective BPU predictions are taken into account when filling the queue.
 This enables speculative execution which is needed for Spectre attacks [@sec:meltdown-and-spectre].
