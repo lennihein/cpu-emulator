@@ -94,7 +94,7 @@ out-of-order-execution ca. 5 Minuten -> ca. 60 Zeilen
                 put the SlotID into the reservation station slot to show, that the new instruction is also waiting for this result/ register value
             lastly we, if our instruction itself produces a result that should be put in a target register
                 put the new SlotID of our instruction into this register to show that it is now waiting for the result of our newly issued instruction
-				
+## Example reservation Station				
 	can see this in the example picture
 		visualization of the reservation station from the execution of our demo program
 		example program can be found in our Gitlab repo and is discussed in more detail in our documentation
@@ -104,7 +104,8 @@ out-of-order-execution ca. 5 Minuten -> ca. 60 Zeilen
 			resolved operands that are either data words or reservation stations
 		e.g. addi instruction in slot 2 operates on the result of the addi instruction of ssli in reg2
 			-> waits for the result of slot 1 as its operand
-				
+
+## Issuing instructions				
     by putting the SlotIDs of newly issued intructions in their respective target register whenever we issue a instruction, we make sure that the registers always reflect the expected register state at the point of issuing the current instruction, if the program was executed in order
         only difference that instead of some of the values we have SlotIDs as placeholders instead
         but since we pass these placeholder SlotIDs on to the operands lists of the instructions, this is not a problem 
