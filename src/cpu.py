@@ -92,11 +92,16 @@ class CPU:
         _snapshots.append(copy.deepcopy(self))
 
     def load_program_from_file(self, path: str):
+        """Loads a program given a file path."""
         with open(path, "r") as f:
             source = f.read()
         self.load_program(source)
 
     def load_program(self, source: str):
+        """
+        Loads a program given the source code.
+        Initializes the frontend and execution engine.
+        """
         instructions = self._parser.parse(source)
 
         # Initialize frontend
@@ -108,6 +113,14 @@ class CPU:
         self._take_snapshot()
 
     def tick(self) -> CPUStatus:
+        """
+        The tick function that executes one cycles each time it is called.
+
+        Returns:
+            status (CPUStatus): An instance of the CPUStatus class containing
+                information about the executed cycle. See memory.py for
+                details on this class.
+        """
 
         # check if any program is being executed
         if self._frontend is None:
