@@ -49,7 +49,7 @@ If no target program is supplied, the emulator will print system information, al
 
 ## The Context Screen {#sec:context_screen}
 
-The core of the visualization is the context screen. Here most of the relevant information is shown. The context screen is printed out every time the execution is paused. Alternatively, pressing enter with an empty input will also print the context screen. [@fig:context] shows an example output of the context screen.
+The core of the visualization is the context screen. Here, most of the relevant information is shown. The context screen is printed out every time the execution is paused. Alternatively, pressing enter with an empty input will also print the context screen. [Figure @fig:context] shows an example output of the context screen.
 
 ![Example output of the context screen](fig/context.png){#fig:context width=470px height=317px shortcaption='Example output of the context screen'}
 
