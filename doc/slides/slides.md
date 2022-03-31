@@ -300,11 +300,11 @@ Do you have any questions so far?
 
 ## Spectre-Type Attack: Overview
 
-- Prepare victim array: 8 elements, all zero
+- Prepare victim array: 8 elements, all `0x01`
 
   - Followed by secret value `0x41`
 
-- Victim loops over the array and encodes each value in the cache
+- Victim loops over the array and encodes each value into the cache
 
   - BPU is trained to predict that the loop continues
 
@@ -317,16 +317,17 @@ Do you have any questions so far?
 ## Spectre-Type Attack: Preparation
 
 ```c
-// Set up array at 0x1000, 8 elements, all zero
+// Set up array at 0x1000, 8 elements, all 0x01
 addi r1, r0, 0x1000
-sb r0, r1, 0
-sb r0, r1, 1
-sb r0, r1, 2
-sb r0, r1, 3
-sb r0, r1, 4
-sb r0, r1, 5
-sb r0, r1, 6
-sb r0, r1, 7
+addi r2, r0, 0x01
+sb r2, r1, 0
+sb r2, r1, 1
+sb r2, r1, 2
+sb r2, r1, 3
+sb r2, r1, 4
+sb r2, r1, 5
+sb r2, r1, 6
+sb r2, r1, 7
 // Followed by one out-of-bounds 0x41 value
 addi r2, r0, 0x41
 sb r2, r1, 8
@@ -346,7 +347,6 @@ slli r4, r4, 4
 lb r4, r4, 0x2000
 // Increment loop index
 addi r2, r2, 1
-fence
 // Loop while index is in bounds
 bne r2, r3, loop
 ```
