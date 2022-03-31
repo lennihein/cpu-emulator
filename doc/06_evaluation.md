@@ -383,24 +383,80 @@ The original Spectre paper describes an attack very similar to our Spectre-type 
 
 ## Mitigations Demonstration {#sec:evaluation_mitigations}
 
-todo
+As described in [@sec:meltdown-and-spectre-mitigations], there are several mitigations available, that can be used to protect against Meltdown and Spectre attacks. In the following, we will present our implementations of some of these mitigations, and discuss their effectiveness against the demonstrated attacks from [@sec:evaluation_meltdown_attack] and [@sec:evaluation_spectre_attack].
 
-            it is known which mitigations exist, here is what we have in our emulator:
+### Disable Out of Order Execution {#sec:evaluation_disable_ooo}
 
-            what is possible in our program as is
-                planned:    cache flush: microcode -> config file
-                            mfence im assembler (normally in compiler)
-                            aslr directly in program -> config (es gibt ja auch mitigations, die keine echte mitigation sind; nice to have -> könnte demonstrieren dass es nicht der Fall ist; war eh schon einige Jahre vor Meltdown vorhanden/ in Gebrauch; KSLR brachen kann man auch als Angriff verkaufen)
-                            flush IQ -> passiert eh schon, ist das überhaupt eine echte mitigation?
-                            disable speculation (nice to have, lassen wir weg)-> config
-                            out of order -> in config RS mit nur einem Slot
-                            zero mem load result
+A simple, but costly mitigation is to disable out-of-order execution. Such an effect can be achieved in our emulator, by limiting the number of slots in the reservation station to \texttt{1}. The user simply changes the according parameter in the configuration file.
 
-            is our meltdown/ spectre variant still possible?
-            ggf. how does this affect the performance?
-            vorsichtig sein, dass man dann auch die richtige Frage für die Antwort stellt
-                in real life (already in background)
-                in our program
+To demonstrate, we will use the following configuration file:
 
-            what would be the necessary steps/ changes to the program for further mitigations
-                compare to changes in hardware by the manufacturers
+```yaml
+...
+ExecutionEngine:
+    slots: 1
+...
+```
+
+We further use the following program, which is identical to the one used in [@sec:evaluation_meltdown_attack], and is provided in `demo/meltdown_small.tea`:
+
+```asm
+lb r1, r0, 0xc000
+slli r1, r1, 4
+lb r2, r1, 0x1000
+```
+
+After issuing a \texttt{continue} command which breaks at the rollback of the first instruction, only the first instruction has been executed. There is no transient execution window, and the secret value is not encoded in the cache. At the end of the program, while the target address is still in the cache, it can't be read by the attacker, and the encoded value in the cache will be located at \texttt{0x1000}, independently of the secret value.
+
+This mitigation also is effective against the demonstrated Spectre attack supplied in `demo/spectre.tea`.
+
+### Return Zero Mitigation
+
+An undocumented mitigation Intel employs to mitigate Meltdown attacks is the return zero mitigation. When performing an illegal read, the CPU passes a zero value to dependent instructions. Our implementation can be enabled as an option in the configuration file.
+
+Using the following configuration file, we can demonstrate this mitigation:
+
+```yaml
+...
+Mitigations:
+    illegal_read_return_zero: True
+...
+```
+
+We again use the program provided in `demo/meltdown_small.tea`. After forwarding 6 cycles using \texttt{step 6}, we can see that \texttt{slii r1, r1, 0x4} has been supplied with the result of the first instruction over the common data bus; the content of the field in the slot is zero. This also results in \texttt{0x1000} being cached, i.e. zero being encoded as the secret, independently of the secret value.
+
+
+This mitigation does NOT generally work against Spectre attacks.
+
+### Fence Mitigation
+
+A mitigation that can be implemented on a compiler level or during development is the Fence Mitigation. Here specific instructions can be proofed against the attacks by inserting fence instructions. This could be inserting a fence after a load instruction to prevent the demonstrated Meltdown attack, or inserting a fence after a branch instruction to prevent the demonstrated Spectre attack.
+
+Using the standard configuration file, we can demonstrate this mitigation versus the above seen Meltdown attack, by inserting fence instructions after loads:
+
+```asm
+lb r1, r0, 0xc000
+fence
+slli r1, r1, 4
+lb r2, r1, 0x1000
+fence
+```
+
+Stepping into the program, we can see that the first fence blocks following instructions from entering the reservation station. Only after the rollback occurs, the first load instruction retires and the fence allows subsequent instructions to enter the reservation station. Since the attacks depends on the subsequent instructions to be executed before the rollback is executed, the secret byte can not be encoded into the cache, and thus not leaked.
+
+The mitigation also works against the demonstrated Spectre attack.
+
+### Flushall Microcode Injection Mitigation
+
+The emulator allows the user to specify microcode programs, that are injected into the CPU after a rollback. One example how this can be used to implement a mitigation is the Flushall Microcode Injection Mitigation. Here we inject a microcode program that flushes the entire cache, after the rollback is executed. Since the secret byte is encoded into the cache, it subsequently is flushed and can not be read by the attacker.
+
+To enable this mitigation against the demonstrated Meltdown attack supplied in `demo/meltdown_small.tea`, we use the following configuration file:
+
+```yml
+Microprograms:
+    InstrLoad: demo/flushall.tea
+```
+
+Using \texttt{continue} will forward execution to the rollback. As indicated by the UI, the \texttt{flushall} and \texttt{fence} instructions are injected before regular execution can be resumed. Using \texttt{retire} followed by \texttt{show cache}, we can observe the cache being empty, thus the secret value can not be leaked.
+
+The mitigation also works against the demonstrated Spectre attack.
