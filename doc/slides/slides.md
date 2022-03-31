@@ -157,7 +157,7 @@ Aufteilung:
 
 <!-- Übergang zu Melina-->
 
-## Implementation of our emulator
+# Implementation of our emulator
 
 - overview over our whole emulator
 
@@ -203,8 +203,18 @@ Aufteilung:
 
 - two kinds of register values: Word and SlotID
 
+- register state always reflects in-order register state with SlotIDs as placeholders
+
+## Example Reservation Station
+
 ![](../fig/mp_rs.png){ style="margin: auto;" }
-    
+
+## Issuing instructions  
+
+- resolve operands and target register 
+
+- two kinds of register values: Word and SlotID
+
 - register state always reflects in-order register state with SlotIDs as placeholders
 
 ## Common Data Bus (CDB)
