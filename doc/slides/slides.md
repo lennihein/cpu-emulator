@@ -91,7 +91,7 @@ Aufteilung:
 - Meltdown-US-L1:
   - Define oracle array
   - Perform illegal read to steal secret
-  - Embded secret-dependent oracle entry into cache
+  - Embed secret-dependent oracle entry into cache
   - Await rollback and measure oracle access times
   
 - Small time window
