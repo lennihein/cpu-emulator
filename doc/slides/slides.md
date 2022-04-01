@@ -290,6 +290,8 @@ Do you have any questions so far?
 
 ![](../fig/code.png){ style="margin: auto;" height=95% }
 
+# Spectre-Type Attack Demo
+
 ## Spectre-Type Attack Demo
 
 - Demonstrate mechanism behind Spectre-type attacks
